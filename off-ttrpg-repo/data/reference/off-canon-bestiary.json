@@ -1,0 +1,4449 @@
+{
+ "meta": {
+  "schema": "off-ttrpg canon bestiary v1",
+  "sources": {
+   "2008": "off.fandom.com export (original RPG Maker data + paired remaster infobox values)",
+   "remake": "off.miraheze.org export (2025 release)"
+  },
+  "field_tags": [
+   "2008",
+   "remake",
+   "remaster_via_fandom",
+   "derived",
+   "missing"
+  ],
+  "notes": "Derived element uses ring Plastic>Metal>Smoke>Meat>Plastic; weak-to preferred over canon mirror-match resistance. Non-element canon weaknesses (Bat, Add-Ons, Special, Darkness) preserved raw, never derived.",
+  "remake_status_renames": {
+   "Lethargic": "Blinded (2008: Blind — confirmed via Atypical Sclerosis and Chronic Migraine pairings)",
+   "Frail": "DEF Down (via Heaven's Smile pairing)",
+   "Sturdy": "DEF Up (presumed mirror of Frail)",
+   "Confused": "Madness (GM ruling: canon Confused = system Madness)",
+   "Impure": "remake-only (Maldicion): target becomes weak to a random element. No system equivalent; maps naturally onto the TTRPG element-change rules."
+  }
+ },
+ "fodder": [
+  {
+   "name": "Common Spectre 1",
+   "zone": "Zone 1",
+   "stats_2008": {
+    "hp": 10,
+    "hp_alt": null,
+    "cp": 0,
+    "cp_alt": "50",
+    "atk": 40,
+    "def": 1,
+    "esp": 115,
+    "agl": 35,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 25
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "resists smoke (canon mirror-match)",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": [
+     "smoke"
+    ]
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {
+    "light": [
+     "palsied"
+    ]
+   },
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals 7-10 damage",
+     "cp": "None",
+     "accuracy": "95%"
+    }
+   ],
+   "competences_remake": [
+    "Attack"
+   ],
+   "grouping_2008": "In the second room of the smoke mines (Zone 1), in groups of four alongside four Common Spectre 2. However, they only appear during the first battle in the smoke mines.",
+   "drops_2008": "50 experience, 10 credits, and a Luck Ticket each upon death.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Common Spectre 2",
+   "zone": "Zone 1",
+   "stats_2008": {
+    "hp": 10,
+    "hp_alt": null,
+    "cp": 0,
+    "cp_alt": "150",
+    "atk": 40,
+    "def": 1,
+    "esp": 175,
+    "agl": 35,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 25
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "resists smoke (canon mirror-match)",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": [
+     "smoke"
+    ]
+   },
+   "status_vulnerable": {},
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals 7-10 damage",
+     "cp": "None",
+     "accuracy": "95%"
+    }
+   ],
+   "competences_remake": [
+    "Attack"
+   ],
+   "grouping_2008": "In the second room of the smoke mines (Zone 1), in groups of four alongside four Common Spectre 2. They only appear during the first battle in the smoke mines, however.",
+   "drops_2008": "50 experience and 10 credits each upon death.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Magnolia",
+   "zone": "Zone 1",
+   "stats_2008": {
+    "hp": 30,
+    "hp_alt": null,
+    "cp": 10,
+    "cp_alt": null,
+    "atk": 65,
+    "def": 70,
+    "esp": 45,
+    "agl": 35,
+    "crit": "1/10"
+   },
+   "stats_remake": {
+    "hp": 24
+   },
+   "element": {
+    "value": "plastic",
+    "derivation": "weak to meat",
+    "source": "derived",
+    "raw_weak": [
+     "meat"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "muted",
+     "asleep",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {
+    "light": [
+     "palsied"
+    ]
+   },
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals 17-24 damage",
+     "cp": "None",
+     "accuracy": "70%"
+    },
+    {
+     "name": "Chronic Migraine",
+     "effect": "Can inflict Blind Element: Smoke",
+     "cp": "5",
+     "accuracy": "60%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Domestic Socket",
+    "Chronic Migraine (Inflicts Lethargic)"
+   ],
+   "grouping_2008": "In the tunnels of the smoke mines (Zone 1), in groups of two or three.",
+   "drops_2008": "100 experience and 20 credits each upon death, with a 30% chance to drop a Luck Ticket.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "January",
+   "zone": "Zone 1",
+   "stats_2008": {
+    "hp": 90,
+    "hp_alt": null,
+    "cp": 15,
+    "cp_alt": null,
+    "atk": 75,
+    "def": 70,
+    "esp": 40,
+    "agl": 35,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 60
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "weak to metal",
+    "source": "derived",
+    "raw_weak": [
+     "metal"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "poisoned",
+     "blinded",
+     "madness",
+     "asleep",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals 12-16 damage",
+     "cp": "None",
+     "accuracy": "95%"
+    },
+    {
+     "name": "Domestic Socket",
+     "effect": "Deals 30-40 damage",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Domestic Socket",
+    "Swing"
+   ],
+   "grouping_2008": "In the tunnels of the smoke mines (Zone 1), alone or in pairs.",
+   "drops_2008": "170 experience and 50 credits each upon death, with a 5% chance to drop an Abaddon's Meat.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Fat Spectre",
+   "zone": null,
+   "stats_2008": {
+    "hp": 90,
+    "hp_alt": null,
+    "cp": 15,
+    "cp_alt": null,
+    "atk": 75,
+    "def": 70,
+    "esp": 70,
+    "agl": 35,
+    "crit": "1/30"
+   },
+   "stats_remake": {
+    "hp": 75
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "resists smoke (canon mirror-match)",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": [
+     "smoke"
+    ]
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals damage",
+     "cp": "None",
+     "accuracy": "95%"
+    },
+    {
+     "name": "Ah, ah! (Not a Competence)",
+     "effect": "Spawns \"Ah, ah!\"",
+     "cp": "5?",
+     "accuracy": "100%"
+    },
+    {
+     "name": "Domestic Socket",
+     "effect": "Deals damage",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Domestic Socket"
+   ],
+   "grouping_2008": "In the Barns of Pentel and the black-out tunnels of the smoke mines (both Zone 1), usually by itself. Fat Spectres appear in groups of two during ambushes.",
+   "drops_2008": "150 experience and 35 credits each upon death, with a 50% chance to drop a Silver Flesh.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Ah, ah!",
+   "zone": null,
+   "stats_2008": {
+    "hp": 10,
+    "hp_alt": null,
+    "cp": 15,
+    "cp_alt": null,
+    "atk": 1,
+    "def": 1,
+    "esp": 70,
+    "agl": 40,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 25
+   },
+   "element": {
+    "value": "plastic",
+    "derivation": "weak to meat [remake data]",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "hasty"
+    ]
+   },
+   "status_immune": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused"
+    ]
+   },
+   "moves_2008": [
+    {
+     "name": "Chronic Migraine",
+     "effect": "Can inflict Blind",
+     "cp": "5",
+     "accuracy": "60%"
+    },
+    {
+     "name": "No Action",
+     "effect": "Passes the turn",
+     "cp": "None",
+     "accuracy": "-"
+    }
+   ],
+   "competences_remake": [
+    "Chronic Migraine (Inflicts Lethargic)",
+    "Partie Quarrée (Drains ~10-20 CC)"
+   ],
+   "grouping_2008": "Appears when purifying Fat Spectres. Three of them appear with one Fat Spectre (after one, two, and four turns have passed), and two of them with two Fat Spectres (after one and two turns have passed).",
+   "drops_2008": "10 experience and 10 credits each upon death.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "One-eyed Spectre",
+   "zone": null,
+   "stats_2008": {
+    "hp": 65,
+    "hp_alt": null,
+    "cp": 10,
+    "cp_alt": null,
+    "atk": 70,
+    "def": 70,
+    "esp": 70,
+    "agl": 35,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 35
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "weak to metal",
+    "source": "derived",
+    "raw_weak": [
+     "metal"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty moveset: {| class=\"article-table\" !name !effects !cp !accuracy |- |attack |deals 15-25 damage |none |95% |- |swing |deals 40-55 damage |5 |100% |} location & grouping: * in the smoke mines of damien",
+     "a chest at the post office of shachihata (both zone 1)"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals 15-25 damage",
+     "cp": "None",
+     "accuracy": "95%"
+    },
+    {
+     "name": "Swing",
+     "effect": "Deals 40-55 damage",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Domestic Socket"
+   ],
+   "grouping_2008": "In the smoke mines of Damien, and a chest at the post office of Shachihata (both Zone 1). One-eyed Spectres always appear in groups of three.",
+   "drops_2008": "120 experience and 40 credits each upon death, with a 10% chance to drop a Luck Ticket.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Burnt",
+   "zone": null,
+   "stats_2008": {
+    "hp": 70,
+    "hp_alt": null,
+    "cp": 10,
+    "cp_alt": null,
+    "atk": 80,
+    "def": 70,
+    "esp": 70,
+    "agl": 40,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 70
+   },
+   "element": {
+    "value": "meat",
+    "derivation": "weak to smoke [remake data]",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty moveset: {| class=\"article-table\" !name !effects !cp !accuracy |- |attack |deals 20-30 damage |none |95% |- |swing |deals 40-55 damage |5 |100% |} location & grouping: * in the post office of shachihata",
+     "around the meat fountains of alma",
+     "in the flesh maze of alma (all zone 1)"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals 20-30 damage",
+     "cp": "None",
+     "accuracy": "95%"
+    },
+    {
+     "name": "Swing",
+     "effect": "Deals 40-55 damage",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Domestic Socket",
+    "Swing"
+   ],
+   "grouping_2008": "In the post office of Shachihata, around the meat fountains of Alma, and in the flesh maze of Alma (all Zone 1). A Burnt can appear by themself or in twos, sometimes along with one or two Tiburce or Arpagon respectively.",
+   "drops_2008": "140 experience and 30 credits each upon death, with a 30% chance to drop a Luck Ticket.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Tiburce",
+   "zone": null,
+   "stats_2008": {
+    "hp": 45,
+    "hp_alt": null,
+    "cp": 10,
+    "cp_alt": null,
+    "atk": 75,
+    "def": 70,
+    "esp": 65,
+    "agl": 40,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 60
+   },
+   "element": {
+    "value": "metal",
+    "derivation": "weak to plastic [remake data]",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty moveset: {| class=\"article-table\" !name !effects !cp !accuracy |- |attack |deals 20-30 damage |none |95% |- |partie quarrée (square game) |drains 15-25 cp |5 |100% |} location & grouping: * in the post office of shachihata",
+     "around the meat fountains of alma (both zone 1)"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals 20-30 damage",
+     "cp": "None",
+     "accuracy": "95%"
+    },
+    {
+     "name": "Partie Quarrée (Square Game)",
+     "effect": "Drains 15-25 CP",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Partie Quarrée (Drains ~10-20 CC)"
+   ],
+   "grouping_2008": "In the post office of Shachihata, and around the meat fountains of Alma (both Zone 1). Tiburce can appear in groups of two or three, with one or two Burnt and Arpagon each.",
+   "drops_2008": "110 experience and 20 credits each upon death, with a 10% chance to drop an Eye.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Troquantary",
+   "zone": "Zone 1",
+   "stats_2008": {
+    "hp": 100,
+    "hp_alt": null,
+    "cp": 10,
+    "cp_alt": null,
+    "atk": 90,
+    "def": 70,
+    "esp": 65,
+    "agl": 42,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 95
+   },
+   "element": {
+    "value": "metal",
+    "derivation": "weak to plastic",
+    "source": "derived",
+    "raw_weak": [
+     "plastic"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty moveset: {| class=\"article-table\" !name !effects !cp !accuracy |- |attack |deals 25-35 damage |none |90% |- |heaven's smile |drops defense |5 |100% |} location & grouping: * in the meat fountains of alma (zone 1)",
+     "appearing in groups of two or three"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals 25-35 damage",
+     "cp": "None",
+     "accuracy": "90%"
+    },
+    {
+     "name": "Heaven's Smile",
+     "effect": "Drops Defense",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Heaven's Smile (Inflicts Frail)"
+   ],
+   "grouping_2008": "In the meat fountains of Alma (Zone 1), appearing in groups of two or three.",
+   "drops_2008": "150 experience and 40 credits each upon death, with a 30% chance to drop a Luck Ticket.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Arpagon",
+   "zone": "Zone 1",
+   "stats_2008": {
+    "hp": 65,
+    "hp_alt": null,
+    "cp": 15,
+    "cp_alt": null,
+    "atk": 80,
+    "def": 65,
+    "esp": 70,
+    "agl": 35,
+    "crit": "1/10"
+   },
+   "stats_remake": {
+    "hp": 60
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "weak to metal",
+    "source": "derived",
+    "raw_weak": [
+     "metal"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty 1/10 chance of critical hit moveset: {| class=\"article-table\" !name !effects !cp !accuracy |- |attack |deals damage |none |95% |- |domestic socket |deals 30-40 damage |5 |100% |- |swing |deals 40-55 damage |n/a |100% |} location & grouping: * in the flesh maze of alma (zone 1)"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals damage",
+     "cp": "None",
+     "accuracy": "95%"
+    },
+    {
+     "name": "Domestic Socket",
+     "effect": "Deals 30-40 damage",
+     "cp": "5",
+     "accuracy": "100%"
+    },
+    {
+     "name": "Swing",
+     "effect": "Deals 40-55 damage",
+     "cp": "N/A",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Domestic Socket"
+   ],
+   "grouping_2008": "in the flesh maze of Alma (Zone 1). Arpagon can appear in groups of two or three, with one Burnt or one to two Tiburce each.",
+   "drops_2008": "115 experience and 40 credits each upon death, with a 15% chance to drop Silver Flesh.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "笑",
+   "zone": null,
+   "stats_2008": {
+    "hp": 10,
+    "hp_alt": null,
+    "cp": 15,
+    "cp_alt": null,
+    "atk": 1,
+    "def": 1,
+    "esp": 1,
+    "agl": 1,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": null
+   },
+   "element": {
+    "value": null,
+    "derivation": null,
+    "source": "missing",
+    "raw_weak": [],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty moveset: {| class=\"article-table\" !name !effects !cp !accuracy |- |chronic migraine |can inflict blind element: smoke |5 |60% |- |partie quarée |drains 15-25 cp |5 |100% |} location & grouping: * three times when battling dedan: one when his hp is between 50-60%",
+     "another one between 40-50%",
+     "the last one between 10-20%"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Chronic migraine",
+     "effect": "Can inflict Blind Element: Smoke",
+     "cp": "5",
+     "accuracy": "60%"
+    },
+    {
+     "name": "Partie Quarée",
+     "effect": "Drains 15-25 CP",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [],
+   "grouping_2008": "Three times when battling Dedan: one when his HP is between 50-60%, another one between 40-50%, and the last one between 10-20%.",
+   "drops_2008": "No experience or items, It might drop 1 credit upon death, however.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "missing",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": [
+    "no remake row (name mismatch or cut content)",
+    "element underivable from canon weak/resist",
+    "remake HP missing"
+   ]
+  },
+  {
+   "name": "Upside-down Spectre",
+   "zone": null,
+   "stats_2008": {
+    "hp": 120,
+    "hp_alt": null,
+    "cp": 20,
+    "cp_alt": null,
+    "atk": 100,
+    "def": 80,
+    "esp": 70,
+    "agl": 41,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 70
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "resists smoke (canon mirror-match)",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": [
+     "smoke"
+    ]
+   },
+   "status_vulnerable": {},
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals damage",
+     "cp": "None",
+     "accuracy": "95%"
+    },
+    {
+     "name": "Heavy Silence",
+     "effect": "Deals 30-45 damage to two enemies; can inflict Mute",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Heavy Silence (Inflicts Muted)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Gilles de Rais",
+   "zone": "Zone 2",
+   "stats_2008": {
+    "hp": 130,
+    "hp_alt": null,
+    "cp": 0,
+    "cp_alt": null,
+    "atk": 120,
+    "def": 80,
+    "esp": 70,
+    "agl": 43,
+    "crit": "1/20"
+   },
+   "stats_remake": {
+    "hp": 130
+   },
+   "element": {
+    "value": "metal",
+    "derivation": "weak to plastic [remake data]",
+    "source": "derived",
+    "raw_weak": [
+     "bat"
+    ],
+    "raw_resist": [
+     "add"
+    ]
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty 1/20 chance of critical hit moveset: {| class=\"fandom-table\" !name !effect !cp !accuracy |- |attack |deals 30-40 damage |n/a |100% |} location & grouping: *in the gomez galleries of bismark (zone 2)"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals 30-40 damage",
+     "cp": "N/A",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Irrational Behavior (Inflicts Confused)"
+   ],
+   "grouping_2008": "In the Gomez Galleries of Bismark (Zone 2). Gilles de Rais appear in groups of two or three, and can appear alongside Massu and three Upside-down Spectres.",
+   "drops_2008": "180 experience and 55 credits each upon death, with a 20% chance to drop a Silver Flesh.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Massu",
+   "zone": null,
+   "stats_2008": {
+    "hp": 120,
+    "hp_alt": null,
+    "cp": 35,
+    "cp_alt": null,
+    "atk": 90,
+    "def": 80,
+    "esp": 78,
+    "agl": 41,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 65
+   },
+   "element": {
+    "value": "meat",
+    "derivation": "weak to smoke",
+    "source": "derived",
+    "raw_weak": [
+     "smoke"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {},
+   "status_immune": {},
+   "moves_2008": [],
+   "competences_remake": [
+    "Attack",
+    "Irrational Behavior (Inflicts Confused)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Whale",
+   "zone": null,
+   "stats_2008": {
+    "hp": 300,
+    "hp_alt": null,
+    "cp": 30,
+    "cp_alt": null,
+    "atk": 100,
+    "def": 120,
+    "esp": 60,
+    "agl": 30,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 240
+   },
+   "element": {
+    "value": "metal",
+    "derivation": "weak to plastic [remake data]",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": []
+   },
+   "status_vulnerable": {},
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals damage",
+     "cp": "None",
+     "accuracy": "95%"
+    },
+    {
+     "name": "Murmur of the Flies",
+     "effect": "Deals damage; inflicts Mute Elements: Smoke and Meat",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Dramatic Impact",
+    "Murmur of the Flies (Inflicts Muted)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Valzong-burnt",
+   "zone": null,
+   "stats_2008": {
+    "hp": 350,
+    "hp_alt": null,
+    "cp": 20,
+    "cp_alt": null,
+    "atk": 120,
+    "def": 80,
+    "esp": 60,
+    "agl": 89,
+    "crit": "1/10"
+   },
+   "stats_remake": {
+    "hp": 100
+   },
+   "element": {
+    "value": "meat",
+    "derivation": "weak to smoke [remake data]",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals around 40 damage",
+     "cp": "None",
+     "accuracy": "95%"
+    },
+    {
+     "name": "Murmur of the Flies",
+     "effect": "Deals damage; inflicts Mute Elements: Smoke and Meat",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Murmur of the Flies (Inflicts Muted)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Porter Spectre",
+   "zone": null,
+   "stats_2008": {
+    "hp": 230,
+    "hp_alt": null,
+    "cp": 10,
+    "cp_alt": null,
+    "atk": 145,
+    "def": 80,
+    "esp": 10,
+    "agl": 50,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 160
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "weak to metal [remake data]",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Transform into: Junior Spectres (Not a Competence)",
+     "effect": "Disappears and spawns 7-8 Junior Spectres",
+     "cp": "-",
+     "accuracy": "-"
+    }
+   ],
+   "competences_remake": [
+    "Return to Limbo (Attacks self and spawns Junior Specters)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Junior Spectres",
+   "zone": null,
+   "stats_2008": {
+    "hp": 55,
+    "hp_alt": null,
+    "cp": 10,
+    "cp_alt": null,
+    "atk": 120,
+    "def": 75,
+    "esp": 10,
+    "agl": 50,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 45
+   },
+   "element": {
+    "value": "meat",
+    "derivation": "weak to smoke",
+    "source": "derived",
+    "raw_weak": [
+     "smoke"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals damage",
+     "cp": "None",
+     "accuracy": "95%"
+    },
+    {
+     "name": "Self-Destruct",
+     "effect": "Deals damage by dying",
+     "cp": "-",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Self-Destruct (Damages everyone)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Blind Spectre",
+   "zone": null,
+   "stats_2008": {
+    "hp": 210,
+    "hp_alt": null,
+    "cp": 25,
+    "cp_alt": null,
+    "atk": 150,
+    "def": 85,
+    "esp": 80,
+    "agl": 100,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 148
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "weak to metal [remake data]",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals damage",
+     "cp": "-",
+     "accuracy": "N/A"
+    },
+    {
+     "name": "Hasty Judgment",
+     "effect": "Deals damage",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Chronic Migraine (Inflicts Lethargic)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Mute Spectre",
+   "zone": null,
+   "stats_2008": {
+    "hp": 180,
+    "hp_alt": null,
+    "cp": 30,
+    "cp_alt": null,
+    "atk": 140,
+    "def": 85,
+    "esp": 85,
+    "agl": 100,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 148
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "weak to metal [remake data]",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals 20-40 damage",
+     "cp": "-",
+     "accuracy": "N/A"
+    },
+    {
+     "name": "Heavy Silence",
+     "effect": "Deals damage; inflicts Mute",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Heavy Silence (Inflicts Muted)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Crown of the Dead",
+   "zone": null,
+   "stats_2008": {
+    "hp": 130,
+    "hp_alt": null,
+    "cp": 40,
+    "cp_alt": null,
+    "atk": null,
+    "def": null,
+    "esp": null,
+    "agl": null,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 130
+   },
+   "element": {
+    "value": "meat",
+    "derivation": "weak to smoke",
+    "source": "derived",
+    "raw_weak": [
+     "smoke"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Aspirating Suzerain",
+     "effect": "Heals ally or self and removes Poisoned",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Aspirating Suzerain (Heals allies)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Von Gacy",
+   "zone": null,
+   "stats_2008": {
+    "hp": 260,
+    "hp_alt": null,
+    "cp": 30,
+    "cp_alt": null,
+    "atk": 150,
+    "def": 85,
+    "esp": 80,
+    "agl": 100,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 260
+   },
+   "element": {
+    "value": "metal",
+    "derivation": "resists metal (canon mirror-match)",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": [
+     "metal"
+    ]
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals 35-40 damage",
+     "cp": "-",
+     "accuracy": "N/A"
+    },
+    {
+     "name": "Swan Dive",
+     "effect": "Deals Damage; inflicts Palsied Elements: Metal and Plastic",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Swan Dive (Inflicts Palsied)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Calvary-burnt",
+   "zone": null,
+   "stats_2008": {
+    "hp": 220,
+    "hp_alt": "270",
+    "cp": 35,
+    "cp_alt": null,
+    "atk": 150,
+    "def": 85,
+    "esp": 80,
+    "agl": 100,
+    "crit": "1/10"
+   },
+   "stats_remake": {
+    "hp": 171
+   },
+   "element": {
+    "value": "meat",
+    "derivation": "weak to smoke",
+    "source": "derived",
+    "raw_weak": [
+     "smoke"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals Damage",
+     "cp": "-",
+     "accuracy": "N/A"
+    },
+    {
+     "name": "Inhuman Decadence",
+     "effect": "Deals damage; inflicts Furious, Poison Element: Meat",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Domestic Socket",
+    "Swing"
+   ],
+   "grouping_2008": "In the Treatment Rooms in Area 2 of Vesper, and in the hallways in Area 4 of Vesper (both Zone 3). Cavalry-burnt can appear by themself or in groups up to three, and can be accompanied by Mute Spectres, Blind Spectres, and/or Crown of the Dead.",
+   "drops_2008": "340 experience and 140 credits each upon death, with a 5% chance to drop a Joker.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Critic-burnt",
+   "zone": "Zone 3",
+   "stats_2008": {
+    "hp": 1000,
+    "hp_alt": "2000",
+    "cp": 10,
+    "cp_alt": null,
+    "atk": 10,
+    "def": 10,
+    "esp": 10,
+    "agl": 250,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 400
+   },
+   "element": {
+    "value": "metal",
+    "derivation": "weak to plastic",
+    "source": "derived",
+    "raw_weak": [
+     "plastic"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {
+    "light": [
+     "poisoned"
+    ]
+   },
+   "moves_2008": [
+    {
+     "name": "??? (Help 1)",
+     "effect": "slightly self-increases ESP by yelling H E L P",
+     "cp": "0",
+     "accuracy": "100%"
+    },
+    {
+     "name": "??? (Help 2)",
+     "effect": "slightly self-increases DFS by shouting H E L P",
+     "cp": "0",
+     "accuracy": "100%"
+    },
+    {
+     "name": "??? (Help 3)",
+     "effect": "slightly self-increases AGL by screaming H E L P",
+     "cp": "0",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "???!"
+   ],
+   "grouping_2008": "On the tracks of the Vesper Monorail (Zone 3). Critic-burnt appears only once.",
+   "drops_2008": "",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Pastel-burnt",
+   "zone": null,
+   "stats_2008": {
+    "hp": 50,
+    "hp_alt": null,
+    "cp": 85,
+    "cp_alt": null,
+    "atk": 10,
+    "def": 10,
+    "esp": 90,
+    "agl": 100,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 1150
+   },
+   "element": {
+    "value": "meat",
+    "derivation": "weak to smoke [remake data]",
+    "source": "derived",
+    "raw_weak": [],
+    "raw_resist": []
+   },
+   "status_vulnerable": {},
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack (Monster)",
+     "effect": "Deals damage",
+     "cp": "-",
+     "accuracy": "N/A"
+    },
+    {
+     "name": "Aspirating Suzerain (Heads)",
+     "effect": "Heals an ally",
+     "cp": "5",
+     "accuracy": "100%"
+    },
+    {
+     "name": "Inhuman Decadence (Monster)",
+     "effect": "Deals damage; inflicts Furious, Poison Element: Meat",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Dramatic Impact",
+    "Murmur of the Flies (Inflicts Muted)",
+    "Inhuman Decadence (Inflicts Furious)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Bear",
+   "zone": null,
+   "stats_2008": {
+    "hp": 200,
+    "hp_alt": null,
+    "cp": 10,
+    "cp_alt": null,
+    "atk": 150,
+    "def": 85,
+    "esp": 85,
+    "agl": 110,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 130
+   },
+   "element": {
+    "value": "metal",
+    "derivation": "weak to plastic [remake data]",
+    "source": "derived",
+    "raw_weak": [
+     "bat"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals damage",
+     "cp": "-",
+     "accuracy": "N/A"
+    },
+    {
+     "name": "Magical Amnesia",
+     "effect": "Deals damage; inflicts Blind",
+     "cp": "5",
+     "accuracy": "70%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Chronic Migraine (Inflicts Lethargic)",
+    "Magic Amnesia"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Abstract Spectre",
+   "zone": null,
+   "stats_2008": {
+    "hp": 170,
+    "hp_alt": null,
+    "cp": 25,
+    "cp_alt": null,
+    "atk": 75,
+    "def": 70,
+    "esp": 70,
+    "agl": 35,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 135
+   },
+   "element": {
+    "value": "metal",
+    "derivation": "weak to plastic",
+    "source": "derived",
+    "raw_weak": [
+     "plastic",
+     "plastic"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Attack",
+     "effect": "Deals damage",
+     "cp": "-",
+     "accuracy": "N/A"
+    },
+    {
+     "name": "Immediate Forfeiture",
+     "effect": "Deals damage; inflicts Madness",
+     "cp": "5",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Dramatic Impact",
+    "Immediate Forfeiture (Inflicts Madness)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Infernal Spectre",
+   "zone": null,
+   "stats_2008": {
+    "hp": 280,
+    "hp_alt": null,
+    "cp": 30,
+    "cp_alt": null,
+    "atk": 170,
+    "def": 95,
+    "esp": 100,
+    "agl": 115,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 150
+   },
+   "element": {
+    "value": "plastic",
+    "derivation": "weak to meat",
+    "source": "derived",
+    "raw_weak": [
+     "meat"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Love Game",
+     "effect": "Deals damage; inflicts Furious",
+     "cp": "0",
+     "accuracy": "100%"
+    },
+    {
+     "name": "Attack",
+     "effect": "Deals Damage",
+     "cp": "-",
+     "accuracy": "N/A"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Love Game (Inflicts Madness)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Obese Spectre",
+   "zone": "The Room, Chapter 3",
+   "stats_2008": {
+    "hp": 500,
+    "hp_alt": null,
+    "cp": 60,
+    "cp_alt": null,
+    "atk": 180,
+    "def": 95,
+    "esp": 100,
+    "agl": 110,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": 276
+   },
+   "element": {
+    "value": "meat",
+    "derivation": "weak to smoke",
+    "source": "derived",
+    "raw_weak": [
+     "smoke"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Dance of the Nails",
+     "effect": "Deals damage; inflicts Sleep Elements: Smoke and Meat",
+     "cp": "5",
+     "accuracy": "100%"
+    },
+    {
+     "name": "Attack",
+     "effect": "Deals damage",
+     "cp": "-",
+     "accuracy": "N/A"
+    }
+   ],
+   "competences_remake": [
+    "Attack",
+    "Dance of the Nails (Inflicts Sleep)"
+   ],
+   "grouping_2008": "In the upper hall area (The Room, Chapter 3). An Obese Spectre always appears alone.",
+   "drops_2008": "940 experience and 290 credits each upon death, with a 50% chance to drop a Belial's meat.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Ballman",
+   "zone": null,
+   "stats_2008": {
+    "hp": 500,
+    "hp_alt": null,
+    "cp": 500,
+    "cp_alt": null,
+    "atk": 500,
+    "def": 500,
+    "esp": 500,
+    "agl": 650,
+    "crit": "1/30"
+   },
+   "stats_remake": {
+    "hp": null
+   },
+   "element": {
+    "value": null,
+    "derivation": null,
+    "source": "missing",
+    "raw_weak": [
+     "justice"
+    ],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Ball Gun",
+     "effect": "zap! Deals damage",
+     "cp": "0",
+     "accuracy": "100%"
+    },
+    {
+     "name": "Ball Ray",
+     "effect": "bang! Deals damage",
+     "cp": "0",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "missing",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": [
+    "no remake row (name mismatch or cut content)",
+    "element underivable from canon weak/resist",
+    "remake HP missing"
+   ]
+  },
+  {
+   "name": "Secretary (Zone 1)",
+   "zone": null,
+   "stats_2008": {
+    "hp": 800,
+    "hp_alt": null,
+    "cp": 0,
+    "cp_alt": null,
+    "atk": 130,
+    "def": 60,
+    "esp": 95,
+    "agl": 55,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": null
+   },
+   "element": {
+    "value": "metal",
+    "derivation": "weak to plastic",
+    "source": "derived",
+    "raw_weak": [
+     "plastic",
+     "special"
+    ],
+    "raw_resist": [
+     "smoke",
+     "darkness"
+    ]
+   },
+   "status_vulnerable": {},
+   "status_immune": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "moves_2008": [
+    {
+     "name": "Logical Value",
+     "effect": "Drains little HP; inflicts Furious, Muted, Poisoned",
+     "cp": "0",
+     "accuracy": "50%"
+    },
+    {
+     "name": "Natural Logarithm",
+     "effect": "Deals damage Elements: Metal, Smoke, Plastic and Meat",
+     "cp": "0",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [],
+   "grouping_2008": "Anywhere in purified Zone 1. Secretaries can appear in numbers from one to three.",
+   "drops_2008": "800 experience and 300 credits, with a 30% chance to drop a Fortune Ticket each upon death.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "missing",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": [
+    "no remake row (name mismatch or cut content)",
+    "remake HP missing"
+   ],
+   "encounter_tier": "endgame (purified zones, party level 16-20)"
+  },
+  {
+   "name": "Secretary (Zone 2)",
+   "zone": null,
+   "stats_2008": {
+    "hp": 2000,
+    "hp_alt": "1500",
+    "cp": 0,
+    "cp_alt": null,
+    "atk": 190,
+    "def": 110,
+    "esp": 100,
+    "agl": 100,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": null
+   },
+   "element": {
+    "value": "metal",
+    "derivation": "weak to plastic",
+    "source": "derived",
+    "raw_weak": [
+     "plastic",
+     "special"
+    ],
+    "raw_resist": [
+     "smoke",
+     "darkness"
+    ]
+   },
+   "status_vulnerable": {},
+   "status_immune": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "moves_2008": [
+    {
+     "name": "Derivation",
+     "effect": "Deals damage",
+     "cp": "0",
+     "accuracy": "100%"
+    },
+    {
+     "name": "Oblique Asymptote",
+     "effect": "Drains HP; inflicts Poisoned",
+     "cp": "0",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [],
+   "grouping_2008": "Anywhere in purified Zone 2. Secretaries can appear in numbers from one to three.",
+   "drops_2008": "1500 experience and 450 credits, with a 30% chance to drop a Fortune Ticket each upon death.",
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "missing",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": [
+    "no remake row (name mismatch or cut content)",
+    "remake HP missing"
+   ],
+   "encounter_tier": "endgame (purified zones, party level 16-20)"
+  },
+  {
+   "name": "Secretary (Zone 3)",
+   "zone": null,
+   "stats_2008": {
+    "hp": 3500,
+    "hp_alt": "2600",
+    "cp": 0,
+    "cp_alt": null,
+    "atk": 250,
+    "def": 100,
+    "esp": 150,
+    "agl": 170,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": null
+   },
+   "element": {
+    "value": "metal",
+    "derivation": "weak to plastic",
+    "source": "derived",
+    "raw_weak": [
+     "plastic",
+     "special"
+    ],
+    "raw_resist": [
+     "smoke",
+     "darkness"
+    ]
+   },
+   "status_vulnerable": {},
+   "status_immune": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "moves_2008": [
+    {
+     "name": "Division by zero",
+     "effect": "Deals damage; inflicts Poisoned and Asleep",
+     "cp": "O",
+     "accuracy": "100%"
+    },
+    {
+     "name": "Vertical Limit",
+     "effect": "Deals damage",
+     "cp": "0",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "missing",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": [
+    "no remake row (name mismatch or cut content)",
+    "remake HP missing"
+   ],
+   "encounter_tier": "endgame (purified zones, party level 16-20)"
+  },
+  {
+   "name": "Dummie",
+   "zone": null,
+   "stats_2008": {
+    "hp": 1,
+    "hp_alt": null,
+    "cp": 50,
+    "cp_alt": null,
+    "atk": 1,
+    "def": 48,
+    "esp": 80,
+    "agl": 250,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": null
+   },
+   "element": {
+    "value": null,
+    "derivation": null,
+    "source": "missing",
+    "raw_weak": [],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "strong": [
+     "instant death",
+     "confused"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [
+    {
+     "name": "Blind Mask",
+     "effect": "Increases all allies' ATK",
+     "cp": "10",
+     "accuracy": "100%"
+    },
+    {
+     "name": "Empathetic Mask",
+     "effect": "Increases all allies' AGL",
+     "cp": "10",
+     "accuracy": "100%"
+    },
+    {
+     "name": "Loose Mask",
+     "effect": "Increases all allies' ESP",
+     "cp": "10",
+     "accuracy": "100%"
+    },
+    {
+     "name": "Sick Mask",
+     "effect": "Increases all allies' DFS",
+     "cp": "10",
+     "accuracy": "100%"
+    }
+   ],
+   "competences_remake": [],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "missing",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": [
+    "no remake row (name mismatch or cut content)",
+    "element underivable from canon weak/resist",
+    "remake HP missing"
+   ]
+  },
+  {
+   "name": "Delta, Sigma & Ipsilon",
+   "zone": null,
+   "stats_2008": {
+    "hp": 1200,
+    "hp_alt": null,
+    "cp": 500,
+    "cp_alt": null,
+    "atk": 300,
+    "def": 100,
+    "esp": 120,
+    "agl": 155,
+    "crit": null
+   },
+   "stats_remake": {
+    "hp": null
+   },
+   "element": {
+    "value": null,
+    "derivation": null,
+    "source": "missing",
+    "raw_weak": [],
+    "raw_resist": []
+   },
+   "status_vulnerable": {
+    "light": [
+     "instant death",
+     "poisoned",
+     "blinded",
+     "muted",
+     "furious",
+     "madness",
+     "asleep",
+     "palsied",
+     "confused",
+     "hasty"
+    ]
+   },
+   "status_immune": {},
+   "moves_2008": [],
+   "competences_remake": [],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "missing",
+    "moves": "2008",
+    "status_profile": "2008"
+   },
+   "gaps": [
+    "no remake row (name mismatch or cut content)",
+    "element underivable from canon weak/resist",
+    "remake HP missing"
+   ]
+  },
+  {
+   "name": "Speckter-mite",
+   "zone": "Zone 1 Damien",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 25
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "weak to metal [remake data]",
+    "source": "derived",
+    "raw_weak": [
+     "metal"
+    ],
+    "raw_resist": [
+     "smoke"
+    ]
+   },
+   "status_vulnerable": {},
+   "status_immune": {},
+   "moves_2008": [],
+   "competences_remake": [
+    "Painful Quandary (Hits twice)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake",
+    "moves": "missing",
+    "status_profile": "missing"
+   },
+   "gaps": [
+    "remake-only enemy: no 2008 ratios; infer archetype from nearest 2008 analogue",
+    "no ATK/DEF/ESP/AGL in any source",
+    "no status profile in any source"
+   ]
+  },
+  {
+   "name": "Rupture-burnt",
+   "zone": "Zone 1 Shachihata Alma",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 75
+   },
+   "element": {
+    "value": null,
+    "derivation": null,
+    "source": "missing",
+    "raw_weak": [
+     "smoke / symbols"
+    ],
+    "raw_resist": [
+     "metal / bats"
+    ]
+   },
+   "status_vulnerable": {},
+   "status_immune": {},
+   "moves_2008": [],
+   "competences_remake": [
+    "Mandatory Overtime (Hits all party members)",
+    "Clock Out (Damages everyone and kills this enemy)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake",
+    "moves": "missing",
+    "status_profile": "missing"
+   },
+   "gaps": [
+    "remake-only enemy: no 2008 ratios; infer archetype from nearest 2008 analogue",
+    "no ATK/DEF/ESP/AGL in any source",
+    "no status profile in any source"
+   ]
+  },
+  {
+   "name": "Fission Specter",
+   "zone": "Zone 2",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 25
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "weak to metal [remake data]",
+    "source": "derived",
+    "raw_weak": [
+     "metal"
+    ],
+    "raw_resist": [
+     "smoke"
+    ]
+   },
+   "status_vulnerable": {},
+   "status_immune": {},
+   "moves_2008": [],
+   "competences_remake": [
+    "Shortened Fuse (Damages self)",
+    "Extended Fuse (Heals target)",
+    "Self-Destruct (Damages everyone)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake",
+    "moves": "missing",
+    "status_profile": "missing"
+   },
+   "gaps": [
+    "remake-only enemy: no 2008 ratios; infer archetype from nearest 2008 analogue",
+    "no ATK/DEF/ESP/AGL in any source",
+    "no status profile in any source"
+   ]
+  },
+  {
+   "name": "Speckter-mite Swarm",
+   "zone": "Zone 1 Zone 2",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 120
+   },
+   "element": {
+    "value": "smoke",
+    "derivation": "weak to metal [remake data]",
+    "source": "derived",
+    "raw_weak": [
+     "metal"
+    ],
+    "raw_resist": [
+     "smoke"
+    ]
+   },
+   "status_vulnerable": {},
+   "status_immune": {},
+   "moves_2008": [],
+   "competences_remake": [
+    "Hesitant Inquiry (Hits all party members three times)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake",
+    "moves": "missing",
+    "status_profile": "missing"
+   },
+   "gaps": [
+    "remake-only enemy: no 2008 ratios; infer archetype from nearest 2008 analogue",
+    "no ATK/DEF/ESP/AGL in any source",
+    "no status profile in any source"
+   ]
+  },
+  {
+   "name": "Elsen?",
+   "zone": "Zone 3",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 172
+   },
+   "element": {
+    "value": "meat",
+    "derivation": "weak to smoke [remake data]",
+    "source": "derived",
+    "raw_weak": [
+     "smoke"
+    ],
+    "raw_resist": [
+     "plastic"
+    ]
+   },
+   "status_vulnerable": {},
+   "status_immune": {},
+   "moves_2008": [],
+   "competences_remake": [
+    "Aspirating Suzerain (Heals allies)"
+   ],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake",
+    "moves": "missing",
+    "status_profile": "missing"
+   },
+   "gaps": [
+    "remake-only enemy: no 2008 ratios; infer archetype from nearest 2008 analogue",
+    "no ATK/DEF/ESP/AGL in any source",
+    "no status profile in any source"
+   ]
+  },
+  {
+   "name": "Fortuna",
+   "zone": "Zone 1 Alma(?) Zone 2",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 25
+   },
+   "element": {
+    "value": "metal",
+    "derivation": "weak to plastic [remake data]",
+    "source": "derived",
+    "raw_weak": [
+     "plastic"
+    ],
+    "raw_resist": [
+     "meat"
+    ]
+   },
+   "status_vulnerable": {},
+   "status_immune": {},
+   "moves_2008": [],
+   "competences_remake": [],
+   "grouping_2008": null,
+   "drops_2008": null,
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake",
+    "moves": "missing",
+    "status_profile": "missing"
+   },
+   "gaps": [
+    "remake-only enemy: no 2008 ratios; infer archetype from nearest 2008 analogue",
+    "no ATK/DEF/ESP/AGL in any source",
+    "no status profile in any source"
+   ]
+  }
+ ],
+ "bosses": [
+  {
+   "name": "Dedan",
+   "stats_2008": {
+    "hp": 4000,
+    "cp": 200,
+    "atk": 80,
+    "def": 65,
+    "esp": 70,
+    "agl": 55
+   },
+   "stats_remake": {
+    "hp": 750,
+    "atk": 35,
+    "def": 48,
+    "esp": 20,
+    "agl": 6
+   },
+   "stats_remaster_via_fandom": {
+    "hp": 750,
+    "cp": 0,
+    "atk": 35,
+    "def": 48,
+    "esp": 20,
+    "agl": 6
+   },
+   "competence_names": [
+    "Hour Hand Minute Hand Sweep Hand"
+   ],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences (Original)",
+     "rows": [
+      {
+       "name": "Minute Hand",
+       "description": "Attack of mediocre impact",
+       "base value": "85",
+       "atk/esp/var influence": "0/3/4",
+       "priority": "55"
+      },
+      {
+       "name": "Hour Hand",
+       "description": "Inflicts Sleep status effect on targeted member.",
+       "base value": "0",
+       "atk/esp/var influence": "0/3/4",
+       "priority": "10",
+       "_extra": [
+        "50"
+       ]
+      },
+      {
+       "name": "Sweep Hand",
+       "description": "Inflicts Furious status on targeted member.",
+       "base value": "70",
+       "atk/esp/var influence": "0/7/4",
+       "priority": "5",
+       "_extra": [
+        "50"
+       ]
+      }
+     ]
+    },
+    {
+     "label": "Competences (Remaster)",
+     "rows": [
+      {
+       "name": "Minute Hand",
+       "description": "Single target attack.",
+       "base value": "0",
+       "atk/esp/var": "100%/0%/40%",
+       "move power": "0.9"
+      },
+      {
+       "name": "Hour Hand",
+       "description": "Single target attack. Inflicts Asleep.",
+       "base value": "0",
+       "atk/esp/var": "0%/100%/0%",
+       "move power": "1"
+      },
+      {
+       "name": "Half Past",
+       "description": "Inflicts Dedan with Hasty.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1"
+      }
+     ]
+    }
+   ],
+   "moves_remake": [
+    {
+     "name": "Minute Hand",
+     "description": "Single target attack."
+    },
+    {
+     "name": "Hour Hand",
+     "description": "Single target attack. Inflicts Sleep."
+    },
+    {
+     "name": "Half Past",
+     "description": "Grants himself Hasty."
+    }
+   ],
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake"
+   },
+   "gaps": []
+  },
+  {
+   "name": "Japhet",
+   "stats_2008": {
+    "hp": 1000,
+    "cp": 80,
+    "atk": 110,
+    "def": 80,
+    "esp": 70,
+    "agl": 42
+   },
+   "stats_remake": {
+    "hp": 600
+   },
+   "stats_remaster_via_fandom": null,
+   "competence_names": [
+    "Alto Soprano Tenor Head-Voice"
+   ],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences (Original)",
+     "rows": [
+      {
+       "name": "Attack",
+       "description": "Regular Attack, only the first form uses it",
+       "base value": "?",
+       "atk/esp/var influence": "?/?/?",
+       "priority": "50"
+      },
+      {
+       "name": "Alto",
+       "description": "Mute status effect applied on targeted member, low impact, all forms use it.",
+       "base value": "60",
+       "atk/esp/var influence": "0/4/4",
+       "priority": "50"
+      },
+      {
+       "name": "Soprano",
+       "description": "Attack of mediocre impact, only the 2nd and Final forms use it",
+       "base value": "100",
+       "atk/esp/var influence": "0/3/4",
+       "priority": "50"
+      },
+      {
+       "name": "Head-Voice",
+       "description": "Attack of great impact, only the Final form uses it",
+       "base value": "180",
+       "atk/esp/var influence": "4/9/7",
+       "priority": "56"
+      },
+      {
+       "name": "Tenor",
+       "description": "Applies Poison status effect on targeted member, low impact, only the Final Form uses it",
+       "base value": "100",
+       "atk/esp/var influence": "3/6/4",
+       "priority": "56"
+      }
+     ]
+    },
+    {
+     "label": "Competences (Remaster)",
+     "rows": [
+      {
+       "name": "Warble",
+       "description": "Single target attack.",
+       "base value": "0",
+       "atk/esp/var": "100%/0%/10%",
+       "move power": "1.33",
+       "_extra": []
+      },
+      {
+       "name": "Alto",
+       "description": "Single target attack. Inflicts Mute.",
+       "base value": "0",
+       "atk/esp/var": "30%/70%/10%",
+       "move power": "1.75",
+       "_extra": []
+      },
+      {
+       "name": "Soprano",
+       "description": "Single target attack.",
+       "base value": "0",
+       "atk/esp/var": "30%/70%/20%",
+       "move power": "1.5",
+       "_extra": []
+      },
+      {
+       "name": "Head-Voice",
+       "description": "Single target attack.",
+       "base value": "0",
+       "atk/esp/var": "100%/0%/20%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Tenor",
+       "description": "Single target attack. Inflicts Poison",
+       "base value": "0",
+       "atk/esp/var": "30%/70%/20%",
+       "move power": "1",
+       "_extra": []
+      }
+     ]
+    }
+   ],
+   "moves_remake": [
+    {
+     "name": "Warble",
+     "description": "Single target."
+    },
+    {
+     "name": "Soprano",
+     "description": "Single target."
+    },
+    {
+     "name": "Head Voice",
+     "description": "Single target."
+    },
+    {
+     "name": "Alto",
+     "description": "Inflicts Muted."
+    },
+    {
+     "name": "Tenor",
+     "description": "Inflicts Poison."
+    },
+    {
+     "name": "Refrain",
+     "description": "Goes to next phase."
+    }
+   ],
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake"
+   },
+   "gaps": [
+    "remake atk missing",
+    "remake def missing",
+    "remake esp missing",
+    "remake agl missing"
+   ]
+  },
+  {
+   "name": "Enoch",
+   "stats_2008": {
+    "hp": 99999,
+    "cp": 9999,
+    "atk": 250,
+    "def": 250,
+    "esp": 250,
+    "agl": 150
+   },
+   "stats_remake": {
+    "hp": 1000
+   },
+   "stats_remaster_via_fandom": null,
+   "competence_names": [
+    "Dramatic Irony Dramatic Crescendo Inciting Incident Law of Causality Climax"
+   ],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences",
+     "rows": [
+      {
+       "name": "Attack",
+       "description": "",
+       "cp": "0",
+       "rate": "",
+       "scope=\"col\" style=\"width:0%\" |": ""
+      },
+      {
+       "name": "Trigger Element",
+       "description": "",
+       "cp": "5",
+       "rate": "100%",
+       "scope=\"col\" style=\"width:0%\" |": ""
+      },
+      {
+       "name": "Double Attack",
+       "description": "",
+       "cp": "",
+       "rate": "",
+       "scope=\"col\" style=\"width:0%\" |": ""
+      },
+      {
+       "name": "Dramatic Crescendo",
+       "description": "Lowers targeted members Competence.",
+       "cp": "5",
+       "rate": "100%",
+       "scope=\"col\" style=\"width:0%\" |": ""
+      },
+      {
+       "name": "Dramatic Irony",
+       "description": "Can apply \"Furious\" state",
+       "cp": "5",
+       "rate": "100%",
+       "scope=\"col\" style=\"width:0%\" |": ""
+      },
+      {
+       "name": "Law of Causation",
+       "description": "Can apply \"Poisoned\" state",
+       "cp": "5",
+       "rate": "100%",
+       "scope=\"col\" style=\"width:0%\" |": ""
+      },
+      {
+       "name": "Climax",
+       "description": "Only used if {{PAGENAME"
+      }
+     ]
+    }
+   ],
+   "moves_remake": [
+    {
+     "name": "Inciting Incident",
+     "description": "Single target."
+    },
+    {
+     "name": "Spurred Moment",
+     "description": "Self target. Inflicts Serious."
+    },
+    {
+     "name": "Dramatic Crescendo",
+     "description": "Single target."
+    },
+    {
+     "name": "Dramatic Irony",
+     "description": "Inflicts Furious."
+    },
+    {
+     "name": "Law of Casualty",
+     "description": "Inflicts Poison."
+    },
+    {
+     "name": "Climax",
+     "description": "Full party attack."
+    }
+   ],
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake"
+   },
+   "gaps": [
+    "remake atk missing",
+    "remake def missing",
+    "remake esp missing",
+    "remake agl missing"
+   ]
+  },
+  {
+   "name": "The Queen",
+   "stats_2008": {
+    "hp": 4000,
+    "cp": 1000,
+    "atk": 320,
+    "def": 100,
+    "esp": 160,
+    "agl": 170
+   },
+   "stats_remake": {
+    "hp": 1280
+   },
+   "stats_remaster_via_fandom": null,
+   "competence_names": [
+    "Castling King Castling Queen Fool's Mate Scholar's Mate White Fianchetto Mirror Play Immortal Anderssen"
+   ],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences",
+     "rows": [
+      {
+       "name": "Castling King",
+       "quote": "No dessert for you.",
+       "cp": "5",
+       "dmg.": "150",
+       "acc.": "100%",
+       "infl.": "0/3/4",
+       "effects": "Can inflict Furious."
+      },
+      {
+       "name": "Castling Queen",
+       "quote": "He loves you not.",
+       "cp": "6",
+       "dmg.": "150",
+       "acc.": "100%",
+       "infl.": "0/3/4",
+       "effects": "Can inflict Poison."
+      },
+      {
+       "name": "Scholar's Mate",
+       "quote": "I am gravely disappointed.",
+       "cp": "5",
+       "dmg.": "150",
+       "acc.": "100%",
+       "infl.": "0/3/4",
+       "effects": "Can inflict Sleep."
+      },
+      {
+       "name": "White Fianchetto",
+       "quote": "Have you filled your life with beauty?",
+       "cp": "7",
+       "dmg.": "150",
+       "acc.": "100%",
+       "infl.": "0/3/4",
+       "effects": "Can inflict Blind."
+      },
+      {
+       "name": "Mirror Play",
+       "quote": "There is nothing but the void after me.",
+       "cp": "5",
+       "dmg.": "230",
+       "acc.": "100%",
+       "infl.": "0/3/4",
+       "effects": ""
+      },
+      {
+       "name": "Immortal Anderssen",
+       "quote": "You don't even know his first name.",
+       "cp": "5",
+       "dmg.": "120",
+       "acc.": "100%",
+       "infl.": "0/4/4",
+       "effects": "Hits all enemies."
+      },
+      {
+       "name": "Fool's Mate",
+       "quote": "You've been wrong since the beginning.",
+       "cp": "5",
+       "dmg.": "10",
+       "acc.": "100%",
+       "infl.": "0/4/4",
+       "effects": "Absorbs CP from all enemies instead of damaging."
+      }
+     ]
+    }
+   ],
+   "moves_remake": [
+    {
+     "name": "Queenside Castle \"He loves you not.\"",
+     "description": "Full party attack. (Inflicts Poison.)"
+    },
+    {
+     "name": "White Fianchetto \"Have you filled your life with beauty?\"",
+     "description": "Single target attack. (Inflicts Lethargic.)"
+    },
+    {
+     "name": "Kingside Castle \"No dessert for you.\"",
+     "description": "Full party attack. (Inflicts Furious.)"
+    },
+    {
+     "name": "Fool's Mate \"You've been wrong since the beginning.\"",
+     "description": "Drains CC."
+    },
+    {
+     "name": "Immortal Anderssen \"You don't even know his first name.\"",
+     "description": "Full party attack."
+    },
+    {
+     "name": "Scholar's Mate \"I am gravely disappointed.\"",
+     "description": "Single target attack. (Inflicts Sleep.)"
+    },
+    {
+     "name": "Mirror Play \"There is nothing but the void after me.\"",
+     "description": "Single target attack."
+    },
+    {
+     "name": "??? \"You are mistaken.\"",
+     "description": ""
+    },
+    {
+     "name": "??? \"Did you fill your life?\"",
+     "description": ""
+    },
+    {
+     "name": "Long Silence",
+     "description": "Full party attack."
+    },
+    {
+     "name": "Alto Clef",
+     "description": ""
+    },
+    {
+     "name": "Treble Clef",
+     "description": "Heals self."
+    },
+    {
+     "name": "Diminished Chord",
+     "description": "Single target attack. (Inflicts Weak.)"
+    },
+    {
+     "name": "Major Chord",
+     "description": "Single target attack. (Inflicts Frail)"
+    }
+   ],
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "remake"
+   },
+   "gaps": [
+    "remake atk missing",
+    "remake def missing",
+    "remake esp missing",
+    "remake agl missing"
+   ]
+  },
+  {
+   "name": "Sugar",
+   "stats_2008": {
+    "hp": 12000,
+    "cp": 500,
+    "atk": 250,
+    "def": 100,
+    "esp": 200,
+    "agl": 250
+   },
+   "stats_remake": {
+    "hp": 1200
+   },
+   "stats_remaster_via_fandom": null,
+   "competence_names": [],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences (Original)",
+     "rows": [
+      {
+       "name": "Quatre Quarts (Pound Cake)",
+       "effects": "Deals around 400 damage",
+       "cp": "5",
+       "accuracy": "100%"
+      },
+      {
+       "name": "Hard-bitten Caramel",
+       "effects": "Deals around 250 damage, can inflict Palsy",
+       "cp": "5",
+       "accuracy": "100%"
+      },
+      {
+       "name": "Mille Feuilles (Napoleon Cake)",
+       "effects": "Attack de-buff, can inflict Furious",
+       "cp": "5",
+       "accuracy": "100%"
+      },
+      {
+       "name": "Dame Blanche (White-Lady Sundae)",
+       "effects": "Deals around 90 damage, can inflict Madness",
+       "cp": "5",
+       "accuracy": "90%"
+      },
+      {
+       "name": "Parfait au Chocolat (Chocolate Sundae)",
+       "effects": "Deals around 100 damage to each party member",
+       "cp": "5",
+       "accuracy": "100%"
+      }
+     ]
+    },
+    {
+     "label": "Competences (Remaster)",
+     "rows": [
+      {
+       "user": "Sugar",
+       "name": "Quatre-Quarts (Pound Cake)",
+       "description": "One target. Inflicts Confused."
+      },
+      {
+       "user": "Sugar",
+       "name": "Parfait au Chocolat (Chocolate Sundae)",
+       "description": "Full party attack."
+      },
+      {
+       "user": "Sugar",
+       "name": "Dame Blanche (White Lady Sundae)",
+       "description": "One target. Inflicts Madness."
+      },
+      {
+       "user": "Sugar",
+       "name": "Caramel Dur (Hard Caramel)",
+       "description": "One target. Inflicts Palsied."
+      },
+      {
+       "user": "Sugar",
+       "name": "Mille-Feuilles (Napoleon Cake)",
+       "description": "One target. Inflicts Furious."
+      },
+      {
+       "user": "Dummy",
+       "name": "Attack",
+       "description": "One target."
+      },
+      {
+       "user": "Dummy",
+       "name": "Sick Mask",
+       "description": "Heals all allies."
+      },
+      {
+       "user": "Dummy",
+       "name": "Blind Mask",
+       "description": "Gives all allies Hasty."
+      },
+      {
+       "user": "Dummy",
+       "name": "Empathetic Mask",
+       "description": "Gives all allies Sturdy."
+      }
+     ]
+    }
+   ],
+   "moves_remake": [
+    {
+     "name": "Quatre-Quarts \"Pound Cake\"",
+     "description": "One target. Inflicts Confused."
+    },
+    {
+     "name": "Parfait au Chocolat \"Chocolate Sundae\"",
+     "description": "Full party attack."
+    },
+    {
+     "name": "Dame Blanche \"White Lady Sundae\"",
+     "description": "One target. Inflicts Madness."
+    },
+    {
+     "name": "Caramel Dur \"Hard Caramel\"",
+     "description": "One target. Inflicts Palsied."
+    },
+    {
+     "name": "Mille-Feuilles \"Napoleon Cake\"",
+     "description": "One target. Inflicts Furious."
+    },
+    {
+     "name": "Attack",
+     "description": "One target."
+    },
+    {
+     "name": "Sick Mask",
+     "description": "Heals all allies."
+    },
+    {
+     "name": "Blind Mask",
+     "description": "Gives all allies Hasty."
+    },
+    {
+     "name": "Empathetic Mask",
+     "description": "Gives all allies Sturdy."
+    }
+   ],
+   "sources": {
+    "stats_2008": "manual (user-supplied from wiki)",
+    "stats_remake": "remake"
+   },
+   "gaps": [
+    "remake numeric stats unknown (remake HP 1200 via Miraheze infobox stands)"
+   ],
+   "notes": "Fights alongside 4 Dummies (see fodder: Dummie). Remake kit leans status-first; remake Dummies were reworked from stat-masks to heal/Hasty/Sturdy support. GM ruling: remake Quatre-Quarts (Confused) maps to Madness — note this doubles with Dame Blanche (also Madness); differentiate or consolidate when statting."
+  },
+  {
+   "name": "Hugo",
+   "stats_2008": {
+    "hp": 2000,
+    "cp": 9999,
+    "atk": 1,
+    "def": 1,
+    "esp": 500,
+    "agl": 100
+   },
+   "stats_remake": null,
+   "stats_remaster_via_fandom": null,
+   "competence_names": [
+    "Defend Wait"
+   ],
+   "competence_tables_fandom": [],
+   "moves_remake": [],
+   "sources": {
+    "stats_2008": "2008",
+    "stats_remake": "missing"
+   },
+   "gaps": [],
+   "notes": "GM ruling: not a combat encounter. Hugo takes no actions; the \"fight\" is a story beat. Excluded from encounter design."
+  },
+  {
+   "name": "The Judge (boss)",
+   "stats_2008": {
+    "hp": 4000,
+    "cp": 250,
+    "atk": 330,
+    "def": 105,
+    "esp": 150,
+    "agl": 170
+   },
+   "stats_remake": null,
+   "stats_remaster_via_fandom": null,
+   "competence_names": [],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences (Original)",
+     "rows": [
+      {
+       "name": "Conniving Aneurysm",
+       "cp": "5",
+       "dmg": "70",
+       "accuracy": "100%",
+       "influence": "0/3/4"
+      },
+      {
+       "name": "Malignant Aneurysm",
+       "cp": "13",
+       "dmg": "160",
+       "accuracy": "100%",
+       "influence": "0/3/4"
+      },
+      {
+       "name": "Critical Aneurysm",
+       "cp": "26",
+       "dmg": "400",
+       "accuracy": "100%",
+       "influence": "0/3/4"
+      },
+      {
+       "name": "Aneurysm Rupture",
+       "cp": "25% of max CP",
+       "dmg": "950",
+       "accuracy": "100%",
+       "influence": "0/3/4"
+      },
+      {
+       "name": "Unknown Sclerosis",
+       "cp": "8",
+       "dmg": "80",
+       "accuracy": "100%",
+       "influence": "0/3/4",
+       "effects": "Can inflict Mute"
+      },
+      {
+       "name": "Atypical Sclerosis",
+       "cp": "8",
+       "dmg": "80",
+       "accuracy": "100%",
+       "influence": "0/3/4",
+       "effects": "Can inflict Blind"
+      },
+      {
+       "name": "Purulent Sclerosis",
+       "cp": "8",
+       "dmg": "80",
+       "accuracy": "100%",
+       "influence": "0/3/4",
+       "effects": "Can inflict Poison"
+      },
+      {
+       "name": "Staggering Sclerosis",
+       "cp": "8",
+       "dmg": "80",
+       "accuracy": "100%",
+       "influence": "0/3/4",
+       "effects": "Can inflict Palsy"
+      }
+     ]
+    },
+    {
+     "label": "Competences (Remaster)",
+     "rows": [
+      {
+       "name": "Conniving Aneurysm",
+       "cost": "10",
+       "description": "Special attack with low impact."
+      },
+      {
+       "name": "Malignant Aneurysm",
+       "cost": "15",
+       "description": "Special attack with average impact."
+      },
+      {
+       "name": "Critical Aneurysm",
+       "cost": "20",
+       "description": "Special attack with considerable impact."
+      },
+      {
+       "name": "Ruptured Aneurysm",
+       "cost": "25",
+       "description": "Special attack with incredible impact."
+      },
+      {
+       "name": "Unknown Sclerosis",
+       "cost": "12",
+       "description": "Special attack inflicting Muteness."
+      },
+      {
+       "name": "Atypical Sclerosis",
+       "cost": "12",
+       "description": "Special attack inflicting Lethargic."
+      },
+      {
+       "name": "Purulent Sclerosis",
+       "cost": "12",
+       "description": "Special attack inflicting Poison."
+      },
+      {
+       "name": "Staggering Sclerosis",
+       "cost": "12",
+       "description": "Special attack inflicting Palsy."
+      }
+     ]
+    }
+   ],
+   "moves_remake": [
+    {
+     "name": "Conniving Aneurysm \"Special attack with low impact.\"",
+     "description": ""
+    },
+    {
+     "name": "Malignant Aneurysm \"Special attack with average impact.\"",
+     "description": ""
+    },
+    {
+     "name": "Critical Aneurysm \"Special attack with considerable impact.\"",
+     "description": ""
+    },
+    {
+     "name": "Ruptured Aneurysm \"Special attack with incredible impact.\"",
+     "description": ""
+    },
+    {
+     "name": "Unknown Sclerosis \"Special attack inflicting Muteness.\"",
+     "description": ""
+    },
+    {
+     "name": "Atypical Sclerosis \"Special attack inflicting Lethargic.\"",
+     "description": ""
+    },
+    {
+     "name": "Purulent Sclerosis \"Special attack inflicting Poison.\"",
+     "description": ""
+    },
+    {
+     "name": "Staggering Sclerosis \"Special attack inflicting Palsy.\"",
+     "description": ""
+    }
+   ],
+   "sources": {
+    "stats_2008": "manual (user-supplied from wiki)",
+    "stats_remake": "missing"
+   },
+   "gaps": [
+    "no remake numeric stats in any source"
+   ],
+   "stats_2008_tutorial": {
+    "hp": 300,
+    "cp": 30,
+    "atk": 60,
+    "def": 50,
+    "esp": 30,
+    "agl": 30
+   }
+  },
+  {
+   "name": "The Batter (boss)",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 600
+   },
+   "stats_remaster_via_fandom": null,
+   "competence_names": [],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences (Original)",
+     "rows": [
+      {
+       "lv.": "1",
+       "name": "Wide Angle",
+       "cp": "2",
+       "dmg.": "N/A",
+       "acc.": "N/A",
+       "infl.": "N/A",
+       "effects": "Analyzes the enemies' characteristics."
+      },
+      {
+       "lv.": "3",
+       "name": "Save First Base",
+       "cp": "5",
+       "dmg.": "100",
+       "acc.": "100%",
+       "infl.": "0/9/2",
+       "effects": "Heals an ally."
+      },
+      {
+       "lv.": "4",
+       "name": "Run with Courage",
+       "cp": "5",
+       "dmg.": "40",
+       "acc.": "100%",
+       "infl.": "4/8/3",
+       "effects": "Deals Metal damage."
+      },
+      {
+       "lv.": "6",
+       "name": "Furious Homerun",
+       "cp": "7",
+       "dmg.": "70",
+       "acc.": "80%",
+       "infl.": "4/8/3",
+       "effects": ""
+      },
+      {
+       "lv.": "8",
+       "name": "Save Second Base",
+       "cp": "15",
+       "dmg.": "500",
+       "acc.": "100%",
+       "infl.": "0/9/2",
+       "effects": "Heals an ally."
+      },
+      {
+       "lv.": "10",
+       "name": "Run with Grace",
+       "cp": "7",
+       "dmg.": "60",
+       "acc.": "100%",
+       "infl.": "4/8/3",
+       "effects": "Deals Plastic damage."
+      },
+      {
+       "lv.": "13",
+       "name": "Special Homerun",
+       "cp": "15",
+       "dmg.": "160",
+       "acc.": "80%",
+       "infl.": "4/8/3",
+       "effects": ""
+      },
+      {
+       "lv.": "16",
+       "name": "Save Third Base",
+       "cp": "40",
+       "dmg.": "9999",
+       "acc.": "100%",
+       "infl.": "0/10/0",
+       "effects": "Heals an ally."
+      },
+      {
+       "lv.": "20",
+       "name": "Run with Dementia",
+       "cp": "10",
+       "dmg.": "90",
+       "acc.": "100%",
+       "infl.": "4/8/3",
+       "effects": "Deals Smoke damage."
+      },
+      {
+       "lv.": "25",
+       "name": "Magic Homerun",
+       "cp": "30",
+       "dmg.": "400",
+       "acc.": "80%",
+       "infl.": "4/8/3",
+       "effects": ""
+      },
+      {
+       "lv.": "30",
+       "name": "Save Fourth Base",
+       "cp": "80",
+       "dmg.": "100",
+       "acc.": "100%",
+       "infl.": "0/3/4",
+       "effects": "Revives and heals an ally."
+      },
+      {
+       "lv.": "35",
+       "name": "Run with Belief",
+       "cp": "15",
+       "dmg.": "140",
+       "acc.": "80%",
+       "infl.": "4/8/3",
+       "effects": "Deals Meat damage."
+      },
+      {
+       "lv.": "40",
+       "name": "Save Secret Base",
+       "cp": "50",
+       "dmg.": "500",
+       "acc.": "100%",
+       "infl.": "0/7/2",
+       "effects": "Heals the party."
+      },
+      {
+       "lv.": "45",
+       "name": "Ultimate Homerun",
+       "cp": "25%",
+       "dmg.": "1000",
+       "acc.": "100%",
+       "infl.": "5/5/5",
+       "effects": ""
+      }
+     ]
+    },
+    {
+     "label": "Competences (Remaster)",
+     "rows": [
+      {
+       "lv.": "1",
+       "name": "Wide Angle",
+       "cc": "2",
+       "dmg.": "N/A",
+       "pow.": "N/A",
+       "a/e/v": "N/A",
+       "description/effects": "Analyzes the enemies' characteristics."
+      },
+      {
+       "lv.": "1",
+       "name": "Run with Courage",
+       "cc": "16",
+       "dmg.": "0",
+       "pow.": "1.66",
+       "a/e/v": "0%/100%/0%",
+       "description/effects": "Metal attack, effective against most Specters."
+      },
+      {
+       "lv.": "2",
+       "name": "Save First Base",
+       "cc": "18",
+       "dmg.": "0",
+       "pow.": "1.75",
+       "a/e/v": "0%/100%/0%",
+       "description/effects": "Restores some HP to an ally."
+      },
+      {
+       "lv.": "4",
+       "name": "Furious Home Run",
+       "cc": "14",
+       "dmg.": "0",
+       "pow.": "1.66",
+       "a/e/v": "100%/0%/0%",
+       "description/effects": "Special attack with low impact."
+      },
+      {
+       "lv.": "5",
+       "name": "Save Second Base",
+       "cc": "22",
+       "dmg.": "0",
+       "pow.": "1",
+       "a/e/v": "0%/100%/0%",
+       "description/effects": "Restores a lot of HP to an ally. [Restores 80% of target's maximum health in addition to formula.]"
+      },
+      {
+       "lv.": "6",
+       "name": "Run with Dementia",
+       "cc": "16",
+       "dmg.": "0",
+       "pow.": "1.66",
+       "a/e/v": "0%/100%/0%",
+       "description/effects": "Smoke attack, effective against most Burnts."
+      },
+      {
+       "lv.": "8",
+       "name": "Special Home Run",
+       "cc": "20",
+       "dmg.": "0",
+       "pow.": "2",
+       "a/e/v": "100%/0%/0%",
+       "description/effects": "Special attack with average impact."
+      },
+      {
+       "lv.": "11",
+       "name": "Run with Grace",
+       "cc": "16",
+       "dmg.": "0",
+       "pow.": "1.66",
+       "a/e/v": "0%/100%/0%",
+       "description/effects": "Plastic attack, effective against most Beasts."
+      },
+      {
+       "lv.": "13",
+       "name": "Run with Faith",
+       "cc": "16",
+       "dmg.": "0",
+       "pow.": "1.66",
+       "a/e/v": "0%/100%/0%",
+       "description/effects": "Meat attack, effective against ???."
+      },
+      {
+       "lv.": "15",
+       "name": "Save Third Base",
+       "cc": "24",
+       "dmg.": "0",
+       "pow.": "1",
+       "a/e/v": "0%/100%/0%",
+       "description/effects": "Restores some HP to the whole party. [Restores 25% of target's maximum health in addition to formula.]"
+      },
+      {
+       "lv.": "17",
+       "name": "Magic Home Run",
+       "cc": "26",
+       "dmg.": "0",
+       "pow.": "2.25",
+       "a/e/v": "100%/0%/0%",
+       "description/effects": "Special attack with considerable impact."
+      },
+      {
+       "lv.": "19",
+       "name": "Save Fourth Base",
+       "cc": "30",
+       "dmg.": "0",
+       "pow.": "1",
+       "a/e/v": "0%/100%/0%",
+       "description/effects": "Revives an ally. [Restores 60% of target's maximum health in addition to formula.]"
+      },
+      {
+       "lv.": "21",
+       "name": "Ultimate Home Run",
+       "cc": "32",
+       "dmg.": "0",
+       "pow.": "2.5",
+       "a/e/v": "100%/0%/0%",
+       "description/effects": "Special attack with cataclysmic impact."
+      },
+      {
+       "lv.": "23",
+       "name": "Save Secret Base",
+       "cc": "32",
+       "dmg.": "0",
+       "pow.": "1",
+       "a/e/v": "0%/100%/0%",
+       "description/effects": "Restores a lot of HP to the whole party."
+      }
+     ]
+    }
+   ],
+   "moves_remake": [],
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake"
+   },
+   "gaps": [
+    "no original stat block (remake-only boss or undocumented)",
+    "remake atk missing",
+    "remake def missing",
+    "remake esp missing",
+    "remake agl missing",
+    "no moveset in either dump"
+   ]
+  },
+  {
+   "name": "Source",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 600,
+    "atk": 30,
+    "def": 60,
+    "esp": 30,
+    "agl": 7
+   },
+   "stats_remaster_via_fandom": {
+    "hp": 600,
+    "cp": 0,
+    "atk": 30,
+    "def": 60,
+    "esp": 30,
+    "agl": 7
+   },
+   "competence_names": [
+    "Flourish Verdant Bonds Famine Return to Nature"
+   ],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences",
+     "rows": [
+      {
+       "name": "Flourish",
+       "description": "Heals 10% of Source's maximum health.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Verdant Bonds",
+       "description": "Inflicts Source with the Regeneration status effect. Regeneration heals 4% of maximum health + 1 each turn. This healing doubles once Source is at 65%(?) health.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Return to Nature",
+       "description": "Inflicts Thorns on your entire party. Thorns deal 14%(?) of maximum health upon acting.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Famine",
+       "description": "Inflicts Poison. This Poison deals double the damage of regular Poison.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      }
+     ]
+    }
+   ],
+   "moves_remake": [
+    {
+     "name": "Flourish",
+     "description": "Heals Source for 10% of his maximum health."
+    },
+    {
+     "name": "Verdant Bonds",
+     "description": "Inflicts Source with Regeneration."
+    },
+    {
+     "name": "Return to Nature",
+     "description": "Inflicts the party with Thorns."
+    },
+    {
+     "name": "Famine",
+     "description": "One target. Inflicts Poison. This Poison deals 15% damage rather than 7%."
+    }
+   ],
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake"
+   },
+   "gaps": [
+    "remake-only boss: no 2008 counterpart exists",
+    "no original stat block (remake-only boss or undocumented)"
+   ],
+   "encounter_tier": "endgame (purified zones / Grand collection, party level 16-20)"
+  },
+  {
+   "name": "Maldicion",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 812,
+    "atk": 58,
+    "def": 52,
+    "esp": 50,
+    "agl": 14
+   },
+   "stats_remaster_via_fandom": {
+    "hp": 812,
+    "cp": 0,
+    "atk": 58,
+    "def": 52,
+    "esp": 50,
+    "agl": 14
+   },
+   "competence_names": [
+    "Entropic Piety Clamor Claws Unstable Purity"
+   ],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences",
+     "rows": [
+      {
+       "name": "Entropic Piety",
+       "description": "Deals some damage to Maldicion, and inflicts it with a random version of Impure.",
+       "base value": "0",
+       "atk/esp/var": "0%/100%/40%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Clamor Claws",
+       "description": "Deals physical damage to your whole party. Damage is the same element as Maldicion's weakness.",
+       "base value": "0",
+       "atk/esp/var": "100%/0%/20%",
+       "move power": "2",
+       "_extra": []
+      },
+      {
+       "name": "Unstable Purity",
+       "description": "Deals magic damage to a single target. Inflicts a random version of Impure.",
+       "base value": "0",
+       "atk/esp/var": "0%/100%/40%",
+       "move power": "1.6",
+       "_extra": []
+      }
+     ]
+    }
+   ],
+   "moves_remake": [
+    {
+     "name": "Entropic Piety",
+     "description": "Self target attack. 100% of user's ESP. Inflicts Impure."
+    },
+    {
+     "name": "Clamor Claws",
+     "description": "Full party attack. 100% of user's ATK. Element is whichever Maldicion is weak to."
+    },
+    {
+     "name": "Unstable Purity",
+     "description": "One target attack. 100% of user's ESP. Inflicts Impure."
+    }
+   ],
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake"
+   },
+   "gaps": [
+    "remake-only boss: no 2008 counterpart exists",
+    "no original stat block (remake-only boss or undocumented)"
+   ],
+   "encounter_tier": "endgame (purified zones / Grand collection, party level 16-20)"
+  },
+  {
+   "name": "Psalmanazar & Herodotus",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 810,
+    "atk": 38,
+    "def": 63,
+    "esp": 34,
+    "agl": 8
+   },
+   "stats_remaster_via_fandom": {
+    "hp": 810,
+    "cp": 0,
+    "atk": 38,
+    "def": 63,
+    "esp": 34,
+    "agl": 8
+   },
+   "competence_names": [
+    "Vilify Subterfuge Fib Deceptive Inquiry Façade"
+   ],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences",
+     "rows": [
+      {
+       "name": "Vilify",
+       "description": "Inflicts your whole party with Vilified.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Subterfuge",
+       "description": "Inflicts your whole party with Defamed.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Fib",
+       "description": "One target. Deals 7% of target's current health in addition to damage formula.",
+       "base value": "0",
+       "atk/esp/var": "100%/0%/20%",
+       "move power": "0.6",
+       "_extra": []
+      },
+      {
+       "name": "Deceptive Inquiry",
+       "description": "One target. Deals 15% of target's current health in addition to damage formula.",
+       "base value": "0",
+       "atk/esp/var": "100%/0%/20%",
+       "move power": "0.8",
+       "_extra": []
+      },
+      {
+       "name": "Façade",
+       "description": "Spawns the Gnosticī.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      }
+     ]
+    }
+   ],
+   "moves_remake": [
+    {
+     "name": "Fib",
+     "description": "One target. 100% of user's ATK + 7% of target's current health. 2% variance."
+    },
+    {
+     "name": "Deceptive Inquiry",
+     "description": "One Target. 100% of user's ATK + 15% of target's current health. 2% variance."
+    },
+    {
+     "name": "Vilify",
+     "description": "Inflicts the party with Vilified."
+    },
+    {
+     "name": "Subterfuge",
+     "description": "Inflicts the party with Defamed."
+    },
+    {
+     "name": "Façade",
+     "description": "Spawns the Gnosticus."
+    },
+    {
+     "name": "Red Herring",
+     "description": "One target. 100% of user's ATK + 7% of target's current health. 2% variance."
+    }
+   ],
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake"
+   },
+   "gaps": [
+    "remake-only boss: no 2008 counterpart exists",
+    "no original stat block (remake-only boss or undocumented)"
+   ],
+   "encounter_tier": "endgame (purified zones / Grand collection, party level 16-20)"
+  },
+  {
+   "name": "Justus",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 1100,
+    "atk": 68,
+    "def": 64,
+    "esp": 68,
+    "agl": 17
+   },
+   "stats_remaster_via_fandom": {
+    "hp": 1100,
+    "cp": 9999,
+    "atk": 68,
+    "def": 64,
+    "esp": 68,
+    "agl": 17
+   },
+   "competence_names": [
+    "(See below)"
+   ],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences (Incomplete)",
+     "rows": [
+      {
+       "name": "Requisite Bracket",
+       "description": "80% chance to inflict Lethargic.",
+       "base value": "0",
+       "atk/esp/var": "0%/100%/20%",
+       "move power": "1.33",
+       "_extra": []
+      },
+      {
+       "name": "Photographic Blur",
+       "description": "Ignores defence.",
+       "base value": "0",
+       "atk/esp/var": "100%/0%/0%",
+       "move power": "0.4",
+       "_extra": []
+      },
+      {
+       "name": "Surrealist Tragedy",
+       "description": "Deals magic damage to your whole party.",
+       "base value": "0",
+       "atk/esp/var": "0%/100%/10%",
+       "move power": "1.33",
+       "_extra": []
+      },
+      {
+       "name": "Irrevocable Drama",
+       "description": "Inflicts Justus with Hasty.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      }
+     ]
+    }
+   ],
+   "moves_remake": [
+    {
+     "name": "Requisite Bracket",
+     "description": "One target attack. 100% of user's ESP. 80% chance to inflict Lethargic. 2% variance."
+    },
+    {
+     "name": "Photographic Blur",
+     "description": "One target attack. 100% of user's ATK. Ignores defence."
+    },
+    {
+     "name": "Surrealist Tragedy",
+     "description": "Full party attack. 100% of user's ESP. 1% variance."
+    },
+    {
+     "name": "Irrevocable Drama",
+     "description": "Inflicts Justus with Hasty."
+    }
+   ],
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake"
+   },
+   "gaps": [
+    "remake-only boss: no 2008 counterpart exists",
+    "no original stat block (remake-only boss or undocumented)"
+   ],
+   "encounter_tier": "endgame (purified zones / Grand collection, party level 16-20)"
+  },
+  {
+   "name": "Carnival",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 1450,
+    "atk": 78,
+    "def": 58,
+    "esp": 48,
+    "agl": 18
+   },
+   "stats_remaster_via_fandom": {
+    "hp": 1450,
+    "cp": 9999,
+    "atk": 78,
+    "def": 58,
+    "esp": 48,
+    "agl": 18
+   },
+   "competence_names": [
+    "Game of Leo Game of Cancer Game of Pisces Game of Aquarius"
+   ],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences",
+     "rows": [
+      {
+       "name": "Game of Leo",
+       "description": "Carnival will use competences from Source. Changes prize win condition to using healing.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Game of Cancer",
+       "description": "Carnival will use competences from Maldicion. Changes prize win condition to using elemental attacks.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Game of Pisces",
+       "description": "Carnival will use competences from Psalmanazar and Herodotus. Changes prize win condition to being hit.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Game of Aquarius",
+       "description": "Carnival will use competences from Justus. Changes prize win condition to using any competence.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Flourish (Carnival)",
+       "description": "Heals Carnival 10% of their health, and your whole party ?? health. Game of Leo only.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Swan Dive (Carnival)",
+       "description": "Inflicts Palsy to a single target. Game of Leo only.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Clamor Claws (Carnival)",
+       "description": "Deals physical damage to your whole party. Game of Cancer only.",
+       "base value": "0",
+       "atk/esp/var": "100%/0%/20%",
+       "move power": "3.5",
+       "_extra": []
+      },
+      {
+       "name": "Unstable Purity (Carnival)",
+       "description": "Single target, random element. Deals 1% of the target's current health in addition to formula. Game of Cancer only.",
+       "base value": "0",
+       "atk/esp/var": "0%/100%/40%",
+       "move power": "2.4",
+       "_extra": []
+      },
+      {
+       "name": "Red Herring (Carnival)",
+       "description": "Single target. Deals 7% of the target's current health in addition to formula. Game of Pisces only.",
+       "base value": "0",
+       "atk/esp/var": "100%/0%/20%",
+       "move power": "0.6",
+       "_extra": []
+      },
+      {
+       "name": "Hoax",
+       "description": "Deals damage to your whole party. Ignores defence. Game of Pisces only.",
+       "base value": "50",
+       "atk/esp/var": "100%/0%/0%",
+       "move power": "0.6",
+       "_extra": []
+      },
+      {
+       "name": "Ultimate Homerun (Carnival)",
+       "description": "Single target. Deals 7% of the target's current health in addition to formula. Inflicts Confused. Game of Aquarius only.",
+       "base value": "22",
+       "atk/esp/var": "100%/0%/0%",
+       "move power": "1",
+       "_extra": []
+      },
+      {
+       "name": "Surrealist Tragedy (Carnival)",
+       "description": "Deals damage to your whole party. Deals 1% of the target's current health in addition to formula. Game of Aquarius only.",
+       "base value": "0",
+       "atk/esp/var": "0%/100%/10%",
+       "move power": "0.5",
+       "_extra": []
+      },
+      {
+       "name": "Requisite Bracket (Carnival)",
+       "description": "Single target. Deals 1% of the target's current health in addition to formula. Inflicts Lethargic. Game of Aquarius only.",
+       "base value": "0",
+       "atk/esp/var": "0%/100%/20%",
+       "move power": "???",
+       "_extra": []
+      }
+     ]
+    }
+   ],
+   "moves_remake": [
+    {
+     "name": "Flourish (Carnival)",
+     "description": "Heals Carnival 10% of their maximum health. Heals your whole party ?? health."
+    },
+    {
+     "name": "Swan Dive",
+     "description": "One target. Inflicts Palsy."
+    },
+    {
+     "name": "Clamor Claws",
+     "description": "Full party attack. 100% of user's ATK."
+    },
+    {
+     "name": "Unstable Purity (Carnival)",
+     "description": "One target attack. 100% of user's ESP. Random element."
+    },
+    {
+     "name": "Red Herring",
+     "description": "One target attack. 100% of user's ATK + 8% of target's current health. 2% variance."
+    },
+    {
+     "name": "Hoax",
+     "description": "Full party attack. 50 + 100% of user's ATK. Ignores defence."
+    },
+    {
+     "name": "Ultimate Homerun (Carnival)",
+     "description": "One target attack. 22 + 100% of user's ATK + 7% of target's current health."
+    },
+    {
+     "name": "Surrealist Tragedy (Carnival)",
+     "description": "Full party attack. 100% of user's ESP + 1% of target's current health. 1% variance."
+    }
+   ],
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake"
+   },
+   "gaps": [
+    "remake-only boss: no 2008 counterpart exists",
+    "no original stat block (remake-only boss or undocumented)"
+   ],
+   "encounter_tier": "endgame (purified zones / Grand collection, party level 16-20)"
+  },
+  {
+   "name": "Cob",
+   "stats_2008": null,
+   "stats_remake": {
+    "hp": 900,
+    "atk": 40,
+    "def": 78,
+    "esp": 40,
+    "agl": 27
+   },
+   "stats_remaster_via_fandom": {
+    "hp": 900,
+    "cp": 0,
+    "atk": 40,
+    "def": 78,
+    "esp": 40,
+    "agl": 27
+   },
+   "competence_names": [
+    "Thalia's Smile Melpo's Tears Aion's Gaze Oizys' Lament Apollo's Gift Hades' Rage"
+   ],
+   "competence_tables_fandom": [
+    {
+     "label": "Competences",
+     "rows": [
+      {
+       "name": "Conjugate Auroras",
+       "description": "Heals Cob 13.5% of his maximum health.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "priority": "???",
+       "_extra": []
+      },
+      {
+       "name": "Rearrangement of Solid Objects",
+       "description": "Deals physical damage to your whole party. Deals 40% of target's current health in addition to damage formula.",
+       "base value": "0",
+       "atk/esp/var": "100%/0%/0%",
+       "priority": "???",
+       "_extra": []
+      },
+      {
+       "name": "Watch with Great Interest",
+       "description": "No effect on its own.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "priority": "???",
+       "_extra": []
+      },
+      {
+       "name": "Advent of the Corrupted Era",
+       "description": "Inflicts the party with Vilified. This Vilified prevents the use of items in addition to competences.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "priority": "???",
+       "_extra": []
+      },
+      {
+       "name": "Grant a Boon",
+       "description": "Always targets the watched party member. Heals target for 75% of current health.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "priority": "???",
+       "_extra": []
+      },
+      {
+       "name": "Ionosphere",
+       "description": "Always targets the watched party member. Deals 2000+ damage.",
+       "base value": "0",
+       "atk/esp/var": "0%/0%/0%",
+       "priority": "???",
+       "_extra": []
+      }
+     ]
+    }
+   ],
+   "moves_remake": [
+    {
+     "name": "Conjugate Auroras",
+     "description": "Heals Cob 13.5% of their maximum health + 100% of ESP. Removes Vilified from the entire party."
+    },
+    {
+     "name": "Rearrangement of Solid Objects",
+     "description": "Full party attack. 100% of user's ATK + 40% of targets' current health."
+    },
+    {
+     "name": "Watch with Great Interest",
+     "description": "No effect on its own, marks a target for Grant a Boon and Ionosphere."
+    },
+    {
+     "name": "Advent of the Corrupted Era",
+     "description": "Inflicts the party with Vilified. This Vilified prevents the use of items in addition to competences."
+    },
+    {
+     "name": "Grant a Boon",
+     "description": "Always targets the watched party member. Heals target for 75% of current health."
+    },
+    {
+     "name": "Ionosphere",
+     "description": "Always targets the watched party member. Damages target for 999 +100% of their current HP."
+    }
+   ],
+   "sources": {
+    "stats_2008": "missing",
+    "stats_remake": "remake"
+   },
+   "gaps": [
+    "remake-only boss: no 2008 counterpart exists",
+    "no original stat block (remake-only boss or undocumented)"
+   ]
+  }
+ ]
+}

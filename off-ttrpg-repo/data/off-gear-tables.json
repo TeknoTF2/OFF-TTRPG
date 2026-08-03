@@ -1,0 +1,832 @@
+{
+ "meta": {
+  "slot_model": "FIVE SLOTS PER CHARACTER: offensive, defensive1 (Auras — universal), defensive2 (class-locked: Tunics/Epidermides/Lockpicks/Oven Mitts), defensive3 (Colours — universal), special (Days — universal). Offensive is class-locked: Bats/Symbols/Star Charts/Dessert Molds. Matches the canon equip screen.",
+  "acquisition_design": "Per GM ruling: Symbols and Epidermides are SINGLE-COPY SHARED POOLS across the three ring-bearers — their difficulty is allocation. Purifier, Bandit, and Burnt pieces are individual hunts — their difficulty is exploration. Universal pools (Auras, Colours, Days) are single-copy across all six.",
+  "stat_model": "GEAR IS ADDITIVE, per GM ruling. The level tables are the true base stats; equipment adds its values on top, full stop. Piece magnitudes are sized at ~15% of checkpoint stats per tier (T5 20%), so a fully-geared character runs up to ~15% above the printed tables. The bestiary was derived against table values — if geared parties make fights run easy, that is rebalanced GM-side with GM tools (waves, template edits, income bands), never by reducing player stats. There is no base-stat discount anywhere in the engine.",
+  "invented": "Star Charts, Lockpicks (Bandit), Dessert Molds, Oven Mitts (Burnt) — the four cells canon leaves empty; names GM-renameable.",
+  "unassigned_canon_pool": [
+   "Left Glove",
+   "Right Glove",
+   "Starred Shorts",
+   "Nerves of Steel",
+   "Lucky Coin — Boxxer/Ballman prize items, GM uniques (bestiary: Ballman fight rewards)"
+  ],
+  "source": "OFF_2008.xml Items page x canon equip screen x off-level-tables.json",
+  "slot_restrictions": "SLOT-FIRST EQUIP FLOW: editing gear starts from the slot, not the inventory. Click a slot and the picker shows ONLY that slot's legal items — defensive1 shows Auras, defensive2 shows the character's personal category (Tunics / Epidermides / Lockpicks / Oven Mitts), defensive3 shows Colours, special shows Days, offensive shows the class weapon category — filtered further to unequipped copies (shared pools: an item worn by another ring-bearer appears greyed with the wearer's name, selectable only after they unequip). Illegal equips are unrepresentable in the UI, so no refusal message ever fires; the server still validates category-slot match as the authoritative backstop against malformed requests, per the server-authoritative rule. The category field \"slot\" drives both the filter and the validation.",
+  "gear_effect_vocabulary": "Gear effects are ACTIVE, per GM ruling: inert effects are incoherent in engine-resolved combat (the engine would apply the crit and the GM would have to hand-correct mid-tempo). All effects use existing systems only. Vocabulary: crit_immune (wearer cannot receive crits — Negative Space machinery); status_immune:[...] (Strong immunity while worn); res_vs:{status:N} (+N effective RES vs that status); cp_cost_mult (multiplies competence CP costs); overworld_tick_immune (negates the per-transition poison tick damage; the status itself persists); attack_element (wearer’s BASIC ATTACKS carry this element, competences unchanged — same forcing as the Purifier’s Runs); hits (basic attack resolves N times); flat stat riders. RESTAT INTERPRETATIONS flagged for GM veto: canon \"Special\" attribute = Sugar; Perfect Symbol’s dual attribute resolves at the better multiplier vs the target (the one micro-rule added); Wednesday’s terrain protection = the overworld poison tick (distinct from Sunday, which blocks the status); Thursday/Friday riders restatted to +2 ATK / +2 ESP with res_vs 30/50. Supply control is GM placement: Days are GM-priced treasures, T5s are superboss drops. An effect inexpressible in this vocabulary gets flagged to the GM, never half-built."
+ },
+ "categories": {
+  "Bats": {
+   "slot": "offensive",
+   "wearers": [
+    "Purifier"
+   ],
+   "items": [
+    {
+     "name": "Harold Bat",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "stat": "atk",
+     "value": 5,
+     "price": 240
+    },
+    {
+     "name": "Masashi Bat",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "stat": "atk",
+     "value": 5,
+     "price": 240
+    },
+    {
+     "name": "Emmanuel Bat",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "stat": "atk",
+     "value": 6,
+     "price": 360
+    },
+    {
+     "name": "Michael Bat",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "stat": "atk",
+     "value": 6,
+     "price": 360
+    },
+    {
+     "name": "Yoshihiro Bat",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "stat": "atk",
+     "value": 8,
+     "price": 540
+    },
+    {
+     "name": "Lewis Bat",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "stat": "atk",
+     "value": 8,
+     "price": 540
+    },
+    {
+     "name": "Katsuhiro Bat",
+     "tier": "T4",
+     "zone": "The Room",
+     "stat": "atk",
+     "value": 9,
+     "price": 720,
+     "canon_note": "canon: adds Plastic attribute",
+     "effects": {
+      "attack_element": "Plastic"
+     }
+    },
+    {
+     "name": "Ashley Bat",
+     "tier": "T5",
+     "zone": "superboss / unique",
+     "stat": "atk",
+     "value": 12,
+     "price": null,
+     "canon_note": "canon: Five Grands purchase; double hit, ignores evasion",
+     "effects": {
+      "attack_element": "Sugar",
+      "hits": 2,
+      "accuracy": null
+     }
+    }
+   ]
+  },
+  "Symbols": {
+   "slot": "offensive",
+   "wearers": [
+    "Alpha",
+    "Omega",
+    "Epsilon"
+   ],
+   "note": "SHARED SINGLE-COPY POOL — three ring-bearers manage who wears what",
+   "items": [
+    {
+     "name": "Audacious Symbol",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "stat": "esp",
+     "value": 6,
+     "price": 240
+    },
+    {
+     "name": "Persistent Symbol",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "stat": "esp",
+     "value": 6,
+     "price": 240
+    },
+    {
+     "name": "Choleric Symbol",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "stat": "esp",
+     "value": 6,
+     "price": 240,
+     "effects": {
+      "attack_element": "Sugar"
+     }
+    },
+    {
+     "name": "Battlesome Symbol",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "stat": "esp",
+     "value": 6,
+     "price": 240
+    },
+    {
+     "name": "Loyal Symbol",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "stat": "esp",
+     "value": 8,
+     "price": 360,
+     "effects": {
+      "attack_element": "Sugar"
+     }
+    },
+    {
+     "name": "Solid Symbol",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "stat": "esp",
+     "value": 8,
+     "price": 360,
+     "effects": {
+      "attack_element": "Sugar"
+     }
+    },
+    {
+     "name": "Vengeful Symbol",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "stat": "esp",
+     "value": 8,
+     "price": 360
+    },
+    {
+     "name": "Hidden Symbol",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "stat": "esp",
+     "value": 9,
+     "price": 540,
+     "effects": {
+      "attack_element": "Metal"
+     }
+    },
+    {
+     "name": "Fast Symbol",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "stat": "esp",
+     "value": 9,
+     "price": 540,
+     "effects": {
+      "attack_element": "Sugar"
+     }
+    },
+    {
+     "name": "Aggressive Symbol",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "stat": "esp",
+     "value": 9,
+     "price": 540
+    },
+    {
+     "name": "Silent Symbol",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "stat": "esp",
+     "value": 9,
+     "price": 540,
+     "canon_note": "Pastel-burnt drop per bestiary"
+    },
+    {
+     "name": "Luminous Symbol",
+     "tier": "T4",
+     "zone": "The Room",
+     "stat": "esp",
+     "value": 11,
+     "price": 720
+    },
+    {
+     "name": "Boastful Symbol",
+     "tier": "T4",
+     "zone": "The Room",
+     "stat": "esp",
+     "value": 11,
+     "price": 720,
+     "effects": {
+      "attack_element": "Sugar"
+     }
+    },
+    {
+     "name": "Mysterious Symbol",
+     "tier": "T4",
+     "zone": "The Room",
+     "stat": "esp",
+     "value": 11,
+     "price": 720,
+     "effects": {
+      "attack_element": "Metal"
+     }
+    },
+    {
+     "name": "Jumpy Symbol",
+     "tier": "T5",
+     "zone": "superboss / unique",
+     "stat": "esp",
+     "value": 14,
+     "price": null
+    },
+    {
+     "name": "Bleeding Symbol",
+     "tier": "T5",
+     "zone": "superboss / unique",
+     "stat": "esp",
+     "value": 14,
+     "price": null
+    },
+    {
+     "name": "Perfect Symbol",
+     "tier": "T5",
+     "zone": "superboss / unique",
+     "stat": "esp",
+     "value": 14,
+     "price": null,
+     "effects": {
+      "attack_element": [
+       "Smoke",
+       "Plastic"
+      ],
+      "element_rule": "best multiplier vs target"
+     }
+    }
+   ]
+  },
+  "Star Charts": {
+   "slot": "offensive",
+   "wearers": [
+    "Bandit"
+   ],
+   "invented": true,
+   "items": [
+    {
+     "name": "Paper Chart",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "stat": "atk",
+     "value": 4,
+     "price": 240
+    },
+    {
+     "name": "Inked Chart",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "stat": "atk",
+     "value": 6,
+     "price": 360
+    },
+    {
+     "name": "Brass Chart",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "stat": "atk",
+     "value": 7,
+     "price": 540
+    },
+    {
+     "name": "Silvered Chart",
+     "tier": "T4",
+     "zone": "The Room",
+     "stat": "atk",
+     "value": 8,
+     "price": 720
+    },
+    {
+     "name": "Celestial Chart",
+     "tier": "T5",
+     "zone": "superboss / unique",
+     "stat": "atk",
+     "value": 10,
+     "price": null
+    }
+   ]
+  },
+  "Dessert Molds": {
+   "slot": "offensive",
+   "wearers": [
+    "Burnt"
+   ],
+   "invented": true,
+   "items": [
+    {
+     "name": "Tin Mold",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "stat": "esp",
+     "value": 4,
+     "price": 240
+    },
+    {
+     "name": "Copper Mold",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "stat": "esp",
+     "value": 5,
+     "price": 360
+    },
+    {
+     "name": "Steel Mold",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "stat": "esp",
+     "value": 6,
+     "price": 540
+    },
+    {
+     "name": "Ceramic Mold",
+     "tier": "T4",
+     "zone": "The Room",
+     "stat": "esp",
+     "value": 7,
+     "price": 720
+    },
+    {
+     "name": "Patissier Mold",
+     "tier": "T5",
+     "zone": "superboss / unique",
+     "stat": "esp",
+     "value": 10,
+     "price": null
+    }
+   ]
+  },
+  "Auras": {
+   "slot": "defensive1",
+   "wearers": "all",
+   "items": [
+    {
+     "name": "Aura of Justice",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "hp": 7,
+     "defense": 1,
+     "price": 120
+    },
+    {
+     "name": "Aura of Fear",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "hp": 7,
+     "defense": 1,
+     "price": 120
+    },
+    {
+     "name": "Aura of Perception",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "hp": 10,
+     "defense": 1,
+     "price": 180
+    },
+    {
+     "name": "Aura of Greatness",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "hp": 10,
+     "defense": 1,
+     "price": 180
+    },
+    {
+     "name": "Aura of Clairvoyance",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "hp": 12,
+     "defense": 1,
+     "price": 270
+    },
+    {
+     "name": "Aura of Tenacity",
+     "tier": "T4",
+     "zone": "The Room",
+     "hp": 14,
+     "defense": 1,
+     "price": 360
+    },
+    {
+     "name": "Aura of Lunacy",
+     "tier": "T4",
+     "zone": "The Room",
+     "hp": 14,
+     "defense": 1,
+     "price": 360
+    },
+    {
+     "name": "Aura of Power",
+     "tier": "T5",
+     "zone": "superboss / unique",
+     "hp": 18,
+     "defense": 2,
+     "price": null
+    }
+   ]
+  },
+  "Tunics": {
+   "slot": "defensive2",
+   "wearers": [
+    "Purifier"
+   ],
+   "items": [
+    {
+     "name": "Nicolas Tunic",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "hp": 8,
+     "defense": 1,
+     "price": 120
+    },
+    {
+     "name": "David Tunic",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "hp": 8,
+     "defense": 1,
+     "price": 120
+    },
+    {
+     "name": "Min-Woo Tunic",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "hp": 11,
+     "defense": 1,
+     "price": 180
+    },
+    {
+     "name": "Canepa Tunic",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "hp": 13,
+     "defense": 1,
+     "price": 270
+    },
+    {
+     "name": "Taiyou Tunic",
+     "tier": "T4",
+     "zone": "The Room",
+     "hp": 15,
+     "defense": 2,
+     "price": 360
+    },
+    {
+     "name": "Neil Tunic",
+     "tier": "T5",
+     "zone": "superboss / unique",
+     "hp": 20,
+     "defense": 2,
+     "price": null
+    }
+   ]
+  },
+  "Epidermides": {
+   "slot": "defensive2",
+   "wearers": [
+    "Alpha",
+    "Omega",
+    "Epsilon"
+   ],
+   "note": "SHARED SINGLE-COPY POOL",
+   "items": [
+    {
+     "name": "Radius Epidermis",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "hp": 7,
+     "defense": 1,
+     "price": 120
+    },
+    {
+     "name": "Ulna Epidermis",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "hp": 9,
+     "defense": 1,
+     "price": 180
+    },
+    {
+     "name": "Humerus Epidermis",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "hp": 9,
+     "defense": 1,
+     "price": 180
+    },
+    {
+     "name": "Tibia Epidermis",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "hp": 11,
+     "defense": 1,
+     "price": 270
+    },
+    {
+     "name": "Fibula Epidermis",
+     "tier": "T4",
+     "zone": "The Room",
+     "hp": 12,
+     "defense": 1,
+     "price": 360
+    },
+    {
+     "name": "Femur Epidermis",
+     "tier": "T5",
+     "zone": "superboss / unique",
+     "hp": 17,
+     "defense": 2,
+     "price": null,
+     "canon_note": "canon: prevents crits",
+     "effects": {
+      "crit_immune": true
+     }
+    }
+   ]
+  },
+  "Lockpicks": {
+   "slot": "defensive2",
+   "wearers": [
+    "Bandit"
+   ],
+   "invented": true,
+   "items": [
+    {
+     "name": "Bent Pick",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "hp": 5,
+     "defense": 1,
+     "price": 120
+    },
+    {
+     "name": "Iron Pick",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "hp": 7,
+     "defense": 1,
+     "price": 180
+    },
+    {
+     "name": "Tempered Pick",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "hp": 9,
+     "defense": 1,
+     "price": 270
+    },
+    {
+     "name": "Master Pick",
+     "tier": "T4",
+     "zone": "The Room",
+     "hp": 10,
+     "defense": 1,
+     "price": 360
+    },
+    {
+     "name": "Skeleton Pick",
+     "tier": "T5",
+     "zone": "superboss / unique",
+     "hp": 14,
+     "defense": 1,
+     "price": null
+    }
+   ]
+  },
+  "Oven Mitts": {
+   "slot": "defensive2",
+   "wearers": [
+    "Burnt"
+   ],
+   "invented": true,
+   "items": [
+    {
+     "name": "Patched Mitt",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "hp": 10,
+     "defense": 1,
+     "price": 120
+    },
+    {
+     "name": "Quilted Mitt",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "hp": 13,
+     "defense": 1,
+     "price": 180
+    },
+    {
+     "name": "Leather Mitt",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "hp": 17,
+     "defense": 2,
+     "price": 270
+    },
+    {
+     "name": "Asbestos Mitt",
+     "tier": "T4",
+     "zone": "The Room",
+     "hp": 19,
+     "defense": 2,
+     "price": 360
+    },
+    {
+     "name": "Wheelhouse Mitt",
+     "tier": "T5",
+     "zone": "superboss / unique",
+     "hp": 25,
+     "defense": 3,
+     "price": null
+    }
+   ]
+  },
+  "Colours": {
+   "slot": "defensive3",
+   "wearers": "all",
+   "items": [
+    {
+     "name": "Colour of Wrath",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "hp": 7,
+     "defense": 1,
+     "price": 120
+    },
+    {
+     "name": "Colour of Pain",
+     "tier": "T1",
+     "zone": "Zone 1",
+     "hp": 7,
+     "defense": 1,
+     "price": 120
+    },
+    {
+     "name": "Colour of Sadness",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "hp": 10,
+     "defense": 1,
+     "price": 180
+    },
+    {
+     "name": "Colour of Hatred",
+     "tier": "T2",
+     "zone": "Zone 2",
+     "hp": 10,
+     "defense": 1,
+     "price": 180
+    },
+    {
+     "name": "Colour of Force",
+     "tier": "T3",
+     "zone": "Zone 3",
+     "hp": 12,
+     "defense": 1,
+     "price": 270
+    },
+    {
+     "name": "Colour of Defeat",
+     "tier": "T4",
+     "zone": "The Room",
+     "hp": 14,
+     "defense": 1,
+     "price": 360
+    },
+    {
+     "name": "Colour of Neglect",
+     "tier": "T4",
+     "zone": "The Room",
+     "hp": 14,
+     "defense": 1,
+     "price": 360
+    },
+    {
+     "name": "The Eighth Colour",
+     "tier": "T5",
+     "zone": "superboss / unique",
+     "hp": 18,
+     "defense": 2,
+     "price": null
+    }
+   ]
+  },
+  "Days": {
+   "slot": "special",
+   "wearers": "all",
+   "note": "Untiered uniques — GM-placed treasures or rare stock, GM-priced; single copies. All canon effects ACTIVE per gear_effect_vocabulary. Placement is the supply control.",
+   "items": [
+    {
+     "name": "Monday",
+     "canon_effect": "Prevents critical hits",
+     "stats": {},
+     "price": "GM",
+     "tier": "special",
+     "effects": {
+      "crit_immune": true
+     }
+    },
+    {
+     "name": "Tuesday",
+     "canon_effect": "Halves CP consumption",
+     "stats": {},
+     "price": "GM",
+     "tier": "special",
+     "effects": {
+      "cp_cost_mult": 0.5
+     }
+    },
+    {
+     "name": "Wednesday",
+     "canon_effect": "Prevents terrain damage",
+     "stats": {},
+     "price": "GM",
+     "tier": "special",
+     "effects": {
+      "overworld_tick_immune": true
+     }
+    },
+    {
+     "name": "Thursday",
+     "canon_effect": "+ATK flavor; 30% resist Furious/Madness",
+     "stats": {},
+     "price": "GM",
+     "tier": "special",
+     "effects": {
+      "atk": 2,
+      "res_vs": {
+       "Furious": 30,
+       "Madness": 30
+      }
+     }
+    },
+    {
+     "name": "Friday",
+     "canon_effect": "+ESP flavor; 50% resist Muted",
+     "stats": {},
+     "price": "GM",
+     "tier": "special",
+     "effects": {
+      "esp": 2,
+      "res_vs": {
+       "Muted": 50
+      }
+     }
+    },
+    {
+     "name": "Saturday",
+     "canon_effect": "+15 Agility in canon — HERE: +1 AGI, the only AGI gear in the campaign",
+     "price": "GM",
+     "tier": "special",
+     "effects": {
+      "agi": 1
+     }
+    },
+    {
+     "name": "Sunday",
+     "canon_effect": "Prevents Poisoned",
+     "stats": {},
+     "price": "GM",
+     "tier": "special",
+     "effects": {
+      "status_immune": [
+       "Poisoned"
+      ]
+     }
+    },
+    {
+     "name": "Secret Day",
+     "canon_effect": "Prevents Poisoned, Muted, Blinded",
+     "stats": {},
+     "price": "GM",
+     "tier": "special",
+     "effects": {
+      "status_immune": [
+       "Poisoned",
+       "Muted",
+       "Blinded"
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

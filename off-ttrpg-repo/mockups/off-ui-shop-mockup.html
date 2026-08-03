@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OFF TTRPG — Shop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --g0:#1c1c1c; --g1:#3a3a3a; --g2:#565656; --g3:#6e6e6e; --g4:#9c9c9c; --g5:#cfcfcf; --wht:#f2f0ea;
+  --yel:#f5d31c; --blk:#0a0a0a;
+  --disp:'Jersey 10',monospace; --mono:'IBM Plex Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;border-radius:0}
+html,body{height:100%}
+body{background:var(--g2);color:var(--wht);font-family:var(--mono);overflow:hidden;image-rendering:pixelated;
+  background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 34px,transparent 34px 68px);
+  display:flex;flex-direction:column}
+/* crest ghost */
+body::before{content:"";position:fixed;left:14%;top:16%;width:420px;height:420px;opacity:.16;pointer-events:none;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><g fill='black'><circle cx='100' cy='55' r='26'/><circle cx='60' cy='95' r='22'/><circle cx='140' cy='95' r='22'/><circle cx='100' cy='100' r='16'/><rect x='90' y='115' width='20' height='55'/><circle cx='70' cy='160' r='14'/><circle cx='130' cy='160' r='14'/><path d='M40 40 Q20 20 40 10 Q60 20 40 40' /><path d='M160 40 Q180 20 160 10 Q140 20 160 40'/></g></svg>") 0 0/100% no-repeat}
+/* header */
+.head{background:var(--g0);padding:10px 0 14px;text-align:center;position:relative;border-bottom:6px solid rgba(0,0,0,.35)}
+.title{font-family:var(--disp);font-size:56px;letter-spacing:4px;color:var(--wht);display:inline-block;
+  text-shadow:3px 3px 0 #000}
+.title span{display:inline-block}
+.title span:nth-child(2){transform:translateY(4px) rotate(3deg);font-size:46px}
+.title span:nth-child(4){transform:translateY(3px) rotate(-4deg);font-size:46px}
+.flourish{position:absolute;top:26px;width:26%;height:26px;opacity:.75;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='26'><g fill='none' stroke='%23cfcfcf' stroke-width='3'><path d='M4 14 q10 -12 20 0 q10 12 20 0'/><circle cx='58' cy='13' r='5'/><path d='M70 14 q10 -12 20 0 q10 12 20 0'/></g></svg>") 0 50%/110px repeat-x}
+.flourish.l{left:2%}.flourish.r{right:2%;transform:scaleX(-1)}
+/* stage */
+.stage{flex:1;position:relative;display:flex;align-items:flex-start;justify-content:center;padding-top:7vh}
+/* ribbon menu */
+.menu{display:flex;flex-direction:column;gap:14px;z-index:2}
+.ribbon{position:relative;background:var(--wht);color:var(--g0);font-family:var(--disp);font-size:32px;
+  letter-spacing:2px;border:0;cursor:pointer;padding:2px 46px 4px 34px;text-align:center;min-width:230px;
+  clip-path:polygon(0 0,calc(100% - 22px) 0,100% 50%,calc(100% - 22px) 100%,0 100%);
+  filter:drop-shadow(3px 3px 0 rgba(0,0,0,.45))}
+.ribbon:hover{background:var(--g5)}
+.ribbon.sel{background:var(--blk);color:var(--yel)}
+.ribbon.sel::before{content:"☞";position:absolute;left:-40px;top:-2px;font-size:34px;color:var(--wht);
+  text-shadow:2px 2px 0 #000}
+/* mode tag (Buy/Sell view) */
+.modetag{position:absolute;left:4%;top:8%;background:var(--yel);color:var(--g0);font-family:var(--disp);
+  font-size:30px;padding:2px 36px 4px 20px;clip-path:polygon(0 0,calc(100% - 20px) 0,100% 50%,calc(100% - 20px) 100%,0 100%);
+  filter:drop-shadow(3px 3px 0 rgba(0,0,0,.45));display:none}
+/* item list */
+.list{position:absolute;left:26%;top:8%;display:none;flex-direction:column;gap:2px;z-index:2;min-width:420px}
+.row{display:flex;align-items:center;gap:12px;padding:4px 16px;cursor:pointer;color:var(--g4)}
+.row .ig{font-size:15px;filter:grayscale(1)}
+.row .rn{font-family:var(--disp);font-size:29px;letter-spacing:1px}
+.row .rp{margin-left:auto;font-family:var(--disp);font-size:24px;color:var(--g4)}
+.row:hover{color:var(--g5)}
+.row.sel{background:var(--blk);color:var(--yel)}
+.row.sel .rp{color:var(--yel)}
+.row.sel::before{content:"☞";font-size:26px;color:var(--wht);text-shadow:2px 2px 0 #000;margin-right:-2px}
+.row.broke{opacity:.4}
+/* zacharie + bubble */
+.zach{position:absolute;left:5%;bottom:4%;display:flex;align-items:flex-end;gap:8px}
+.zsprite{text-align:center}
+.zsprite .g{font-size:88px;color:var(--g5);text-shadow:3px 0 var(--blk),-3px 0 var(--blk),0 3px var(--blk),0 -3px var(--blk)}
+.counter{width:150px;height:26px;background:var(--g4);border:3px solid var(--blk);margin-top:-8px}
+.bubble{position:relative;background:var(--g5);color:var(--g0);border:3px solid var(--blk);
+  padding:16px 22px;max-width:420px;font-size:16px;line-height:1.5;margin-bottom:60px;
+  border-radius:18px}
+.bubble::before{content:"";position:absolute;left:-24px;bottom:16px;border:14px solid transparent;
+  border-right-color:var(--blk)}
+.bubble::after{content:"";position:absolute;left:-17px;bottom:19px;border:11px solid transparent;
+  border-right-color:var(--g5)}
+.pricetag{position:absolute;left:30px;bottom:-46px;background:var(--wht);color:var(--g0);border:3px solid var(--blk);
+  font-family:var(--disp);font-size:26px;padding:2px 20px;min-width:150px;display:none}
+.pricetag b{float:right;font-weight:400}
+/* wallet */
+/* GM stock gate */
+.gmgate{position:fixed;inset:0;background:var(--g1);z-index:10;display:flex;flex-direction:column;align-items:center;padding:30px 0;overflow-y:auto}
+.gmgate h2{font-family:var(--disp);font-size:40px;letter-spacing:3px;text-shadow:3px 3px 0 #000}
+.gmgate .sub{font-size:10px;letter-spacing:3px;color:var(--g4);margin-bottom:22px}
+.stocklist{display:flex;flex-direction:column;gap:6px;min-width:440px}
+.srow{display:flex;align-items:center;gap:14px;background:var(--g0);border:3px solid var(--blk);padding:6px 16px;cursor:pointer}
+.srow .sn{font-family:var(--disp);font-size:26px;flex:1}
+.srow .sp{font-family:var(--disp);font-size:22px;color:var(--g4)}
+.srow .tog{font-family:var(--disp);font-size:20px;padding:1px 14px;border:3px solid var(--blk);background:var(--g2);color:var(--g4);min-width:64px;text-align:center}
+.srow.on .tog{background:var(--yel);color:var(--g0)}
+.srow:not(.on) .sn{color:var(--g3)}
+.openbtn{margin-top:26px;background:var(--yel);color:var(--g0);border:3px solid var(--blk);font-family:var(--disp);
+  font-size:32px;padding:6px 40px;cursor:pointer;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 50%,calc(100% - 22px) 100%,0 100%);
+  filter:drop-shadow(4px 4px 0 rgba(0,0,0,.45))}
+.gmbtn{position:fixed;left:14px;bottom:14px;background:var(--g0);border:3px solid var(--blk);color:var(--g4);
+  font-family:var(--disp);font-size:16px;padding:2px 12px;cursor:pointer;z-index:3}
+.gmbtn:hover{color:var(--yel)}
+.wallet{position:fixed;right:16px;bottom:14px;display:flex;align-items:center;gap:10px;z-index:3}
+.credits{background:var(--g0);border:3px solid var(--blk);font-family:var(--disp);font-size:30px;color:var(--yel);padding:0 16px 2px}
+.portrait{width:44px;height:44px;background:var(--g0);border:3px solid var(--blk);display:flex;align-items:center;justify-content:center;font-size:24px}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div class="flourish l"></div>
+  <div class="title"><span>S</span><span>H</span><span>O</span><span>P</span></div>
+  <div class="flourish r"></div>
+</div>
+
+<div class="stage">
+  <!-- main menu -->
+  <div class="menu" id="menu">
+    <button class="ribbon sel" onclick="mode('buy')">Buy</button>
+    <button class="ribbon" onclick="mode('sell')">Sell</button>
+    <button class="ribbon" onclick="say('Off so soon? The road is long, friend.')">Leave</button>
+  </div>
+
+  <div class="modetag" id="modetag">Buy</div>
+
+  <div class="list" id="list"></div>
+
+  <div class="zach">
+    <div class="zsprite"><div class="g">♚</div><div class="counter"></div></div>
+    <div class="bubble" id="bubble"><span id="btext">Welcome, welcome. Everything has a price — even mercy.</span>
+      <div class="pricetag" id="pricetag">$ <b id="pval">0</b></div>
+    </div>
+  </div>
+</div>
+
+<div class="gmgate" id="gmgate">
+  <h2>STOCK</h2>
+  <div class="sub">GM ONLY — TOGGLE, THEN OPEN. PLAYERS SEE ONLY WHAT'S ON.</div>
+  <div class="stocklist" id="stocklist"></div>
+  <button class="openbtn" onclick="openShop()">Open Shop</button>
+</div>
+<button class="gmbtn" onclick="document.getElementById('gmgate').style.display='flex';renderStock()">STOCK (GM)</button>
+
+<div class="wallet">
+  <div class="credits" id="credits">$342</div>
+  <div class="portrait">♚</div>
+</div>
+
+<script>
+const STOCK=[
+  {n:'Luck Ticket',   p:20,  d:'Recovers a moderate amount of HP.',        own:6},
+  {n:'Fortune Ticket',p:90, d:'Recovers a large amount of HP.',           own:1},
+  {n:'Silver Flesh',  p:180, d:'Recovers a moderate amount of CP.',        own:3},
+  {n:'Golden Flesh',  p:480, d:'Recovers a large amount of CP.',           own:1},
+  {n:'Joker',         p:150, d:'Revives a character.',                     own:2},
+  {n:"Moloch's Meat", p:30,  d:'Cures poison.',                            own:2},
+  {n:"Belial's Meat", p:100, d:'Cures all negative status alterations.',   own:1},
+  {n:'Eye',           p:20,  d:'Analyses an enemy\u2019s characteristics.',own:2},
+  {n:'Inspiration',   p:200, d:'An object utilizable in combat.',          own:1},
+];
+let credits=342,curMode=null,selIdx=-1;
+const LINES={
+  buy:['Take a look. Nothing here you don\u2019t need.','Business is slow when the smoke is thick.'],
+  sell:['The characters are starting to pile up, aren\u2019t they?','I pay half. Sentiment costs extra.'],
+  bought:['A fine choice.','It will not save you, but it will help.','Pleasure doing business.'],
+  sold:['Into the pile it goes.','One man\u2019s trash, hm?'],
+  poor:['Come back when your pockets are heavier.'],
+};
+function say(t){document.getElementById('btext').textContent=t;}
+function rand(a){return a[Math.floor(Math.random()*a.length)];}
+function mode(m){
+  curMode=m;selIdx=-1;
+  document.getElementById('menu').style.display='none';
+  const tag=document.getElementById('modetag');
+  tag.style.display='block';tag.textContent=m==='buy'?'Buy':'Sell';
+  tag.onclick=back;
+  document.getElementById('pricetag').style.display='none';
+  say(rand(LINES[m]));
+  render();
+}
+function back(){
+  document.getElementById('menu').style.display='flex';
+  document.getElementById('modetag').style.display='none';
+  document.getElementById('list').style.display='none';
+  document.getElementById('pricetag').style.display='none';
+  say('Anything else?');
+}
+function render(){
+  const L=document.getElementById('list');L.style.display='flex';L.innerHTML='';
+  STOCK.forEach((it,i)=>{
+    if(curMode==='buy'&&!it.on)return;
+    if(curMode==='sell'&&it.own<=0)return;
+    const price=curMode==='buy'?it.p:Math.floor(it.p/2);
+    const r=document.createElement('div');
+    r.className='row'+(i===selIdx?' sel':'')+(curMode==='buy'&&credits<price?' broke':'');
+    r.innerHTML='<span class="ig">\u270B</span><span class="rn">'+it.n+(curMode==='sell'?' \u00d7'+it.own:'')+'</span><span class="rp">$'+price+'</span>';
+    r.onclick=()=>pick(i,price);
+    L.appendChild(r);
+  });
+}
+function pick(i,price){
+  if(i===selIdx){confirmDeal(i,price);return;}
+  selIdx=i;
+  say(STOCK[i].d);
+  const pt=document.getElementById('pricetag');
+  pt.style.display='block';document.getElementById('pval').textContent=price;
+  render();
+}
+function confirmDeal(i,price){
+  const it=STOCK[i];
+  if(curMode==='buy'){
+    if(credits<price){say(rand(LINES.poor));return;}
+    credits-=price;it.own++;say(rand(LINES.bought));
+  }else{
+    it.own--;credits+=price;say(rand(LINES.sold));
+    if(it.own<=0)selIdx=-1;
+  }
+  document.getElementById('credits').textContent='$'+credits;
+  render();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OFF TTRPG — Player Client</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --field:#2e6d9e; --field-dk:#1d4b70; --tint:#7fa8c6;
+  --amber:#f2a71b; --red:#d0231f; --blk:#0c0c0c; --wht:#f4f2ec;
+  --disp:'Jersey 10',monospace; --mono:'IBM Plex Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;border-radius:0}
+html,body{height:100%}
+body{display:grid;grid-template-rows:56px 1fr;grid-template-columns:220px 1fr;
+  grid-template-areas:"top top" "inv play";
+  background:var(--blk);color:var(--wht);font-family:var(--mono);overflow:hidden;image-rendering:pixelated}
+.outline{text-shadow:2px 0 var(--blk),-2px 0 var(--blk),0 2px var(--blk),0 -2px var(--blk),2px 2px var(--blk),-2px -2px var(--blk),2px -2px var(--blk),-2px 2px var(--blk)}
+
+/* ========== TOP BAR: zone identity ========== */
+.top{grid-area:top;background:var(--field-dk);display:flex;align-items:center;gap:22px;padding:0 20px;position:relative;overflow:hidden;border-bottom:4px solid var(--blk)}
+.top::after{content:"";position:absolute;right:0;top:0;bottom:0;width:40%;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='90' height='90'><g fill='white' opacity='.22'><circle cx='45' cy='26' r='10'/><circle cx='29' cy='44' r='10'/><circle cx='61' cy='44' r='10'/><rect x='41' y='52' width='8' height='26'/></g></svg>") 0 50%/70px repeat-x;
+  mask-image:linear-gradient(90deg,transparent,#000 40%);-webkit-mask-image:linear-gradient(90deg,transparent,#000 40%)}
+.zname{font-family:var(--disp);font-size:40px;letter-spacing:2px;line-height:1}
+.zsub{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--tint)}
+.zones{margin-left:auto;display:flex;gap:6px;z-index:1}
+.zw{width:18px;height:18px;border:2px solid var(--blk);cursor:pointer}
+
+/* ========== INVENTORY COLUMN ========== */
+.inv{grid-area:inv;background:var(--blk);border-right:4px solid var(--blk);display:flex;flex-direction:column;overflow:hidden}
+.inv .ihead{padding:12px 14px 8px;border-bottom:2px solid #1d1d1d}
+.inv .ihead .t{font-family:var(--disp);font-size:28px;letter-spacing:1px}
+.inv .credits{font-family:var(--disp);font-size:20px;color:var(--amber)}
+.ilist{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#333 var(--blk)}
+.item{padding:8px 14px;border-bottom:1px solid #191919;cursor:default;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.item .in{font-family:var(--disp);font-size:21px;line-height:1}
+.item .ic{font-family:var(--disp);font-size:19px;color:var(--amber)}
+.item .id{flex-basis:100%;font-size:9px;color:#7a7a7a;letter-spacing:.3px}
+.item{flex-wrap:wrap}
+.item.zero{opacity:.3}
+.inv.armed .item:not(.zero){cursor:pointer}
+.inv.armed .item:not(.zero):hover{background:#1c1c1c}
+.inv.armed .item:not(.zero):hover .in{color:var(--amber)}
+.inv.armed .ihead{box-shadow:inset 0 3px 0 var(--amber)}
+.isec{padding:6px 14px 4px;font-size:9px;letter-spacing:3px;color:#5a5a5a;border-bottom:1px solid #191919}
+
+/* ========== ACTIVE PLAY VIEWPORT ========== */
+.play{grid-area:play;background:var(--field);display:flex;flex-direction:column;position:relative;overflow:hidden}
+.announce{background:var(--field-dk);padding:6px 16px;font-family:var(--disp);font-size:26px;min-height:42px;z-index:2}
+.rail{position:absolute;left:8px;top:58px;bottom:120px;display:flex;flex-direction:column;justify-content:space-between;
+  font-family:var(--disp);font-size:28px;letter-spacing:2px;pointer-events:none;z-index:2}
+.rail span{writing-mode:vertical-lr;transform:rotate(180deg)}
+.damask{position:absolute;right:0;top:42px;width:44%;height:62%;pointer-events:none;z-index:0;color:var(--tint);
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><g fill='white'><circle cx='60' cy='34' r='13'/><circle cx='38' cy='58' r='13'/><circle cx='82' cy='58' r='13'/><circle cx='60' cy='60' r='9'/><rect x='55' y='70' width='10' height='34'/><circle cx='42' cy='96' r='8'/><circle cx='78' cy='96' r='8'/></g></svg>") 20px 10px/110px repeat;
+  mask-image:linear-gradient(210deg,#000 45%,transparent 78%);-webkit-mask-image:linear-gradient(210deg,#000 45%,transparent 78%)}
+.field{flex:1;display:flex;align-items:center;position:relative;padding:16px 26px;z-index:1}
+.enemies{display:flex;gap:44px;align-items:flex-end;margin-left:52px}
+.enemy{text-align:center;cursor:pointer;position:relative;width:128px}
+.enemy .sprite{font-size:84px;line-height:1;color:var(--wht);
+  text-shadow:3px 0 var(--blk),-3px 0 var(--blk),0 3px var(--blk),0 -3px var(--blk);
+  transition:transform .08s;filter:drop-shadow(0 10px 0 rgba(0,0,0,.25))}
+.enemy.targetable:hover .sprite{transform:translateY(-4px)}
+.enemy.targetable:hover::after{content:"";position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);
+  border:8px solid transparent;border-bottom-color:var(--wht)}
+.enemy.dead{cursor:not-allowed}
+.enemy.dead .sprite{color:transparent;text-shadow:2px 0 rgba(0,0,0,.35),-2px 0 rgba(0,0,0,.35),0 2px rgba(0,0,0,.35),0 -2px rgba(0,0,0,.35)}
+.enemy.dead .eicons,.enemy.dead .ename{opacity:.3}
+.ename{font-family:var(--disp);font-size:21px;margin-top:2px}
+.eicons{display:flex;gap:3px;justify-content:center;margin-top:4px;min-height:17px}
+.icn{font-size:9px;font-weight:600;letter-spacing:.5px;background:var(--blk);color:var(--wht);padding:2px 4px;line-height:1;cursor:help}
+.icn.up{color:var(--amber)} .icn.down b{color:var(--amber)}
+.icn.elem{background:transparent;border:1px solid var(--blk);color:var(--blk)}
+.float{position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-family:var(--disp);font-size:38px;opacity:0;pointer-events:none;white-space:nowrap}
+.float.show{animation:rise 1s ease-out forwards}
+@keyframes rise{0%{opacity:1;top:0}100%{opacity:0;top:-40px}}
+.float.dmg{color:var(--wht)} .float.crit{color:var(--red)} .float.miss{color:var(--wht);letter-spacing:4px;opacity:.85}
+.float.heal{color:#9fe3a0}
+.ally{position:absolute;text-align:center}
+.ally .sprite{font-size:58px;color:var(--wht);text-shadow:3px 0 var(--blk),-3px 0 var(--blk),0 3px var(--blk),0 -3px var(--blk);line-height:1}
+.ally .aname{font-family:var(--disp);font-size:17px}
+.ally.me .aname{color:var(--amber)}
+.ally.downed{opacity:.35}
+/* action stack */
+.stack{position:absolute;right:22vw;top:48%;transform:translateY(-58%);display:flex;flex-direction:column;gap:10px;z-index:3}
+.act{background:var(--blk);color:var(--wht);font-family:var(--disp);font-size:32px;letter-spacing:1px;
+  padding:2px 26px 4px 18px;border:0;cursor:pointer;text-align:left;position:relative;
+  transform:skewX(-4deg);width:max-content;min-width:190px;transition:transform .06s}
+.act:nth-child(2){margin-left:24px}.act:nth-child(3){margin-left:48px}.act:nth-child(4){margin-left:72px}
+.act:hover{transform:skewX(-4deg) translateX(4px)}
+.act.sel{color:var(--amber)}
+.stack.crit .act.sel::before,.stack.crit .act.sel::after{content:"";position:absolute;left:-4px;right:-4px;top:-13px;height:12px;
+  background-repeat:repeat-x;background-size:26px 12px;pointer-events:none}
+.stack.crit .act.sel::before{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='26' height='12'><path d='M0 12 L0 9 L3 9 L3 5 L5 5 L5 2 L7 2 L7 7 L10 7 L10 9 L13 9 L13 4 L15 4 L15 0 L17 0 L17 6 L20 6 L20 9 L23 9 L23 7 L26 7 L26 12 Z' fill='%23f2a71b'/></svg>");animation:fA .22s steps(1) infinite}
+.stack.crit .act.sel::after{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='26' height='12'><path d='M0 12 L0 7 L2 7 L2 3 L4 3 L4 8 L7 8 L7 9 L10 9 L10 2 L12 2 L12 0 L14 0 L14 5 L17 5 L17 9 L20 9 L20 4 L22 4 L22 8 L26 8 L26 12 Z' fill='%23f2a71b'/></svg>");animation:fB .22s steps(1) infinite}
+@keyframes fA{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes fB{0%,49%{opacity:0}50%,100%{opacity:1}}
+.subs{position:absolute;right:7vw;top:44%;transform:translateY(-50%);display:none;flex-direction:column;gap:8px;z-index:4}
+.subs.open{display:flex}
+.sub{background:var(--blk);color:var(--wht);padding:3px 16px 5px;transform:skewX(-4deg);cursor:pointer;width:max-content}
+.sub:hover .sn{color:var(--amber)}
+.sub .sn{font-family:var(--disp);font-size:24px}
+.sub .sd{font-size:9px;color:#9a9a9a}
+.sub.broke{opacity:.35;cursor:not-allowed}
+/* party strip */
+.strip{background:var(--blk);display:grid;grid-template-columns:repeat(6,1fr);z-index:2}
+.pc{padding:8px 12px 10px;border-right:2px solid #1d1d1d}
+.pc.me{box-shadow:inset 0 4px 0 var(--amber)}
+.pc .r1{display:flex;align-items:baseline;gap:8px}
+.pc .glyph{font-size:14px}
+.pc .pname{font-family:var(--disp);font-size:23px}
+.nums{display:flex;gap:16px;margin-top:2px}
+.num{font-family:var(--disp);font-size:23px;line-height:1;position:relative;padding-bottom:5px}
+.num i{position:absolute;left:0;bottom:0;height:3px;background:var(--wht)}
+.num.cp i{background:var(--amber)}
+.num em{font-style:normal;font-size:10px;font-family:var(--mono);color:#8a8a8a;margin-left:2px}
+.pg{height:8px;background:#232323;margin-top:6px;position:relative}
+.pg i{display:block;height:100%;background:var(--wht);transition:width .25s linear}
+.pg.critcharge i{background:var(--red)}
+.pg.held::after{content:"";position:absolute;inset:0;border:1px solid var(--wht);animation:blink 1.2s steps(2) infinite}
+.pg.critcharge.held::after{border-color:var(--red)}
+@keyframes blink{50%{opacity:0}}
+.picons{display:flex;gap:3px;margin-top:5px;min-height:14px;flex-wrap:wrap}
+.pc.deadpc .pname,.pc.deadpc .num{color:#4a4a4a}
+.pc.deadpc .num i,.pc.deadpc .pg i{background:#333}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top">
+  <div>
+    <div class="zname">ZONE 1 — PENTEL</div>
+  </div>
+  <div class="zsub">smoke mines · alma damien shachihata</div>
+  <div class="zones">
+    <div class="zw" style="background:#2e6d9e" onclick="zone('#2e6d9e','#1d4b70','#7fa8c6','ZONE 1 — PENTEL','smoke mines · alma damien shachihata')"></div>
+    <div class="zw" style="background:#c8871c" onclick="zone('#c8871c','#8a5c10','#e0b56a','ZONE 2 — BISMARK','the library · gomez galleries')"></div>
+    <div class="zw" style="background:#2f9e44" onclick="zone('#2f9e44','#1d6b2d','#7fc68f','ZONE 3 — VESPER','the sugar works')"></div>
+    <div class="zw" style="background:#d0231f" onclick="zone('#d0231f','#8f1512','#e07f7c','THE ROOM','—')"></div>
+  </div>
+</div>
+
+<!-- INVENTORY COLUMN -->
+<div class="inv" id="inv">
+  <div class="ihead">
+    <div class="t">OBJECTS</div>
+    <div class="credits" id="credits">342 CREDITS</div>
+  </div>
+  <div class="ilist">
+    <div class="isec">RESTORATIVE</div>
+    <div class="item" data-n="6" onclick="useItem(this,'Luck Ticket','heal')"><span class="in">Luck Ticket</span><span class="ic">×6</span><span class="id">50 HP, one character</span></div>
+    <div class="item" data-n="1" onclick="useItem(this,'Fortune Ticket','heal')"><span class="in">Fortune Ticket</span><span class="ic">×1</span><span class="id">200 HP, one character</span></div>
+    <div class="item" data-n="3" onclick="useItem(this,'Silver Flesh','cp')"><span class="in">Silver Flesh</span><span class="ic">×3</span><span class="id">50 CP</span></div>
+    <div class="item" data-n="1" onclick="useItem(this,'Golden Flesh','cp')"><span class="in">Golden Flesh</span><span class="ic">×1</span><span class="id">100 CP</span></div>
+    <div class="item" data-n="2" onclick="useItem(this,'Joker','rev')"><span class="in">Joker</span><span class="ic">×2</span><span class="id">revive · 35% HP</span></div>
+    <div class="isec">CURES</div>
+    <div class="item" data-n="2" onclick="useItem(this,'Moloch&#39;s Meat','cure')"><span class="in">Moloch's Meat</span><span class="ic">×2</span><span class="id">cures Poisoned</span></div>
+    <div class="item" data-n="1" onclick="useItem(this,'Belial&#39;s Meat','cure')"><span class="in">Belial's Meat</span><span class="ic">×1</span><span class="id">cures all statuses</span></div>
+    <div class="isec">COMBAT</div>
+    <div class="item" data-n="2" onclick="useItem(this,'Eye','eye')"><span class="in">Eye</span><span class="ic">×2</span><span class="id">reveal one enemy</span></div>
+    <div class="item" data-n="1" onclick="useItem(this,'Inspiration','atk')"><span class="in">Inspiration</span><span class="ic">×1</span><span class="id">75 dmg + ATK/ESP</span></div>
+    <div class="item zero" data-n="0"><span class="in">Expiration</span><span class="ic">×0</span><span class="id">400 dmg + ATK/ESP</span></div>
+    <div class="isec">HELD</div>
+    <div class="item" data-n="1"><span class="in">Abaddon's Meat</span><span class="ic">×1</span><span class="id">out of combat only</span></div>
+    <div class="item" data-n="1"><span class="in">Leo-card</span><span class="ic">×1</span><span class="id">Zone 1 access</span></div>
+  </div>
+</div>
+
+<!-- ACTIVE PLAY -->
+<div class="play">
+  <div class="announce outline" id="announce">One-eyed Spectre is Blinded!</div>
+  <div class="rail outline"><span>B A T T L E</span><span>T I M E</span></div>
+  <div class="damask"></div>
+
+  <div class="field">
+    <div class="enemies">
+      <div class="enemy targetable" onclick="hitEnemy(this,34,false)">
+        <div class="float"></div><div class="sprite">◉</div>
+        <div class="ename outline">One-eyed Spectre</div>
+        <div class="eicons"><span class="icn" title="Blinded">BLI</span></div>
+      </div>
+      <div class="enemy targetable" onclick="hitEnemy(this,0,true)">
+        <div class="float"></div><div class="sprite">◉</div>
+        <div class="ename outline">One-eyed Spectre</div>
+        <div class="eicons"><span class="icn elem" title="Element: Smoke — revealed by Wide Angle">SMK</span><span class="icn down" title="DEF Down −20, 2 turns"><b>▼</b>DEF·2t</span></div>
+      </div>
+      <div class="enemy dead">
+        <div class="float"></div><div class="sprite">◉</div>
+        <div class="ename outline">One-eyed Spectre</div>
+        <div class="eicons"></div>
+      </div>
+    </div>
+
+    <div class="stack crit" id="stack">
+      <button class="act sel" onclick="pick(this,'attack')">Attack</button>
+      <button class="act" onclick="pick(this,'comp')">Competence</button>
+      <button class="act" onclick="pick(this,'defend')">Defend</button>
+      <button class="act" onclick="pick(this,'obj')">Objects</button>
+    </div>
+
+    <div class="subs" id="subs">
+      <div class="sub"><div class="sn">Orion's Mark — 14</div><div class="sd">one enemy · 1.6× Smoke · acc 87</div></div>
+      <div class="sub"><div class="sn">Ursa Shot — 16</div><div class="sd">one enemy · 1.2× Smoke · steal · acc 86</div></div>
+      <div class="sub"><div class="sn">Draco's Mark — 20</div><div class="sd">one enemy · 2.1× Smoke · acc 87</div></div>
+      <div class="sub"><div class="sn">Lyra Shot — 18</div><div class="sd">one enemy · 1.4× Smoke · acc 87</div></div>
+      <div class="sub broke"><div class="sn">Corvus Mark — 24</div><div class="sd">need 24 CP</div></div>
+    </div>
+
+    <!-- party formation: six slots, assignment randomized per encounter -->
+    <div class="ally me" style="right:9vw;bottom:64px"><div class="sprite">♞</div><div class="aname outline">Bandit</div></div>
+    <div class="ally" style="right:16vw;bottom:120px"><div class="sprite" style="font-size:46px">⚾</div><div class="aname outline">Purifier</div></div>
+    <div class="ally" style="right:5vw;bottom:150px"><div class="sprite" style="font-size:40px">⟨⟩</div><div class="aname outline">Alpha</div></div>
+    <div class="ally" style="right:14vw;bottom:210px"><div class="sprite" style="font-size:40px">◎</div><div class="aname outline">Omega</div></div>
+    <div class="ally" style="right:4vw;bottom:236px"><div class="sprite" style="font-size:40px">✾</div><div class="aname outline">Epsilon</div></div>
+    <div class="ally downed" style="right:10vw;bottom:290px"><div class="sprite" style="font-size:40px">♨</div><div class="aname outline">Burnt</div></div>
+  </div>
+
+  <!-- PARTY STRIP -->
+  <div class="strip">
+    <div class="pc"><div class="r1"><span class="glyph">⚾</span><span class="pname">Purifier</span></div>
+      <div class="nums"><div class="num">132<em>hp</em><i style="width:84%"></i></div><div class="num cp">36<em>cp</em><i style="width:62%"></i></div></div>
+      <div class="pg" data-rate="11"><i style="width:30%"></i></div><div class="picons"></div></div>
+    <div class="pc me"><div class="r1"><span class="glyph">♞</span><span class="pname">Bandit</span></div>
+      <div class="nums"><div class="num" id="myhp">51<em>hp</em><i style="width:47%"></i></div><div class="num cp">32<em>cp</em><i style="width:70%"></i></div></div>
+      <div class="pg critcharge held" data-rate="14" data-full="1"><i style="width:100%"></i></div><div class="picons"></div></div>
+    <div class="pc"><div class="r1"><span class="glyph">⟨⟩</span><span class="pname">Alpha</span></div>
+      <div class="nums"><div class="num">121<em>hp</em><i style="width:91%"></i></div><div class="num cp">22<em>cp</em><i style="width:31%"></i></div></div>
+      <div class="pg" data-rate="10"><i style="width:55%"></i></div>
+      <div class="picons"><span class="icn" title="Poisoned — turn 3 afflicted">PSN·t3</span></div></div>
+    <div class="pc"><div class="r1"><span class="glyph">◎</span><span class="pname">Omega</span></div>
+      <div class="nums"><div class="num">120<em>hp</em><i style="width:96%"></i></div><div class="num cp">41<em>cp</em><i style="width:55%"></i></div></div>
+      <div class="pg" data-rate="7"><i style="width:22%"></i></div>
+      <div class="picons"><span class="icn up" title="Defending — +25 DEF">▲DEF·25</span></div></div>
+    <div class="pc"><div class="r1"><span class="glyph">✾</span><span class="pname">Epsilon</span></div>
+      <div class="nums"><div class="num" style="color:var(--red)">25<em>hp</em><i style="width:19%;background:var(--red)"></i></div><div class="num cp">31<em>cp</em><i style="width:44%"></i></div></div>
+      <div class="pg" data-rate="6"><i style="width:48%"></i></div>
+      <div class="picons"><span class="icn up" title="ATK Up 15%, 2 turns">▲ATK·2t</span></div></div>
+    <div class="pc deadpc"><div class="r1"><span class="glyph">♨</span><span class="pname">Burnt</span></div>
+      <div class="nums"><div class="num">0<em>hp</em><i style="width:0%"></i></div><div class="num cp">29<em>cp</em><i style="width:38%"></i></div></div>
+      <div class="pg"><i style="width:0%"></i></div><div class="picons"></div></div>
+  </div>
+</div>
+
+<script>
+function zone(f,d,t,name,sub){const r=document.documentElement.style;
+  r.setProperty('--field',f);r.setProperty('--field-dk',d);r.setProperty('--tint',t);
+  document.querySelector('.zname').textContent=name;
+  document.querySelector('.zsub').textContent=sub;}
+setInterval(()=>{
+  document.querySelectorAll('.pg[data-rate]').forEach(g=>{
+    if(g.dataset.full)return;
+    const bar=g.querySelector('i');let w=parseFloat(bar.style.width);
+    w+=(+g.dataset.rate)/8;
+    if(w>=100){w=100;g.dataset.full=1;g.classList.add('held');}
+    bar.style.width=w+'%';
+  });
+},400);
+function pick(btn,mode){
+  document.querySelectorAll('.act').forEach(a=>a.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.getElementById('subs').classList.toggle('open',mode==='comp');
+  document.getElementById('inv').classList.toggle('armed',mode==='obj');
+}
+function announce(t){document.getElementById('announce').textContent=t;}
+function spendTurn(){
+  const me=document.querySelector('.pc.me .pg');
+  me.classList.remove('critcharge','held');delete me.dataset.full;
+  me.querySelector('i').style.width='0%';
+  document.getElementById('stack').classList.remove('crit');
+  document.getElementById('inv').classList.remove('armed');
+}
+function hitEnemy(el,dmg,miss){
+  const me=document.querySelector('.pc.me .pg');
+  if(!me.dataset.full)return;
+  const f=el.querySelector('.float');
+  f.className='float';void f.offsetWidth;
+  const crit=me.classList.contains('critcharge');
+  if(miss){f.textContent='MISS';f.classList.add('miss','show');
+    announce('Bandit misses!');}
+  else{const total=crit?dmg*2:dmg;
+    f.textContent=total+(crit?'!':'');f.classList.add(crit?'crit':'dmg','show');
+    announce('Bandit attacks for '+total+(crit?' — CRITICAL!':'!'));}
+  spendTurn();
+}
+function useItem(el,name,kind){
+  if(!document.getElementById('inv').classList.contains('armed'))return;
+  const me=document.querySelector('.pc.me .pg');
+  if(!me.dataset.full)return;
+  let n=+el.dataset.n; if(n<=0)return;
+  n--; el.dataset.n=n;
+  el.querySelector('.ic').textContent='×'+n;
+  if(n===0)el.classList.add('zero');
+  announce('Bandit uses '+name+'!');
+  if(kind==='heal'){const hp=document.getElementById('myhp');
+    hp.childNodes[0].textContent='101';hp.querySelector('i').style.width='93%';}
+  spendTurn();
+}
+</script>
+</body>
+</html>

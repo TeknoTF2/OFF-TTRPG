@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OFF Room Kit — reference demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{background:#0a0a0a;color:#f4f2ec;font-family:'IBM Plex Mono',monospace;display:flex;flex-direction:column;
+  align-items:center;gap:14px;padding:24px;image-rendering:pixelated}
+h1{font-family:'Jersey 10',monospace;font-size:34px;letter-spacing:2px;font-weight:400}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+button{background:#161616;border:1px solid #333;color:#f4f2ec;font-family:'Jersey 10',monospace;
+  font-size:20px;padding:4px 16px;cursor:pointer}
+button:hover{border-color:#f2a71b;color:#f2a71b}
+button.on{background:#f4f2ec;color:#0a0a0a}
+canvas{border:4px solid #000;image-rendering:pixelated;width:768px;height:576px}
+.note{font-size:11px;color:#777;max-width:760px;text-align:center;line-height:1.6}
+</style>
+</head>
+<body>
+<h1>THE ROOM KIT</h1>
+<div class="bar">
+  <button onclick="loadRoom(0,this)">Storeroom</button>
+  <button onclick="loadRoom(1,this)">Carpet Hall</button>
+  <button class="on" onclick="loadRoom(2,this)">Damien Street</button>
+  <span style="width:16px"></span>
+  <button class="pz" onclick="setPal('z1',this)">Blue</button>
+  <button class="pz on" onclick="setPal('z2',this)">Yellow</button>
+  <button class="pz" onclick="setPal('z3',this)">Green</button>
+  <button class="pz" onclick="setPal('room',this)">Red</button>
+  <button class="pz" onclick="setPal('pure',this)">White</button>
+  <span style="width:16px"></span>
+  <button onclick="showCol=!showCol">Collision</button>
+</div>
+<canvas id="c" width="384" height="288"></canvas>
+<div class="note">Outdoor rooms have no walls: the room BOUNDS clamp movement, and buildings/fences/water are unwalkable
+footprints on an open ground plane. Toggle Collision to see it. Smoke and water animate on the two-frame clock.
+Every pattern and prop here is a ~10-line function; the builder lists whatever the kit contains.</div>
+<script>
+const ctx=document.getElementById('c').getContext('2d');ctx.imageSmoothingEnabled=false;
+let showCol=false, phase=0;
+const PALS={
+  z1:{base:'#2e6d9e',dark:'#1d4b70',lite:'#7fa8c6',pale:'#cfe3f2'},
+  z2:{base:'#c8871c',dark:'#8a5c10',lite:'#e0b56a',pale:'#f4e2bb'},
+  z3:{base:'#2f9e44',dark:'#1d6b2d',lite:'#7fc68f',pale:'#c9ecc9'},
+  room:{base:'#d0231f',dark:'#8f1512',lite:'#e07f7c',pale:'#f2c9c7'},
+  pure:{base:'#e8e8e4',dark:'#aaaaaa',lite:'#c9c9c4',pale:'#ffffff'},
+};
+let pal=PALS.z2, room;
+const INK='#000';
+function px(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
+function box(x,y,w,h,f){px(x,y,w,h,INK);px(x+1,y+1,w-2,h-2,f);}
+
+/* ============ GROUND PATTERNS (each carries walkable) ============ */
+const FLOORS={
+plain(r){px(r.x,r.y,r.w,r.h,pal.pale);},
+brackets(r){px(r.x,r.y,r.w,r.h,pal.dark);ctx.fillStyle=pal.lite;
+  for(let y=r.y+8;y<r.y+r.h-8;y+=32)for(let x=r.x+8;x<r.x+r.w-8;x+=32){
+    ctx.fillRect(x,y,6,2);ctx.fillRect(x,y,2,6);
+    ctx.fillRect(x+16,y+16,6,2);ctx.fillRect(x+20,y+12,2,6);}},
+carpet(r){px(r.x,r.y,r.w,r.h,pal.dark);ctx.fillStyle='rgba(0,0,0,.25)';
+  for(let y=r.y;y<r.y+r.h;y+=6)for(let x=r.x;x<r.x+r.w;x+=8)ctx.fillRect(x,y+(x/8%2?0:2),4,2);},
+path(r){px(r.x,r.y,r.w,r.h,pal.lite);ctx.fillStyle='rgba(0,0,0,.18)';
+  for(let y=r.y+3;y<r.y+r.h;y+=10)for(let x=r.x+((y/10%2)?5:0);x<r.x+r.w-3;x+=14)ctx.fillRect(x,y,3,2);},
+grass(r){px(r.x,r.y,r.w,r.h,pal.base);ctx.fillStyle=pal.dark;
+  for(let y=r.y+5;y<r.y+r.h;y+=18)for(let x=r.x+((y/18%2)?9:2);x<r.x+r.w-4;x+=22){
+    ctx.fillRect(x,y,2,4);ctx.fillRect(x+3,y+1,2,3);}},
+metal(r){px(r.x,r.y,r.w,r.h,pal.dark);ctx.fillStyle='rgba(255,255,255,.14)';
+  for(let y=r.y;y<r.y+r.h;y+=24)ctx.fillRect(r.x,y,r.w,2);
+  for(let x=r.x;x<r.x+r.w;x+=48)ctx.fillRect(x,r.y,2,r.h);},
+tracks(r){px(r.x,r.y,r.w,r.h,pal.lite);ctx.fillStyle=pal.dark;
+  for(let y=r.y+2;y<r.y+r.h;y+=12)ctx.fillRect(r.x,y,r.w,3);
+  ctx.fillStyle=INK;ctx.fillRect(r.x+6,r.y,3,r.h);ctx.fillRect(r.x+r.w-9,r.y,3,r.h);},
+water(r){px(r.x,r.y,r.w,r.h,pal.dark);ctx.fillStyle=pal.lite;
+  for(let y=r.y;y<r.y+r.h;y+=24)for(let x=r.x+((y/24%2)?8:0);x<r.x+r.w-10;x+=32)
+    ctx.fillRect(x+(phase?2:0),y+8,10,2);},
+void(r){px(r.x,r.y,r.w,r.h,'#000');},
+};
+const UNWALKABLE_FLOORS={water:1,void:1};
+
+/* ============ STRUCTURES (unwalkable footprints) ============ */
+const STRUCT={
+wall(g){box(g.x,g.y,g.w,g.h,pal.lite);px(g.x+1,g.y+g.h-5,g.w-2,4,pal.dark);},
+building(g){ // facade: body + roof band; door/window stamped separately
+  box(g.x,g.y,g.w,g.h,pal.lite);
+  px(g.x+1,g.y+1,g.w-2,10,pal.dark);                 // roofline
+  px(g.x+1,g.y+g.h-5,g.w-2,4,'rgba(0,0,0,.3)');},
+fence(g){px(g.x,g.y+g.h-6,g.w,2,INK);px(g.x,g.y+g.h-11,g.w,2,INK);
+  for(let x=g.x;x<g.x+g.w;x+=14)px(x,g.y+g.h-14,3,14,INK);},
+ledge(g){px(g.x,g.y,g.w,g.h,pal.dark);px(g.x,g.y,g.w,3,INK);px(g.x,g.y+g.h-3,g.w,3,'rgba(0,0,0,.4)');},
+};
+
+/* ============ PROP STAMPS ============ */
+const PROPS={
+crate(x,y){box(x,y,20,16,pal.lite);px(x+2,y+4,16,2,pal.dark);px(x+2,y+10,16,2,pal.dark);},
+barrel(x,y){box(x,y,14,18,pal.lite);px(x+1,y+4,12,2,INK);px(x+1,y+12,12,2,INK);},
+cabinet(x,y){box(x,y,18,22,'#4a4a4a');px(x+3,y+3,12,7,'#6b6b6b');px(x+3,y+12,12,7,'#6b6b6b');},
+bottles(x,y){for(let i=0;i<4;i++)for(let j=0;j<2;j++){box(x+i*7,y+j*10,6,9,pal.lite);px(x+i*7+2,y+j*10-2,2,3,INK);}},
+counter(x,y,w){box(x,y,w||80,12,pal.lite);px(x+1,y+9,(w||80)-2,2,pal.dark);},
+rug(x,y){px(x,y,44,26,pal.pale);px(x+2,y+2,40,22,pal.dark);px(x+4,y+4,36,18,pal.pale);},
+door(x,y){box(x,y,16,22,pal.dark);px(x+11,y+10,3,3,pal.pale);},
+window(x,y){box(x,y,14,12,pal.pale);px(x+6,y+1,2,10,INK);px(x+1,y+5,12,2,INK);},
+plant(x,y){box(x,y+8,10,8,pal.lite);px(x+2,y,2,8,INK);px(x+6,y+2,2,6,INK);},
+stack(x,y){box(x,y,12,30,'#4a4a4a');px(x+2,y+2,8,4,'#2c2c2c');
+  ctx.fillStyle='rgba(255,255,255,.5)';                       // smoke, animated
+  ctx.fillRect(x+3+(phase?3:0),y-8,5,5);ctx.fillRect(x+1+(phase?0:4),y-16,6,6);ctx.fillRect(x+4+(phase?4:-2),y-26,7,7);},
+lamp(x,y){px(x+4,y+6,3,22,INK);box(x,y,11,8,pal.pale);},
+sign(x,y){box(x,y,20,12,pal.pale);px(x+9,y+12,3,8,INK);},
+bed(x,y){box(x,y,20,34,pal.lite);px(x+2,y+2,16,8,pal.pale);},
+shelf(x,y){box(x,y,30,10,'#4a4a4a');for(let i=0;i<5;i++)px(x+3+i*5,y+2,3,6,pal.lite);},
+vat(x,y){box(x,y,24,26,'#4a4a4a');px(x+2,y+2,20,5,pal.dark);px(x+4,y+4,6,2,pal.pale);},
+dock(x,y){px(x,y,26,10,pal.lite);px(x,y,26,2,INK);px(x,y+8,26,2,INK);px(x+2,y+10,3,4,INK);px(x+21,y+10,3,4,INK);},
+rock(x,y){box(x,y+3,14,9,pal.dark);px(x+3,y,8,5,pal.dark);},
+};
+const SOLID_PROPS={crate:1,barrel:1,cabinet:1,bottles:1,counter:1,plant:1,stack:1,lamp:1,sign:1,bed:1,shelf:1,vat:1,rock:1};
+
+/* ============ ROOMS AS DATA ============ */
+const ROOMS=[
+{name:'storeroom',
+ floors:[{p:'brackets',x:48,y:40,w:288,h:208}],
+ structs:[{t:'wall',x:48,y:40,w:288,h:26}],
+ props:[{t:'counter',x:60,y:78,w:120},{t:'crate',x:64,y:44},{t:'crate',x:86,y:44},
+  {t:'bottles',x:130,y:42},{t:'cabinet',x:180,y:42},{t:'cabinet',x:210,y:42},
+  {t:'barrel',x:300,y:86},{t:'barrel',x:316,y:100},{t:'shelf',x:290,y:140},
+  {t:'crate',x:56,y:210},{t:'door',x:176,y:226}]},
+{name:'carpet hall',
+ floors:[{p:'plain',x:24,y:16,w:336,h:256},{p:'carpet',x:120,y:16,w:96,h:256},{p:'carpet',x:24,y:150,w:336,h:60}],
+ structs:[{t:'wall',x:24,y:16,w:96,h:110},{t:'wall',x:216,y:16,w:144,h:96},
+  {t:'wall',x:24,y:210,w:120,h:62},{t:'wall',x:260,y:210,w:100,h:62}],
+ props:[{t:'cabinet',x:36,y:24},{t:'cabinet',x:62,y:24},{t:'cabinet',x:300,y:24},
+  {t:'rug',x:40,y:160},{t:'crate',x:230,y:120},{t:'plant',x:200,y:120},{t:'bed',x:280,y:120}]},
+{name:'damien street',   /* OUTDOOR: no walls anywhere — bounds clamp, footprints block */
+ floors:[
+  {p:'grass',x:0,y:0,w:384,h:288},
+  {p:'path',x:150,y:0,w:70,h:288},
+  {p:'path',x:0,y:170,w:384,h:56},
+  {p:'water',x:318,y:0,w:66,h:120}],
+ structs:[
+  {t:'building',x:26,y:26,w:104,h:82},
+  {t:'building',x:236,y:150-92,w:70,h:64},
+  {t:'fence',x:10,y:246,w:120,h:20},
+  {t:'ledge',x:308,y:0,w:10,h:120}],
+ props:[
+  {t:'door',x:66,y:86},{t:'window',x:38,y:52},{t:'window',x:100,y:52},
+  {t:'stack',x:112,y:14},
+  {t:'door',x:262,y:100},{t:'window',x:244,y:76},
+  {t:'lamp',x:140,y:150},{t:'lamp',x:222,y:236},
+  {t:'sign',x:132,y:196},{t:'crate',x:250,y:240},{t:'barrel',x:274,y:246},
+  {t:'rock',x:40,y:140},{t:'dock',x:300,y:104}]},
+];
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,384,288);
+  const r=room;
+  r.floors.forEach(f=>FLOORS[f.p](f));
+  ctx.strokeStyle='#000';ctx.lineWidth=3;
+  const bx=Math.min(...r.floors.map(f=>f.x)), by=Math.min(...r.floors.map(f=>f.y));
+  const bw=Math.max(...r.floors.map(f=>f.x+f.w))-bx, bh=Math.max(...r.floors.map(f=>f.y+f.h))-by;
+  ctx.strokeRect(bx,by,bw,bh);
+  (r.structs||[]).forEach(g=>STRUCT[g.t](g));
+  r.props.forEach(p=>PROPS[p.t](p.x,p.y,p.w));
+  if(showCol){
+    ctx.fillStyle='rgba(208,35,31,.45)';
+    r.floors.filter(f=>UNWALKABLE_FLOORS[f.p]).forEach(f=>ctx.fillRect(f.x,f.y,f.w,f.h));
+    (r.structs||[]).forEach(g=>ctx.fillRect(g.x,g.y,g.w,g.h));
+    r.props.filter(p=>SOLID_PROPS[p.t]).forEach(p=>ctx.fillRect(Math.floor(p.x/16)*16,Math.floor(p.y/16)*16,(p.w?Math.ceil(p.w/16)*16:32),32));
+  }
+}
+function loadRoom(i,btn){room=ROOMS[i];
+  [...document.querySelectorAll('.bar button')].slice(0,3).forEach((b,j)=>b.classList.toggle('on',j===i));draw();}
+function setPal(k,btn){pal=PALS[k];
+  document.querySelectorAll('.pz').forEach(b=>b.classList.toggle('on',b===btn));draw();}
+room=ROOMS[2];
+setInterval(()=>{phase=!phase;draw();},380);
+</script>
+</body>
+</html>

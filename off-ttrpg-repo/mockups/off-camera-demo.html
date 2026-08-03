@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OFF — Scrolling Causeway Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{background:#0a0a0a;color:#f4f2ec;font-family:'IBM Plex Mono',monospace;display:flex;flex-direction:column;
+  align-items:center;gap:12px;padding:20px}
+h1{font-family:'Jersey 10',monospace;font-size:30px;letter-spacing:2px;font-weight:400}
+canvas{border:4px solid #000;image-rendering:pixelated;width:768px;height:576px}
+.note{font-size:11px;color:#777;max-width:700px;text-align:center;line-height:1.6}
+</style>
+</head>
+<body>
+<h1>THE CAUSEWAY — camera + water demo</h1>
+<canvas id="c" width="384" height="288"></canvas>
+<div class="note">ARROW KEYS. The room is 384×1600 — five and a half screens tall. The camera is one translate, clamped to the room.
+Water is a floor pattern with walkable:false — no wall rects anywhere on the sides. Try walking into the sea.</div>
+<script>
+const ctx=document.getElementById('c').getContext('2d');ctx.imageSmoothingEnabled=false;
+const VW=384,VH=288,T=16;
+const ROOM={w:384,h:1600,
+  floors:[
+    {p:'water',x:0,y:0,w:384,h:1600,walk:false},
+    {p:'brackets',x:144,y:0,w:96,h:1600,walk:true},        // the walkway
+    {p:'plain',x:96,y:1400,w:192,h:120,walk:true},          // landing at the south end
+    {p:'plain',x:96,y:64,w:192,h:96,walk:true},             // destination plaza north
+  ],
+  walls:[{x:96,y:32,w:192,h:32}],                           // plaza back wall
+  props:[{t:'crate',x:110,y:1420},{t:'crate',x:252,y:1440},{t:'plant',x:120,y:80},{t:'plant',x:250,y:80}]};
+let px=176,py=1480,facing=3,phase=0,tick=0;
+const keys={};
+addEventListener('keydown',e=>{if(e.key.startsWith('Arrow')){keys[e.key]=1;e.preventDefault();}});
+addEventListener('keyup',e=>keys[e.key]=0);
+const PAL={dark:'#1d4b70',lite:'#7fa8c6',floor:'#cfe3f2',water:'#153a5c',waveA:'#2e6d9e',ink:'#000'};
+
+function walkableAt(x,y){
+  let ok=false;
+  for(const f of ROOM.floors) if(x>=f.x&&x<f.x+f.w&&y>=f.y&&y<f.y+f.h) ok=f.walk;   // topmost floor wins
+  for(const w of ROOM.walls) if(x>=w.x&&x<w.x+w.w&&y>=w.y&&y<w.y+w.h) ok=false;
+  return ok;
+}
+function drawFloor(f){
+  if(f.p==='water'){
+    ctx.fillStyle=PAL.water;ctx.fillRect(f.x,f.y,f.w,f.h);
+    ctx.fillStyle=PAL.waveA;
+    for(let y=f.y;y<f.y+f.h;y+=24)
+      for(let x=f.x+((y/24%2)?8:0);x<f.x+f.w;x+=32)
+        ctx.fillRect(x+(phase?2:0),y+8,10,2);               // two-frame shimmer
+  }else if(f.p==='plain'){ctx.fillStyle=PAL.floor;ctx.fillRect(f.x,f.y,f.w,f.h);
+    ctx.strokeStyle=PAL.ink;ctx.lineWidth=2;ctx.strokeRect(f.x,f.y,f.w,f.h);}
+  else{ctx.fillStyle=PAL.dark;ctx.fillRect(f.x,f.y,f.w,f.h);
+    ctx.fillStyle=PAL.lite;
+    for(let y=f.y+8;y<f.y+f.h-8;y+=32)for(let x=f.x+8;x<f.x+f.w-8;x+=32){
+      ctx.fillRect(x,y,6,2);ctx.fillRect(x,y,2,6);
+      ctx.fillRect(x+16,y+16,6,2);ctx.fillRect(x+20,y+12,2,6);}
+    ctx.strokeStyle=PAL.ink;ctx.lineWidth=2;ctx.strokeRect(f.x,f.y,f.w,f.h);}
+}
+const PROPS={crate(x,y){ctx.fillStyle=PAL.ink;ctx.fillRect(x,y,20,16);ctx.fillStyle=PAL.lite;ctx.fillRect(x+1,y+1,18,14);
+    ctx.fillStyle=PAL.dark;ctx.fillRect(x+2,y+4,16,2);ctx.fillRect(x+2,y+10,16,2);},
+  plant(x,y){ctx.fillStyle=PAL.ink;ctx.fillRect(x,y+8,10,8);ctx.fillStyle=PAL.dark;ctx.fillRect(x+1,y,3,8);ctx.fillRect(x+6,y+2,3,6);}};
+
+function frame(){
+  tick++;if(tick%20===0)phase=!phase;                        // water animates
+  const spd=2;
+  let nx=px,ny=py;
+  if(keys.ArrowUp){ny-=spd;facing=3;} if(keys.ArrowDown){ny+=spd;facing=0;}
+  if(keys.ArrowLeft){nx-=spd;facing=1;} if(keys.ArrowRight){nx+=spd;facing=2;}
+  if(walkableAt(nx+6,py+14)&&walkableAt(nx+10,py+14))px=nx;   // feet-corner checks
+  if(walkableAt(px+6,ny+14)&&walkableAt(px+10,ny+14))py=ny;
+  // camera: one translate, clamped
+  const camX=Math.max(0,Math.min(ROOM.w-VW, px-VW/2));
+  const camY=Math.max(0,Math.min(ROOM.h-VH, py-VH/2));
+  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#000';ctx.fillRect(0,0,VW,VH);
+  ctx.translate(-camX,-camY);
+  ROOM.floors.forEach(drawFloor);
+  ROOM.walls.forEach(w=>{ctx.fillStyle=PAL.ink;ctx.fillRect(w.x,w.y,w.w,w.h);
+    ctx.fillStyle=PAL.lite;ctx.fillRect(w.x+2,w.y+2,w.w-4,w.h-4);
+    ctx.fillStyle=PAL.dark;ctx.fillRect(w.x+2,w.y+w.h-6,w.w-4,4);});
+  ROOM.props.forEach(p=>PROPS[p.t](p.x,p.y));
+  // player (placeholder sprite)
+  ctx.fillStyle=PAL.ink;ctx.fillRect(px-1,py-1,18,18);
+  ctx.fillStyle='#f4f2ec';ctx.fillRect(px,py,16,16);
+  ctx.fillStyle=PAL.ink;
+  if(facing!==3){ctx.fillRect(px+4,py+4,2,2);ctx.fillRect(px+10,py+4,2,2);}
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

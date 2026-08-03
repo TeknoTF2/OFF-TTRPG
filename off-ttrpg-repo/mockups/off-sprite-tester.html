@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OFF — Sprite Sheet Tester</title>
+<link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{background:#0a0a0a;color:#f4f2ec;font-family:'IBM Plex Mono',monospace;display:flex;flex-direction:column;
+  align-items:center;gap:12px;padding:20px}
+h1{font-family:'Jersey 10',monospace;font-size:32px;letter-spacing:2px;font-weight:400}
+.bar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:center}
+.bar label{font-size:11px;color:#999;display:flex;gap:6px;align-items:center}
+input[type=number]{width:52px;background:#161616;border:1px solid #333;color:#f4f2ec;font-family:inherit;padding:3px}
+input[type=file]{font-size:11px}
+select{background:#161616;border:1px solid #333;color:#f4f2ec;font-family:inherit;padding:3px}
+button{background:#161616;border:1px solid #333;color:#f4f2ec;font-family:'Jersey 10',monospace;font-size:18px;padding:3px 14px;cursor:pointer}
+button:hover{border-color:#f2a71b;color:#f2a71b}
+canvas{border:4px solid #000;background:#2e6d9e;image-rendering:pixelated}
+#sheetview{max-width:640px;border:2px solid #333;image-rendering:pixelated;background:
+  repeating-conic-gradient(#222 0 25%,#1a1a1a 0 50%) 0 0/16px 16px}
+.cellbox{position:absolute;border:1px solid #f2a71b;pointer-events:none}
+.note{font-size:11px;color:#777;max-width:660px;text-align:center;line-height:1.6}
+.wrap{position:relative;display:inline-block}
+</style>
+</head>
+<body>
+<h1>SPRITE SHEET TESTER</h1>
+<div class="bar">
+  <input type="file" id="file" accept="image/png,image/gif">
+  <label>chars across <input type="number" id="cx" value="4" min="1"></label>
+  <label>chars down <input type="number" id="cy" value="2" min="1"></label>
+  <label>character <select id="who"></select></label>
+  <label>row order <select id="order">
+    <option value="0123">down,left,right,up</option>
+    <option value="0312">down,up,left,right</option>
+    <option value="3120">up,left,right,down</option>
+  </select></label>
+  <label>scale <input type="number" id="scale" value="3" min="1" max="6"></label>
+</div>
+<canvas id="stage" width="480" height="320"></canvas>
+<div class="note">ARROW KEYS to walk. The engine draws sub-rectangles of your PNG — nothing is ever cut apart.
+Walk cycle: columns 0 → 1 → 2 → 1. Idle: hold column 1. If the walk looks moonwalky, your sheet uses a different row order — try the dropdown.</div>
+<div class="wrap"><img id="sheetview"><div class="cellbox" id="cellbox"></div></div>
+
+<script>
+const stage=document.getElementById('stage').getContext('2d');
+stage.imageSmoothingEnabled=false;
+let img=new Image(), loaded=false;
+let cw=32,ch=32;                       // cell size, computed on load
+let who=0, facing=0, col=1, px=224,py=144, moving=false;
+const seq=[0,1,2,1]; let seqi=1, clock=0;
+const keys={};
+document.getElementById('file').onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  img=new Image();
+  img.onload=()=>{loaded=true;recalc();document.getElementById('sheetview').src=img.src;};
+  img.src=URL.createObjectURL(f);
+};
+function recalc(){
+  const cx=+document.getElementById('cx').value, cy=+document.getElementById('cy').value;
+  cw=Math.floor(img.width/(cx*3)); ch=Math.floor(img.height/(cy*4));
+  const sel=document.getElementById('who'); sel.innerHTML='';
+  for(let i=0;i<cx*cy;i++){const o=document.createElement('option');o.value=i;o.textContent='#'+(i+1)+'  ('+cw+'×'+ch+' cells)';sel.appendChild(o);}
+  who=0;sel.value=0;
+}
+['cx','cy'].forEach(id=>document.getElementById(id).onchange=recalc);
+document.getElementById('who').onchange=e=>who=+e.target.value;
+addEventListener('keydown',e=>{if(e.key.startsWith('Arrow')){keys[e.key]=true;e.preventDefault();}});
+addEventListener('keyup',e=>keys[e.key]=false);
+
+function blockOrigin(){
+  const cx=+document.getElementById('cx').value;
+  return {bx:(who%cx)*3*cw, by:Math.floor(who/cx)*4*ch};
+}
+function rowFor(f){ // f: 0=down 1=left 2=right 3=up -> sheet row per chosen order
+  const ord=document.getElementById('order').value;      // string maps sheet rows to meanings
+  // ord[i] = which facing lives in sheet-row i; find sheet row whose facing == f
+  for(let r=0;r<4;r++) if(+ord[r]===f) return r;
+  return 0;
+}
+function tick(){
+  const S=+document.getElementById('scale').value;
+  const spd=2;
+  moving=false;
+  if(keys.ArrowDown){py+=spd;facing=0;moving=true;}
+  else if(keys.ArrowLeft){px-=spd;facing=1;moving=true;}
+  else if(keys.ArrowRight){px+=spd;facing=2;moving=true;}
+  else if(keys.ArrowUp){py-=spd;facing=3;moving=true;}
+  px=Math.max(0,Math.min(480-cw*S,px)); py=Math.max(0,Math.min(320-ch*S,py));
+  if(moving){clock++;if(clock%8===0){seqi=(seqi+1)%4;}col=seq[seqi];}
+  else {col=1;seqi=1;}
+  stage.fillStyle='#2e6d9e';stage.fillRect(0,0,480,320);
+  stage.fillStyle='rgba(0,0,0,.15)';
+  for(let y=0;y<320;y+=32)for(let x=(y/32%2)*32;x<480;x+=64)stage.fillRect(x,y,32,32);
+  if(loaded){
+    const {bx,by}=blockOrigin(); const row=rowFor(facing);
+    stage.imageSmoothingEnabled=false;
+    stage.drawImage(img, bx+col*cw, by+row*ch, cw, ch, px, py, cw*S, ch*S);
+    // highlight current source cell on the sheet preview
+    const view=document.getElementById('sheetview'), box=document.getElementById('cellbox');
+    if(view.width){const k=view.width/img.width;
+      box.style.left=(bx+col*cw)*k+'px'; box.style.top=(by+row*ch)*k+'px';
+      box.style.width=cw*k+'px'; box.style.height=ch*k+'px';}
+  } else {
+    stage.fillStyle='#f4f2ec';stage.font='16px "Jersey 10"';
+    stage.fillText('LOAD A SHEET ABOVE',160,160);
+  }
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+</body>
+</html>

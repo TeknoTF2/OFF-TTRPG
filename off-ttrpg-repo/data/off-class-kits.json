@@ -1,0 +1,944 @@
+{
+ "meta": {
+  "schema": "Part 5: {name, level, cp, baseValue, atkPct, espPct, movePower, variance, target, element, accuracy, effects}. baseValue is 0 for all player competences (MovePower scaling). accuracy null = cannot miss / no roll. effect is verbatim from the system doc, which remains authority for effect semantics.",
+  "class_accuracy": {
+   "Epsilon": 95,
+   "Omega": 94,
+   "Burnt": 93,
+   "Alpha": 91,
+   "Purifier": 90,
+   "Bandit": 87
+  },
+  "accuracy_rule": "class accuracy = 100 - level-1 AGI, held constant; per-competence rows already carry final modified values",
+  "class_elements": {
+   "Purifier": "Metal",
+   "Alpha": "Plastic",
+   "Omega": "Smoke",
+   "Epsilon": "Meat",
+   "Bandit": "Smoke",
+   "Burnt": "Meat"
+  },
+  "source": "off-ttrpg-system_md.docx Part 4, pandoc AST extraction"
+ },
+ "classes": {
+  "Purifier": {
+   "element": "Metal",
+   "competences": [
+    {
+     "name": "Wide Angle",
+     "level": 1,
+     "cp": 2,
+     "baseValue": 0,
+     "atkPct": null,
+     "espPct": null,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "one enemy",
+     "element": null,
+     "effect": "Reveal one enemy's stats, element, statuses"
+    },
+    {
+     "name": "Powerful Homerun",
+     "level": 1,
+     "cp": 14,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 10,
+     "movePower": 1.6,
+     "accuracy": 90,
+     "target": "one enemy",
+     "element": "Sugar",
+     "effect": "One enemy, 1.6× Sugar"
+    },
+    {
+     "name": "Save First Base",
+     "level": 3,
+     "cp": 18,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 5,
+     "movePower": 1.9,
+     "accuracy": null,
+     "target": "one ally",
+     "element": null,
+     "effect": "One ally, heal"
+    },
+    {
+     "name": "Run with Courage",
+     "level": 5,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 10,
+     "movePower": 1.5,
+     "accuracy": 90,
+     "target": "one enemy",
+     "element": "Metal",
+     "effect": "One enemy, Metal"
+    },
+    {
+     "name": "Furious Homerun",
+     "level": 7,
+     "cp": 20,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 15,
+     "movePower": 2.1,
+     "accuracy": 90,
+     "target": "one enemy",
+     "element": "Sugar",
+     "effect": "One enemy, 2.1× Sugar"
+    },
+    {
+     "name": "Run with Grace",
+     "level": 9,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 10,
+     "movePower": 1.5,
+     "accuracy": 90,
+     "target": "one enemy",
+     "element": "Plastic",
+     "effect": "One enemy, Plastic"
+    },
+    {
+     "name": "Save Second Base",
+     "level": 11,
+     "cp": 22,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 5,
+     "movePower": 2.75,
+     "accuracy": null,
+     "target": "one ally",
+     "element": null,
+     "effect": "One ally, large heal"
+    },
+    {
+     "name": "Run with Dementia",
+     "level": 13,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 10,
+     "movePower": 1.5,
+     "accuracy": 90,
+     "target": "one enemy",
+     "element": "Smoke",
+     "effect": "One enemy, Smoke"
+    },
+    {
+     "name": "Special Homerun",
+     "level": 15,
+     "cp": 26,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 15,
+     "movePower": 2.9,
+     "accuracy": 88,
+     "target": "one enemy",
+     "element": "Sugar",
+     "effect": "One enemy, 2.9× Sugar"
+    },
+    {
+     "name": "Run with Faith",
+     "level": 17,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 10,
+     "movePower": 1.5,
+     "accuracy": 90,
+     "target": "one enemy",
+     "element": "Meat",
+     "effect": "One enemy, Meat"
+    },
+    {
+     "name": "Save Third Base",
+     "level": 18,
+     "cp": 24,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 5,
+     "movePower": 1.6,
+     "accuracy": null,
+     "target": "all allies",
+     "element": null,
+     "effect": "All allies, heal"
+    },
+    {
+     "name": "Save Fourth Base",
+     "level": 19,
+     "cp": 30,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "one ally",
+     "element": null,
+     "effect": "Revive one ally at 50% HP"
+    },
+    {
+     "name": "Ultimate Homerun",
+     "level": 20,
+     "cp": 32,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 20,
+     "movePower": 3.8,
+     "accuracy": 88,
+     "target": "one enemy",
+     "element": "Sugar",
+     "effect": "One enemy, 3.8× Sugar"
+    }
+   ],
+   "passives": [
+    {
+     "name": "Sacred Mission",
+     "level": 2,
+     "effect": "Once per battle, survive lethal damage at 1 HP."
+    },
+    {
+     "name": "Purification",
+     "level": 10,
+     "effect": "+25% damage against enemies at or below 30% HP."
+    }
+   ]
+  },
+  "Alpha": {
+   "element": "Plastic",
+   "competences": [
+    {
+     "name": "Saturated String",
+     "level": 1,
+     "cp": 14,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 10,
+     "movePower": 0.98,
+     "accuracy": 91,
+     "target": "one enemy",
+     "element": "Plastic",
+     "effect": "One enemy, 1.6×, Plastic"
+    },
+    {
+     "name": "Open Bracket",
+     "level": 3,
+     "cp": 18,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "one enemy",
+     "element": null,
+     "effect": "Poisoned"
+    },
+    {
+     "name": "Converted String",
+     "level": 5,
+     "cp": 20,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 10,
+     "movePower": 1.29,
+     "accuracy": 91,
+     "target": "one enemy",
+     "element": "Plastic",
+     "effect": "One enemy, 2.1× Plastic, +25% if it holds a status"
+    },
+    {
+     "name": "Closed Bracket",
+     "level": 7,
+     "cp": 20,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": null,
+     "element": null,
+     "effect": "Blinded + ATK Down 25% (2 turns)"
+    },
+    {
+     "name": "Long String",
+     "level": 9,
+     "cp": 24,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 15,
+     "movePower": 0.86,
+     "accuracy": 89,
+     "target": "all enemies",
+     "element": "Plastic",
+     "effect": "All enemies, 1.4× each, Plastic"
+    },
+    {
+     "name": "Broken Bracket",
+     "level": 12,
+     "cp": 24,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "one enemy",
+     "element": null,
+     "effect": "Muted"
+    },
+    {
+     "name": "Complete String",
+     "level": 15,
+     "cp": 26,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 10,
+     "movePower": 1.78,
+     "accuracy": 89,
+     "target": "one enemy",
+     "element": "Plastic",
+     "effect": "One enemy, 2.9× Plastic"
+    },
+    {
+     "name": "Impossible Bracket",
+     "level": 18,
+     "cp": 32,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "one enemy",
+     "element": null,
+     "effect": "Palsied"
+    },
+    {
+     "name": "Absolute String",
+     "level": 20,
+     "cp": 32,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 15,
+     "movePower": 2.33,
+     "accuracy": 89,
+     "target": "one enemy",
+     "element": "Plastic",
+     "effect": "One enemy, 3.8× Plastic, +0.5× per status on it — stat changes do not count"
+    }
+   ],
+   "passives": [
+    {
+     "name": "Chain Mastery",
+     "level": 2,
+     "effect": "Targets afflicted by an Alpha status check their cure at RES − 5."
+    },
+    {
+     "name": "Status Expertise",
+     "level": 12,
+     "effect": "Alpha's status competences land at +10."
+    },
+    {
+     "name": "Corrosion",
+     "level": 18,
+     "effect": "Alpha's status competences treat Light immunity as Neutral."
+    }
+   ]
+  },
+  "Omega": {
+   "element": "Smoke",
+   "competences": [
+    {
+     "name": "Optimized Blur",
+     "level": 1,
+     "cp": 14,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 10,
+     "movePower": 0.4,
+     "accuracy": 93,
+     "target": "one enemy",
+     "element": "Smoke",
+     "effect": "One enemy, 1.0× Smoke + AGI Down 15% (2 turns)"
+    },
+    {
+     "name": "Focus",
+     "level": 3,
+     "cp": 18,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "one ally",
+     "element": null,
+     "effect": "One ally, cure all statuses + DEF Up +15 (2 turns)"
+    },
+    {
+     "name": "Photographic Blur",
+     "level": 5,
+     "cp": 22,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 10,
+     "movePower": 0.32,
+     "accuracy": 91,
+     "target": "all enemies",
+     "element": "Smoke",
+     "effect": "All enemies, 0.8× each Smoke + Blinded"
+    },
+    {
+     "name": "Depth of Field",
+     "level": 7,
+     "cp": 22,
+     "baseValue": 0,
+     "atkPct": null,
+     "espPct": null,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "all allies",
+     "element": null,
+     "effect": "All allies, DEF Up +15 + AGI Up 15% (2 turns)"
+    },
+    {
+     "name": "Gaussian Blur",
+     "level": 9,
+     "cp": 20,
+     "baseValue": 0,
+     "atkPct": null,
+     "espPct": null,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "one enemy",
+     "element": null,
+     "effect": "One enemy, DEF Down −20 (2 turns)"
+    },
+    {
+     "name": "Long Exposure",
+     "level": 12,
+     "cp": 26,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 15,
+     "movePower": 0.93,
+     "accuracy": 92,
+     "target": "one enemy",
+     "element": "Smoke",
+     "effect": "One enemy, 2.3× Smoke, doubled if Blinded"
+    },
+    {
+     "name": "Multiple Perspective",
+     "level": 15,
+     "cp": 30,
+     "baseValue": 0,
+     "atkPct": null,
+     "espPct": null,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "one ally",
+     "element": null,
+     "effect": "Revive one ally at 60% HP, cure all statuses"
+    },
+    {
+     "name": "Radial Blur",
+     "level": 18,
+     "cp": 32,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 15,
+     "movePower": 0.4,
+     "accuracy": 91,
+     "target": "all enemies",
+     "element": "Smoke",
+     "effect": "All enemies, 1.0× each Smoke + DEF Down −20 + AGI Down 25% (3 turns)"
+    }
+   ],
+   "passives": [
+    {
+     "name": "Fixer",
+     "level": 2,
+     "effect": "Whenever Omega cures statuses, it also strips one stat Down from the same target, applying nothing in its place. Applies to Focus and Multiple Perspective."
+    },
+    {
+     "name": "Negative Space",
+     "level": 10,
+     "effect": "Enemies Blinded by Omega cannot land criticals. A charged crit held by an enemy is lost the moment Blinded lands, and none can be rolled while it holds."
+    }
+   ]
+  },
+  "Epsilon": {
+   "element": "Meat",
+   "competences": [
+    {
+     "name": "Petite Tragedy",
+     "level": 1,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 10,
+     "movePower": 0.48,
+     "accuracy": 93,
+     "target": "all enemies",
+     "element": "Meat",
+     "effect": "All enemies, 0.8× each Meat"
+    },
+    {
+     "name": "Comic Drama",
+     "level": 3,
+     "cp": 18,
+     "baseValue": 0,
+     "atkPct": null,
+     "espPct": null,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "all allies",
+     "element": null,
+     "effect": "All allies, ATK Up 15% (2 turns)"
+    },
+    {
+     "name": "Grand Tragedy",
+     "level": 5,
+     "cp": 20,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 10,
+     "movePower": 0.69,
+     "accuracy": 93,
+     "target": "all enemies",
+     "element": "Meat",
+     "effect": "All enemies, 1.15× each Meat"
+    },
+    {
+     "name": "Baroque Drama",
+     "level": 7,
+     "cp": 20,
+     "baseValue": 0,
+     "atkPct": null,
+     "espPct": null,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "all allies",
+     "element": null,
+     "effect": "All allies, DEF Up +15 (2 turns)"
+    },
+    {
+     "name": "Absolute Tragedy",
+     "level": 9,
+     "cp": 24,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 15,
+     "movePower": 0.85,
+     "accuracy": 93,
+     "target": "all enemies",
+     "element": "Meat",
+     "effect": "All enemies, 1.4× each Meat"
+    },
+    {
+     "name": "Unrevokable Drama",
+     "level": 12,
+     "cp": 22,
+     "baseValue": 0,
+     "atkPct": null,
+     "espPct": null,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "all allies",
+     "element": null,
+     "effect": "All allies, AGI Up 15% (3 turns)"
+    },
+    {
+     "name": "Total Drama",
+     "level": 15,
+     "cp": 30,
+     "baseValue": 0,
+     "atkPct": null,
+     "espPct": null,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "all allies",
+     "element": null,
+     "effect": "All allies, ATK Up 20% / DEF Up +15 / AGI Up 15% (3 turns)"
+    },
+    {
+     "name": "Final Tragedy",
+     "level": 18,
+     "cp": 32,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 15,
+     "movePower": 1.24,
+     "accuracy": 93,
+     "target": "all enemies",
+     "element": "Meat",
+     "effect": "All enemies, 2.05× each Meat"
+    }
+   ],
+   "passives": [
+    {
+     "name": "Artistic Mastery",
+     "level": 2,
+     "effect": "Epsilon's Dramas last 1 additional turn."
+    },
+    {
+     "name": "Standing Ovation",
+     "level": 10,
+     "effect": "While any Drama is active, Epsilon's Tragedies deal +20%."
+    }
+   ]
+  },
+  "Bandit": {
+   "element": "Smoke",
+   "competences": [
+    {
+     "name": "Orion's Mark",
+     "level": 1,
+     "cp": 14,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 15,
+     "movePower": 1.6,
+     "accuracy": 87,
+     "target": "one enemy",
+     "element": "Smoke",
+     "effect": "One enemy, 1.6× Smoke"
+    },
+    {
+     "name": "Ursa Shot",
+     "level": 3,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 10,
+     "movePower": 1.2,
+     "accuracy": 86,
+     "target": "one enemy",
+     "element": "Smoke",
+     "effect": "One enemy, 1.2× Smoke, steal an Object into party inventory"
+    },
+    {
+     "name": "Draco's Mark",
+     "level": 5,
+     "cp": 20,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 15,
+     "movePower": 2.1,
+     "accuracy": 87,
+     "target": "one enemy",
+     "element": "Smoke",
+     "effect": "One enemy, 2.1× Smoke"
+    },
+    {
+     "name": "Lyra Shot",
+     "level": 7,
+     "cp": 18,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 10,
+     "movePower": 1.4,
+     "accuracy": 87,
+     "target": "one enemy",
+     "element": "Smoke",
+     "effect": "One enemy, 1.4× Smoke"
+    },
+    {
+     "name": "Corvus Mark",
+     "level": 9,
+     "cp": 24,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 20,
+     "movePower": 2.6,
+     "accuracy": 85,
+     "target": "one enemy",
+     "element": "Smoke",
+     "effect": "One enemy, 2.6× Smoke"
+    },
+    {
+     "name": "Vela Shot",
+     "level": 12,
+     "cp": 22,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 15,
+     "movePower": 1.25,
+     "accuracy": 85,
+     "target": "all enemies",
+     "element": "Smoke",
+     "effect": "All enemies, 1.25× each Smoke"
+    },
+    {
+     "name": "Perseus Mark",
+     "level": 15,
+     "cp": 26,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 20,
+     "movePower": 2.9,
+     "accuracy": 85,
+     "target": "one enemy",
+     "element": null,
+     "effect": "One enemy, 2.9×, ignores elemental resistance"
+    },
+    {
+     "name": "Hydra Shot",
+     "level": 18,
+     "cp": 32,
+     "baseValue": 0,
+     "atkPct": 100,
+     "espPct": 0,
+     "variance": 25,
+     "movePower": 3.8,
+     "accuracy": 85,
+     "target": "one enemy",
+     "element": "Smoke",
+     "effect": "One enemy, 3.8× Smoke"
+    }
+   ],
+   "passives": [
+    {
+     "name": "Light Fingers",
+     "level": 2,
+     "effect": "Whenever any party member uses an Object, 5% chance it is not consumed."
+    },
+    {
+     "name": "Cutpurse",
+     "level": 10,
+     "effect": "Enemies defeated by the Bandit drop one additional item."
+    }
+   ]
+  },
+  "Burnt": {
+   "element": "Meat",
+   "competences": [
+    {
+     "name": "Marzipan Rush",
+     "level": 1,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": null,
+     "movePower": 1.2,
+     "accuracy": null,
+     "target": "one ally",
+     "element": "Plastic",
+     "effect": "One ally: minor heal, set element to Plastic"
+    },
+    {
+     "name": "Marzipan Crash",
+     "level": 1,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 10,
+     "movePower": 0.56,
+     "accuracy": 92,
+     "target": "one enemy",
+     "element": "Plastic",
+     "effect": "One enemy: 0.7× Meat, set element to Plastic"
+    },
+    {
+     "name": "Torte Rush",
+     "level": 3,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": null,
+     "movePower": 1.2,
+     "accuracy": null,
+     "target": "one ally",
+     "element": "Meat",
+     "effect": "One ally: minor heal, set element to Meat"
+    },
+    {
+     "name": "Torte Crash",
+     "level": 3,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 10,
+     "movePower": 0.56,
+     "accuracy": 92,
+     "target": "one enemy",
+     "element": "Meat",
+     "effect": "One enemy: 0.7× Meat, set element to Meat"
+    },
+    {
+     "name": "Praline Rush",
+     "level": 6,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": null,
+     "movePower": 1.2,
+     "accuracy": null,
+     "target": "one ally",
+     "element": "Metal",
+     "effect": "One ally: minor heal, set element to Metal"
+    },
+    {
+     "name": "Praline Crash",
+     "level": 6,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 10,
+     "movePower": 0.56,
+     "accuracy": 92,
+     "target": "one enemy",
+     "element": "Metal",
+     "effect": "One enemy: 0.7× Meat, set element to Metal"
+    },
+    {
+     "name": "Meringue Rush",
+     "level": 9,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": null,
+     "movePower": 1.2,
+     "accuracy": null,
+     "target": "one ally",
+     "element": "Smoke",
+     "effect": "One ally: minor heal, set element to Smoke"
+    },
+    {
+     "name": "Meringue Crash",
+     "level": 9,
+     "cp": 16,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 10,
+     "movePower": 0.56,
+     "accuracy": 92,
+     "target": "one enemy",
+     "element": "Smoke",
+     "effect": "One enemy: 0.7× Meat, set element to Smoke"
+    },
+    {
+     "name": "Nougat Crash",
+     "level": 12,
+     "cp": 22,
+     "baseValue": 0,
+     "atkPct": 0,
+     "espPct": 100,
+     "variance": 10,
+     "movePower": 0.6,
+     "accuracy": 90,
+     "target": "all enemies",
+     "element": "Meat",
+     "effect": "All enemies: 0.75× each Meat + ATK Down 20% (3 turns)"
+    },
+    {
+     "name": "Ganache Crash",
+     "level": 15,
+     "cp": 24,
+     "baseValue": 0,
+     "atkPct": 50,
+     "espPct": 50,
+     "variance": 10,
+     "movePower": 1.1,
+     "accuracy": 90,
+     "target": "one enemy",
+     "element": "Meat",
+     "effect": "One enemy: 1.2× Meat + ATK Down 30% (3 turns)"
+    },
+    {
+     "name": "Sablé Rush",
+     "level": 18,
+     "cp": 26,
+     "baseValue": 0,
+     "atkPct": null,
+     "espPct": null,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "all allies",
+     "element": null,
+     "effect": "All allies: set element to one you choose"
+    },
+    {
+     "name": "Petit Four Crash",
+     "level": 20,
+     "cp": 32,
+     "baseValue": 0,
+     "atkPct": null,
+     "espPct": null,
+     "variance": null,
+     "movePower": null,
+     "accuracy": null,
+     "target": "all enemies",
+     "element": null,
+     "effect": "All enemies: set element to one you choose"
+    }
+   ],
+   "passives": [
+    {
+     "name": "Sweet Madness",
+     "level": 2,
+     "effect": "The Burnt's own element can never be changed, including by itself."
+    },
+    {
+     "name": "Scorched",
+     "level": 10,
+     "effect": "The Burnt's element changes last 3 of the target's turns instead of 2."
+    }
+   ]
+  }
+ }
+}

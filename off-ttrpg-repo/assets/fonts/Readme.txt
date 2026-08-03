@@ -1,0 +1,1 @@
+Use off-game-font for menus headers and large titles, such as Zone names like "ALMA" or "ITEMS" in all caps. Use 7-12 for all other text, in standard formatting

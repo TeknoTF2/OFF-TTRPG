@@ -1,0 +1,53 @@
+{
+ "Black": {
+  "base": "#000000",
+  "tint": "#878787",
+  "pale": "#2b2b2b"
+ },
+ "Blue": {
+  "base": "#0017e6",
+  "tint": "#dfcbff",
+  "pale": "#5544fb"
+ },
+ "Green": {
+  "base": "#4ab036",
+  "tint": "#c9ecd0",
+  "pale": "#65c661"
+ },
+ "Lime": {
+  "base": "#8ee600",
+  "tint": "#89fe3c",
+  "pale": "#d0ffc8"
+ },
+ "Orange": {
+  "base": "#e67a00",
+  "tint": "#ffffcb",
+  "pale": "#fac94b"
+ },
+ "Pink": {
+  "base": "#e600ac",
+  "tint": "#ffcbd9",
+  "pale": "#fc40a6"
+ },
+ "Purple": {
+  "base": "#8600e6",
+  "tint": "#ba2df4",
+  "pale": "#ffcbfc"
+ },
+ "Red": {
+  "base": "#e60600",
+  "tint": "#fc6e42",
+  "pale": "#ffe3c8"
+ },
+ "White": {
+  "base": "#ffffff",
+  "tint": "#000000",
+  "pale": "#aaaaaa"
+ },
+ "Yellow": {
+  "base": "#e6cb00",
+  "tint": "#ebffc8",
+  "pale": "#e8ff4f"
+ },
+ "_note": "Sampled from the canon battle backgrounds. base = field color, tint/pale = damask layers. White = purified state. The source images themselves are the battle backdrops \u2014 render them directly, theme UI chrome from these values."
+}

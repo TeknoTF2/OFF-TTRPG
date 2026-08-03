@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OFF TTRPG — GM Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jersey+10&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --field:#2e6d9e; --field-dk:#1d4b70; --tint:#7fa8c6;
+  --amber:#f2a71b; --red:#d0231f; --blk:#0c0c0c; --panel:#131313; --wht:#f4f2ec;
+  --disp:'Jersey 10',monospace; --mono:'IBM Plex Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;border-radius:0}
+html,body{height:100%}
+body{display:grid;grid-template-rows:56px 1fr;grid-template-columns:200px 1fr;
+  grid-template-areas:"top top" "design play";
+  background:var(--blk);color:var(--wht);font-family:var(--mono);overflow:hidden;image-rendering:pixelated}
+.outline{text-shadow:2px 0 var(--blk),-2px 0 var(--blk),0 2px var(--blk),0 -2px var(--blk),2px 2px var(--blk),-2px -2px var(--blk),2px -2px var(--blk),-2px 2px var(--blk)}
+.dfont{font-family:var(--disp)}
+
+/* ===== TOP BAR: GM tabs ===== */
+.top{grid-area:top;background:var(--field-dk);display:flex;align-items:stretch;border-bottom:4px solid var(--blk);position:relative;overflow:hidden}
+.gmtag{display:flex;flex-direction:column;justify-content:center;padding:0 18px;background:var(--blk)}
+.gmtag .t{font-family:var(--disp);font-size:26px;color:var(--red);line-height:.9}
+.gmtag .s{font-size:8px;letter-spacing:3px;color:#777}
+.tabs{display:flex;align-items:stretch}
+.tab{background:transparent;border:0;color:var(--wht);font-family:var(--disp);font-size:24px;letter-spacing:1px;
+  padding:0 20px;cursor:pointer;position:relative}
+.tab:hover{background:rgba(0,0,0,.25)}
+.tab.on{background:var(--blk);color:var(--amber)}
+.tab.on::after{content:"";position:absolute;left:14px;right:14px;bottom:6px;height:3px;background:var(--amber)}
+.pausebtn{margin-left:auto;background:var(--blk);border:0;color:var(--wht);font-family:var(--disp);
+  font-size:22px;letter-spacing:1px;padding:0 22px;cursor:pointer}
+.pausebtn:hover{color:var(--amber)}
+.pausebtn.on{background:var(--amber);color:var(--blk)}
+body.paused .field::after{content:"PAUSED";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.45);color:var(--wht);font-family:var(--disp);font-size:90px;letter-spacing:14px;
+  text-shadow:4px 4px 0 #000;z-index:6;animation:pblink 1.6s steps(2) infinite}
+@keyframes pblink{50%{opacity:.75}}
+.zview{display:flex;align-items:center;gap:14px;padding-right:18px}
+.zname{font-family:var(--disp);font-size:26px}
+.zsub{font-size:9px;letter-spacing:2px;color:var(--tint)}
+
+/* ===== DESIGN COLUMN ===== */
+.design{grid-area:design;background:var(--blk);display:flex;flex-direction:column;overflow:hidden;border-right:4px solid var(--blk)}
+.dhead{padding:10px 12px 6px;font-family:var(--disp);font-size:24px;border-bottom:2px solid #1d1d1d}
+.dlist{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#333 var(--blk);padding-bottom:20px}
+.dsec{padding:8px 12px 4px;font-size:9px;letter-spacing:3px;color:#5a5a5a}
+.dgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:2px 10px}
+.dpiece{aspect-ratio:1;background:var(--panel);border:1px solid #222;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;cursor:grab;user-select:none}
+.dpiece:hover{border-color:var(--amber)}
+.dpiece .g{font-size:26px;line-height:1}
+.dpiece .n{font-size:7px;letter-spacing:.5px;color:#8a8a8a;margin-top:3px;text-align:center}
+.dnote{padding:8px 12px;font-size:8px;letter-spacing:1px;color:#555}
+
+.ltabs{display:flex;border-bottom:2px solid #1d1d1d}
+.ltab{flex:1;background:transparent;border:0;color:#777;font-family:var(--disp);font-size:22px;padding:8px 0;cursor:pointer}
+.ltab:hover{color:var(--wht)}
+.ltab.on{color:var(--amber);box-shadow:inset 0 -3px 0 var(--amber)}
+.partycol{padding:6px 0}
+.pm{padding:8px 12px;border-bottom:1px solid #191919;cursor:pointer}
+.pm:hover{background:#161616}
+.pm .pmn{font-family:var(--disp);font-size:22px;line-height:1}
+.pmnums{display:flex;gap:14px;margin-top:2px}
+.pmv{font-family:var(--disp);font-size:20px;line-height:1;position:relative;padding-bottom:4px}
+.pmv i{position:absolute;left:0;bottom:0;height:3px;background:var(--wht)}
+.pmv.cp i{background:var(--amber)}
+.pmv em{font-style:normal;font-size:9px;color:#8a8a8a;margin-left:2px}
+.pm.dead .pmn,.pm.dead .pmv{color:#4a4a4a}
+.pm.dead .pmv i,.pm.dead .pg i{background:#333}
+.partycol.targeting .pm:not(.dead){box-shadow:inset 3px 0 0 var(--red)}
+/* ===== PLAY AREA ===== */
+.play{grid-area:play;background:var(--field);display:flex;flex-direction:column;position:relative;overflow:hidden}
+.announce{background:var(--field-dk);padding:6px 16px;font-family:var(--disp);font-size:24px;min-height:40px;z-index:2}
+.damask{position:absolute;right:0;top:40px;width:44%;height:60%;pointer-events:none;z-index:0;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><g fill='white' opacity='.5'><circle cx='60' cy='34' r='13'/><circle cx='38' cy='58' r='13'/><circle cx='82' cy='58' r='13'/><rect x='55' y='70' width='10' height='34'/></g></svg>") 20px 10px/110px repeat;
+  mask-image:linear-gradient(210deg,#000 40%,transparent 75%);-webkit-mask-image:linear-gradient(210deg,#000 40%,transparent 75%)}
+.field{flex:1;position:relative;z-index:1}
+#roomcanvas{position:absolute;inset:0;z-index:0;pointer-events:none}
+#preview{position:absolute;border:2px dashed #fff;background:rgba(255,255,255,.15);display:none;pointer-events:none;z-index:4}
+.field.building{cursor:crosshair}
+.btool{display:flex;flex-wrap:wrap;gap:6px;padding:2px 10px 8px}
+.bt{background:#161616;border:1px solid #333;color:#ccc;font-family:var(--disp);font-size:16px;padding:3px 10px;cursor:pointer}
+.bt:hover{border-color:var(--amber);color:var(--amber)}
+.bt.on{background:var(--amber);color:#0a0a0a;border-color:var(--amber)}
+.enemy{position:absolute;text-align:center;width:120px;cursor:pointer}
+.enemy .sprite{font-size:76px;line-height:1;color:var(--wht);text-shadow:3px 0 var(--blk),-3px 0 var(--blk),0 3px var(--blk),0 -3px var(--blk);filter:drop-shadow(0 9px 0 rgba(0,0,0,.25))}
+.ename{font-family:var(--disp);font-size:19px;margin-top:2px}
+.ehp{height:5px;background:rgba(0,0,0,.5);margin:3px 18px 2px}
+.ehp i{display:block;height:100%;background:var(--wht)}
+.eg{height:4px;background:rgba(0,0,0,.5);margin:0 26px;position:relative}
+.eg i{display:block;height:100%;background:var(--amber);transition:width .3s linear}
+.ectl{font-size:8px;letter-spacing:1px;margin-top:3px;color:var(--blk);background:var(--wht);display:inline-block;padding:1px 5px}
+.ectl.gm{background:var(--red);color:var(--wht)}
+.slot{position:absolute;width:110px;height:110px;border:2px dashed rgba(0,0,0,.35);color:rgba(0,0,0,.45);
+  font-family:var(--disp);font-size:22px;display:flex;align-items:flex-end;justify-content:flex-start;
+  padding:4px 8px;pointer-events:none}
+.dropped.hiddenpiece{opacity:.35}
+.dropped.hiddenpiece::after{content:"◌";position:absolute;right:-10px;top:-8px;font-size:12px;color:var(--wht)}
+.dropped{position:absolute;font-size:40px;color:var(--wht);text-shadow:2px 0 var(--blk),-2px 0 var(--blk),0 2px var(--blk),0 -2px var(--blk);cursor:pointer;user-select:none}
+.field.dragover{outline:3px dashed rgba(255,255,255,.5);outline-offset:-8px}
+/* enemy action stack (GM's turn) */
+.estack{position:absolute;display:none;flex-direction:column;gap:8px;z-index:5}
+.estack.open{display:flex}
+.eact{background:var(--blk);color:var(--wht);font-family:var(--disp);font-size:24px;padding:2px 20px 4px 14px;
+  border:0;border-left:4px solid var(--red);cursor:pointer;text-align:left;transform:skewX(-4deg);width:max-content}
+.eact:hover{color:var(--amber)}
+.eact small{display:block;font-family:var(--mono);font-size:8px;color:#9a9a9a;transform:skewX(4deg)}
+/* party strip */
+.strip{background:var(--blk);display:grid;grid-template-columns:repeat(6,1fr);z-index:2}
+.pc{padding:7px 10px 9px;border-right:2px solid #1d1d1d;cursor:pointer}
+.pc:hover{background:#161616}
+.pc .pname{font-family:var(--disp);font-size:21px}
+.nums{display:flex;gap:14px;margin-top:1px}
+.num{font-family:var(--disp);font-size:21px;line-height:1;position:relative;padding-bottom:4px}
+.num i{position:absolute;left:0;bottom:0;height:3px;background:var(--wht)}
+.num.cp i{background:var(--amber)}
+.num em{font-style:normal;font-size:9px;color:#8a8a8a;margin-left:2px}
+.pg{height:7px;background:#232323;margin-top:5px}
+.pg i{display:block;height:100%;background:var(--wht);transition:width .3s linear}
+.picons{display:flex;gap:3px;margin-top:4px;min-height:13px}
+.pc.gmown{box-shadow:inset 0 4px 0 var(--red)}
+.pc .ctl{font-size:8px;letter-spacing:1px;background:var(--red);color:var(--wht);padding:1px 5px;vertical-align:middle}
+.pc .ctl.ai{background:#333;color:#aaa}
+.pg.eg2 i{background:var(--red)}
+.pc.waveslot{cursor:default;background:#0e0e0e}
+.pc.waveslot:hover{background:#0e0e0e}
+.icn{font-size:8px;font-weight:600;background:#000;border:1px solid #2a2a2a;color:var(--wht);padding:1px 4px;line-height:1.2}
+.icn.up{color:var(--amber)}
+
+/* ===== GM PANELS (overlay the field) ===== */
+.gmpanel{position:absolute;inset:40px 0 96px 0;background:rgba(10,10,10,.94);z-index:8;display:none;
+  overflow-y:auto;scrollbar-width:thin;scrollbar-color:#333 #000;padding:22px 28px}
+.gmpanel.open{display:block}
+.ph{font-family:var(--disp);font-size:34px;color:var(--amber);margin-bottom:4px}
+.ps{font-size:10px;letter-spacing:2px;color:#777;margin-bottom:18px}
+/* location */
+.zgroup{margin-bottom:18px}
+.zlabel{display:flex;align-items:center;gap:10px;font-family:var(--disp);font-size:24px;margin-bottom:8px}
+.zdot{width:14px;height:14px;border:2px solid #000}
+.locrow{display:flex;flex-wrap:wrap;gap:8px}
+.loc{background:var(--panel);border:1px solid #262626;color:var(--wht);font-family:var(--disp);font-size:21px;
+  padding:4px 16px 6px;cursor:pointer;transform:skewX(-4deg)}
+.loc:hover{border-color:var(--wht)}
+.loc.here{background:var(--wht);color:var(--blk)}
+/* enemies library */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.card{background:var(--panel);border:1px solid #262626;padding:10px 12px;cursor:pointer;position:relative}
+.card:hover{border-color:var(--amber)}
+.card .cg{font-size:34px;line-height:1}
+.card .cn{font-family:var(--disp);font-size:22px;line-height:1;margin-top:2px}
+.card .cs{font-size:9px;color:#8a8a8a;margin-top:4px}
+.card .ce{position:absolute;top:8px;right:8px;font-size:8px;border:1px solid #444;color:#aaa;padding:1px 4px}
+.card.new{display:flex;align-items:center;justify-content:center;border:1px dashed #444;color:#666;font-family:var(--disp);font-size:24px}
+.card.new:hover{color:var(--amber);border-color:var(--amber)}
+/* enemy editor */
+.editor{display:none}
+.editor.open{display:block}
+.edtop{display:flex;align-items:baseline;gap:16px;margin-bottom:14px}
+.edname{font-family:var(--disp);font-size:36px;background:transparent;border:0;border-bottom:2px solid #333;color:var(--wht);width:340px}
+.edname:focus{outline:0;border-color:var(--amber)}
+.back{background:transparent;border:0;color:#888;font-family:var(--disp);font-size:20px;cursor:pointer}
+.back:hover{color:var(--wht)}
+.edgrid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.edsec{background:var(--panel);border:1px solid #232323;padding:14px 16px}
+.edsec h4{font-family:var(--disp);font-size:20px;color:var(--amber);letter-spacing:1px;margin-bottom:10px}
+.statrow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.statrow .sl{width:64px;font-size:10px;letter-spacing:1px;color:#999}
+.step{display:flex;align-items:center;gap:6px}
+.step button{width:22px;height:22px;background:#000;border:1px solid #333;color:var(--wht);font-family:var(--disp);font-size:18px;cursor:pointer;line-height:1}
+.step button:hover{border-color:var(--amber);color:var(--amber)}
+.step .v{font-family:var(--disp);font-size:24px;min-width:56px;text-align:center}
+.statbar{flex:1;height:6px;background:#000}
+.statbar i{display:block;height:100%;background:var(--wht)}
+.elring{display:flex;gap:8px}
+.el{border:1px solid #333;color:#999;font-family:var(--disp);font-size:18px;padding:2px 12px;cursor:pointer}
+.el.on{background:var(--wht);color:var(--blk);border-color:var(--wht)}
+.tiergrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tier{display:flex;justify-content:space-between;align-items:center;background:#000;border:1px solid #262626;padding:4px 8px;cursor:pointer;user-select:none}
+.tier .tn{font-size:9px;letter-spacing:1px;color:#aaa}
+.tier .tv{font-family:var(--disp);font-size:20px;width:18px;text-align:center}
+.tv.V{color:#8fd18f}.tv.N{color:var(--wht)}.tv.L{color:var(--amber)}.tv.S{color:var(--red)}
+.mv{display:flex;align-items:center;gap:12px;background:#000;border:1px solid #232323;padding:6px 10px;margin-bottom:6px}
+.mv .mn{font-family:var(--disp);font-size:21px;flex:1}
+.mv .mstat{display:flex;align-items:center;gap:4px;font-size:9px;color:#888}
+.mv .mstat .v{font-family:var(--disp);font-size:18px;color:var(--wht);min-width:34px;text-align:center}
+.addmv{border:1px dashed #444;background:transparent;color:#666;font-family:var(--disp);font-size:18px;padding:5px;width:100%;cursor:pointer}
+.addmv:hover{color:var(--amber);border-color:var(--amber)}
+.savebar{margin-top:16px;display:flex;gap:10px}
+.bigbtn{background:var(--amber);color:var(--blk);border:0;font-family:var(--disp);font-size:24px;padding:6px 26px;cursor:pointer;transform:skewX(-4deg)}
+.bigbtn.ghost{background:transparent;border:1px solid #444;color:#999}
+/* encounter builder */
+.encgrid{display:grid;grid-template-columns:250px 1fr;gap:22px}
+.pool .card{margin-bottom:8px}
+.wave{background:var(--panel);border:1px solid #232323;padding:12px 14px;margin-bottom:12px}
+.wave h4{font-family:var(--disp);font-size:22px;color:var(--amber);margin-bottom:8px;display:flex;justify-content:space-between}
+.qrow{display:flex;align-items:center;gap:10px;background:#000;border:1px solid #262626;padding:6px 10px;margin-bottom:6px}
+.qrow .qg{font-size:22px}
+.qrow .qn{font-family:var(--disp);font-size:21px;flex:1}
+.qbtn{background:transparent;border:1px solid #333;color:#999;font-size:9px;letter-spacing:1px;padding:3px 8px;cursor:pointer}
+.qbtn:hover{color:var(--amber);border-color:var(--amber)}
+.qbtn.gmctl{background:var(--red);border-color:var(--red);color:var(--wht)}
+.qbtn.mod{color:var(--amber);border-color:var(--amber)}
+.qbtn.slotpick{color:var(--wht);border-color:#555}
+.qx{background:transparent;border:0;color:#666;font-family:var(--disp);font-size:22px;cursor:pointer}
+.qx:hover{color:var(--red)}
+.addwave{border:1px dashed #444;background:transparent;color:#666;font-family:var(--disp);font-size:20px;padding:8px;width:100%;cursor:pointer;margin-bottom:14px}
+/* items & players panels */
+.igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.icard{background:var(--panel);border:1px solid #262626;padding:10px 12px}
+.icard .in{font-family:var(--disp);font-size:22px}
+.icard .idsc{font-size:9px;color:#8a8a8a;min-height:22px;margin:2px 0 8px}
+.grant{display:flex;gap:6px}
+.grant button{flex:1;background:#000;border:1px solid #333;color:var(--wht);font-family:var(--disp);font-size:17px;padding:3px;cursor:pointer}
+.grant button:hover{color:var(--amber);border-color:var(--amber)}
+.credrow{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid #262626;padding:12px 16px;margin-bottom:16px;width:max-content}
+.pcards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pcard{background:var(--panel);border:1px solid #262626;padding:12px 14px}
+.pcard .pn{font-family:var(--disp);font-size:26px}
+.pcard .pl{font-size:9px;color:#888;letter-spacing:1px;margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top">
+  <div class="gmtag"><span class="t">GM</span><span class="s">THE JUDGE'S SEAT</span></div>
+  <div class="tabs">
+    <button class="tab" onclick="openPanel(this,'p-loc')">Location</button>
+    <button class="tab" onclick="openPanel(this,'p-ene')">Enemies</button>
+    <button class="tab" onclick="openPanel(this,'p-enc')">Encounter</button>
+    <button class="tab" onclick="openPanel(this,'p-itm')">Items</button>
+    <button class="tab" onclick="openPanel(this,'p-ply')">Players</button>
+  </div>
+  <button class="pausebtn" id="pausebtn" onclick="togglePause()">❚❚ PAUSE</button>
+  <div class="zview"><div><div class="zname" id="zn">ZONE 1 — PENTEL</div><div class="zsub" id="zs">smoke mines</div></div></div>
+</div>
+
+<!-- DESIGN COLUMN -->
+<div class="design">
+  <div class="ltabs">
+    <button class="ltab on" id="lt-create" onclick="leftMode('create')">CREATE</button>
+    <button class="ltab" id="lt-party" onclick="leftMode('party')">PARTY</button>
+  </div>
+  <div class="dlist" id="createcol">
+    <div class="dsec">BUILD — DRAG RECTANGLES ON THE FIELD</div>
+    <div class="btool">
+      <button class="bt" onclick="setTool(this,'floor:brackets')">Floor·Brk</button>
+      <button class="bt" onclick="setTool(this,'floor:carpet')">Floor·Cpt</button>
+      <button class="bt" onclick="setTool(this,'floor:plain')">Floor·Pln</button>
+      <button class="bt" onclick="setTool(this,'wall')">Wall</button>
+      <button class="bt" onclick="setTool(this,'erase')">Erase</button>
+      <button class="bt" onclick="setTool(null,null)">Done</button>
+    </div>
+    <div class="dsec">SPRITES</div>
+    <div class="dgrid">
+      <div class="dpiece" draggable="true" data-g="◉" data-n="Spectre"><span class="g">◉</span><span class="n">Spectre</span></div>
+      <div class="dpiece" draggable="true" data-g="❋" data-n="Magnolia"><span class="g">❋</span><span class="n">Magnolia</span></div>
+      <div class="dpiece" draggable="true" data-g="♟" data-n="Elsen"><span class="g">♟</span><span class="n">Elsen</span></div>
+      <div class="dpiece" draggable="true" data-g="☗" data-n="Burnt"><span class="g">☗</span><span class="n">Burnt</span></div>
+      <div class="dpiece" draggable="true" data-g="♚" data-n="Zacharie"><span class="g">♚</span><span class="n">Zacharie</span></div>
+      <div class="dpiece" draggable="true" data-g="🐈" data-n="The Judge"><span class="g">🐈</span><span class="n">Judge</span></div>
+    </div>
+    <div class="dsec">PROPS</div>
+    <div class="dgrid">
+      <div class="dpiece" draggable="true" data-g="▣" data-n="Crate"><span class="g">▣</span><span class="n">Crate</span></div>
+      <div class="dpiece" draggable="true" data-g="⌂" data-n="Building"><span class="g">⌂</span><span class="n">Building</span></div>
+      <div class="dpiece" draggable="true" data-g="♨" data-n="Smoke"><span class="g">♨</span><span class="n">Smoke</span></div>
+      <div class="dpiece" draggable="true" data-g="✚" data-n="Rest Zone"><span class="g">✚</span><span class="n">Rest</span></div>
+    </div>
+    <div class="dsec">PICKUPS</div>
+    <div class="dgrid">
+      <div class="dpiece" draggable="true" data-g="◇" data-n="Item"><span class="g">◇</span><span class="n">Item</span></div>
+      <div class="dpiece" draggable="true" data-g="¤" data-n="Credits"><span class="g">¤</span><span class="n">Credits</span></div>
+      <div class="dpiece" draggable="true" data-g="✉" data-n="Note"><span class="g">✉</span><span class="n">Note</span></div>
+    </div>
+    <div class="dnote">DRAG TO PLACE · CLICK = HIDE FROM PLAYERS · DBL-CLICK = REMOVE</div>
+  </div>
+  <div class="dlist partycol" id="partycol" style="display:none">
+    <div class="pm" onclick="targetPC(this,'Purifier')"><div class="pmn">Purifier</div>
+      <div class="pmnums"><span class="pmv">132<em>hp</em><i style="width:84%"></i></span><span class="pmv cp">36<em>cp</em><i style="width:62%"></i></span></div>
+      <div class="pg" data-rate="11"><i style="width:30%"></i></div><div class="picons"></div></div>
+    <div class="pm" onclick="targetPC(this,'Bandit')"><div class="pmn">Bandit</div>
+      <div class="pmnums"><span class="pmv">51<em>hp</em><i style="width:47%"></i></span><span class="pmv cp">32<em>cp</em><i style="width:70%"></i></span></div>
+      <div class="pg" data-rate="14"><i style="width:88%"></i></div><div class="picons"></div></div>
+    <div class="pm" onclick="targetPC(this,'Alpha')"><div class="pmn">Alpha</div>
+      <div class="pmnums"><span class="pmv">121<em>hp</em><i style="width:91%"></i></span><span class="pmv cp">22<em>cp</em><i style="width:31%"></i></span></div>
+      <div class="pg" data-rate="10"><i style="width:55%"></i></div>
+      <div class="picons"><span class="icn">PSN·t3</span></div></div>
+    <div class="pm" onclick="targetPC(this,'Omega')"><div class="pmn">Omega</div>
+      <div class="pmnums"><span class="pmv">120<em>hp</em><i style="width:96%"></i></span><span class="pmv cp">41<em>cp</em><i style="width:55%"></i></span></div>
+      <div class="pg" data-rate="7"><i style="width:22%"></i></div>
+      <div class="picons"><span class="icn up">▲DEF·25</span></div></div>
+    <div class="pm" onclick="targetPC(this,'Epsilon')"><div class="pmn">Epsilon</div>
+      <div class="pmnums"><span class="pmv" style="color:var(--red)">25<em>hp</em><i style="width:19%;background:var(--red)"></i></span><span class="pmv cp">31<em>cp</em><i style="width:44%"></i></span></div>
+      <div class="pg" data-rate="6"><i style="width:48%"></i></div>
+      <div class="picons"><span class="icn up">▲ATK·2t</span></div></div>
+    <div class="pm dead"><div class="pmn">Burnt</div>
+      <div class="pmnums"><span class="pmv">0<em>hp</em><i style="width:0%"></i></span><span class="pmv cp">29<em>cp</em><i style="width:38%"></i></span></div>
+      <div class="pg"><i style="width:0%"></i></div><div class="picons"></div></div>
+  </div>
+</div>
+
+<!-- PLAY AREA -->
+<div class="play">
+  <div class="announce outline" id="announce">The party enters the smoke mines.</div>
+  <div class="damask" style="color:var(--tint)"></div>
+
+  <div class="field slotgrid" id="field" onmousedown="bDown(event)" onmousemove="bMove(event)" onmouseup="bUp(event)"
+       ondragover="event.preventDefault();this.classList.add('dragover')"
+       ondragleave="this.classList.remove('dragover')"
+       ondrop="dropPiece(event)">
+    <canvas id="roomcanvas"></canvas>
+    <div id="preview"></div>
+    <!-- GM-only slot markers -->
+    <div class="slot" style="left:8%;top:24%">1</div><div class="slot" style="left:20%;top:32%">2</div>
+    <div class="slot" style="left:32%;top:24%">3</div><div class="slot" style="left:44%;top:32%">4</div>
+    <div class="slot" style="left:12%;top:54%">5</div><div class="slot" style="left:24%;top:62%">6</div>
+    <div class="slot" style="left:36%;top:54%">7</div><div class="slot" style="left:48%;top:62%">8</div>
+    <!-- live enemies, snapped to their queued slots -->
+    <div class="enemy" style="left:8%;top:24%" onclick="gmTurn(this,'One-eyed Spectre')">
+      <div class="sprite">◉</div><div class="ename outline">One-eyed Spectre</div>
+      <div class="ehp"><i style="width:72%"></i></div>
+      <div class="eg"><i data-fill="35" data-rate="8" style="width:35%"></i></div>
+      <div class="ectl gm">GM</div>
+    </div>
+    <div class="enemy" style="left:32%;top:24%">
+      <div class="sprite">◉</div><div class="ename outline">One-eyed Spectre</div>
+      <div class="ehp"><i style="width:41%"></i></div>
+      <div class="eg"><i data-fill="60" data-rate="8" style="width:60%"></i></div>
+      <div class="ectl">AI</div>
+    </div>
+    <!-- enemy action stack: appears on a GM-controlled enemy's turn -->
+    <div class="estack" id="estack">
+      <button class="eact" onclick="eAct('Attack')">Attack<small>then click a player card</small></button>
+      <button class="eact" onclick="eAct('Swing')">Swing<small>2.0× · acc 90 · 5 CP</small></button>
+      <button class="eact" onclick="eAct('Defend')">Defend</button>
+      <button class="eact" onclick="openEPool()">Objects<small>enemy shared pool</small></button>
+    </div>
+    <div class="estack" id="epool"></div>
+  </div>
+
+  <!-- GM PANELS -->
+  <div class="gmpanel" id="p-loc">
+    <div class="ph">LOCATION</div>
+    <div class="ps">STAGE A ROOM, SAVE IT, TELEPORT THE PARTY IN LATER — PLACEMENTS ARE SILENT AND HIDDEN PIECES STAY HIDDEN</div>
+    <div class="savebar" style="margin:0 0 18px">
+      <button class="bigbtn" style="font-size:20px;padding:4px 20px" onclick="saveRoom()">SAVE ROOM — <span id="saveloc">smoke mines</span></button>
+    </div>
+    <div class="zgroup"><div class="zlabel"><span class="zdot" style="background:#2e6d9e"></span>ZONE 1 — PENTEL</div>
+      <div class="locrow">
+        <button class="loc here" onclick="setLoc(this,'#2e6d9e','#1d4b70','#7fa8c6','ZONE 1 — PENTEL','smoke mines')">Smoke Mines</button>
+        <button class="loc" onclick="setLoc(this,'#2e6d9e','#1d4b70','#7fa8c6','ZONE 1 — PENTEL','damien')">Damien</button>
+        <button class="loc" onclick="setLoc(this,'#2e6d9e','#1d4b70','#7fa8c6','ZONE 1 — PENTEL','alma')">Alma</button>
+        <button class="loc" onclick="setLoc(this,'#2e6d9e','#1d4b70','#7fa8c6','ZONE 1 — PENTEL','shachihata post office')">Shachihata</button>
+        <button class="loc" onclick="setLoc(this,'#2e6d9e','#1d4b70','#7fa8c6','ZONE 1 — PENTEL','rest zone')">Rest Zone</button>
+      </div></div>
+    <div class="zgroup"><div class="zlabel"><span class="zdot" style="background:#c8871c"></span>ZONE 2 — BISMARK</div>
+      <div class="locrow">
+        <button class="loc" onclick="setLoc(this,'#c8871c','#8a5c10','#e0b56a','ZONE 2 — BISMARK','gomez galleries')">Gomez Galleries</button>
+        <button class="loc" onclick="setLoc(this,'#c8871c','#8a5c10','#e0b56a','ZONE 2 — BISMARK','the great library')">Great Library</button>
+        <button class="loc" onclick="setLoc(this,'#c8871c','#8a5c10','#e0b56a','ZONE 2 — BISMARK','residential')">Residential</button>
+      </div></div>
+    <div class="zgroup"><div class="zlabel"><span class="zdot" style="background:#2f9e44"></span>ZONE 3 — VESPER</div>
+      <div class="locrow">
+        <button class="loc" onclick="setLoc(this,'#2f9e44','#1d6b2d','#7fc68f','ZONE 3 — VESPER','the sugar works')">Sugar Works</button>
+        <button class="loc" onclick="setLoc(this,'#2f9e44','#1d6b2d','#7fc68f','ZONE 3 — VESPER','the monorail')">Monorail</button>
+      </div></div>
+    <div class="zgroup"><div class="zlabel"><span class="zdot" style="background:#d0231f"></span>THE ROOM</div>
+      <div class="locrow">
+        <button class="loc" onclick="setLoc(this,'#d0231f','#8f1512','#e07f7c','THE ROOM','chapter one')">Chapter 1</button>
+        <button class="loc" onclick="setLoc(this,'#d0231f','#8f1512','#e07f7c','THE ROOM','the queen')">Throne</button>
+      </div></div>
+  </div>
+
+  <div class="gmpanel" id="p-ene">
+    <div id="lib">
+      <div class="ph">ENEMIES</div><div class="ps">TEMPLATES FROM THE CAMPAIGN BESTIARY — CLICK TO EDIT</div>
+      <div class="cards">
+        <div class="card" onclick="openEditor()"><span class="ce">SMOKE</span><div class="cg">◉</div><div class="cn">One-eyed Spectre</div><div class="cs">HP 230 · dmg 14 · 5.0s · Z1</div></div>
+        <div class="card"><span class="ce">SMOKE</span><div class="cg">◉</div><div class="cn">Common Spectre</div><div class="cs">HP 20 · dmg 9 · 5.5s · Z1</div></div>
+        <div class="card"><span class="ce">MEAT</span><div class="cg">☗</div><div class="cn">Rupture-burnt</div><div class="cs">HP 170 · bomb · Z1</div></div>
+        <div class="card"><span class="ce">MEAT</span><div class="cg">♟</div><div class="cn">Tiburce</div><div class="cs">HP 155 · CP drain · Z1</div></div>
+        <div class="card"><span class="ce">METAL</span><div class="cg">♛</div><div class="cn">Dedan</div><div class="cs">HP 4200 · boss · Z1</div></div>
+        <div class="card"><span class="ce">SMOKE</span><div class="cg">◉</div><div class="cn">Upside-down Spectre</div><div class="cs">HP 350 · Mute · Z2</div></div>
+        <div class="card new" onclick="openEditor(true)">+ CREATE NEW</div>
+      </div>
+    </div>
+    <div class="editor" id="editor">
+      <div class="edtop">
+        <button class="back" onclick="closeEditor()">← LIBRARY</button>
+        <input class="edname" value="One-eyed Spectre">
+      </div>
+      <div class="edgrid">
+        <div class="edsec"><h4>STATS</h4>
+          <div class="statrow"><span class="sl">HP</span><div class="step"><button onclick="nudge(this,-10)">−</button><span class="v">230</span><button onclick="nudge(this,10)">+</button></div><div class="statbar"><i style="width:46%"></i></div></div>
+          <div class="statrow"><span class="sl">DMG/ACT</span><div class="step"><button onclick="nudge(this,-2)">−</button><span class="v">14</span><button onclick="nudge(this,2)">+</button></div><div class="statbar"><i style="width:28%"></i></div></div>
+          <div class="statrow"><span class="sl">GAUGE s</span><div class="step"><button onclick="nudge(this,-0.2)">−</button><span class="v">5.0</span><button onclick="nudge(this,0.2)">+</button></div><div class="statbar"><i style="width:60%"></i></div></div>
+          <div class="statrow"><span class="sl">DEF</span><div class="step"><button onclick="nudge(this,-5)">−</button><span class="v">5</span><button onclick="nudge(this,5)">+</button></div><div class="statbar"><i style="width:10%"></i></div></div>
+          <div class="statrow"><span class="sl">RES</span><div class="step"><button onclick="nudge(this,-2)">−</button><span class="v">8</span><button onclick="nudge(this,2)">+</button></div><div class="statbar"><i style="width:16%"></i></div></div>
+          <div class="statrow"><span class="sl">LCK</span><div class="step"><button onclick="nudge(this,-1)">−</button><span class="v">3</span><button onclick="nudge(this,1)">+</button></div><div class="statbar"><i style="width:6%"></i></div></div>
+          <h4 style="margin-top:14px">ELEMENT</h4>
+          <div class="elring">
+            <span class="el" onclick="pickEl(this)">PLASTIC</span><span class="el" onclick="pickEl(this)">METAL</span>
+            <span class="el on" onclick="pickEl(this)">SMOKE</span><span class="el" onclick="pickEl(this)">MEAT</span>
+            <span class="el" onclick="pickEl(this)">SUGAR</span>
+          </div>
+        </div>
+        <div class="edsec"><h4>STATUS TIERS <span style="color:#666;font-size:10px">— CLICK TO CYCLE V·N·L·S</span></h4>
+          <div class="tiergrid">
+            <div class="tier" onclick="cyc(this)"><span class="tn">POISONED</span><span class="tv V">V</span></div>
+            <div class="tier" onclick="cyc(this)"><span class="tn">BLINDED</span><span class="tv V">V</span></div>
+            <div class="tier" onclick="cyc(this)"><span class="tn">MUTED</span><span class="tv V">V</span></div>
+            <div class="tier" onclick="cyc(this)"><span class="tn">PALSIED</span><span class="tv V">V</span></div>
+            <div class="tier" onclick="cyc(this)"><span class="tn">ASLEEP</span><span class="tv V">V</span></div>
+            <div class="tier" onclick="cyc(this)"><span class="tn">FURIOUS</span><span class="tv V">V</span></div>
+            <div class="tier" onclick="cyc(this)"><span class="tn">MADNESS</span><span class="tv V">V</span></div>
+          </div>
+          <h4 style="margin-top:14px">COMPETENCES</h4>
+          <div class="mv"><span class="mn">Attack</span>
+            <span class="mstat">MP <button class="qx" onclick="nudge(this,-0.1)">−</button><span class="v">1.0</span><button class="qx" onclick="nudge(this,0.1)">+</button></span>
+            <span class="mstat">ACC <button class="qx" onclick="nudge(this,-1)">−</button><span class="v">95</span><button class="qx" onclick="nudge(this,1)">+</button></span></div>
+          <div class="mv"><span class="mn">Swing</span>
+            <span class="mstat">MP <button class="qx" onclick="nudge(this,-0.1)">−</button><span class="v">2.0</span><button class="qx" onclick="nudge(this,0.1)">+</button></span>
+            <span class="mstat">ACC <button class="qx" onclick="nudge(this,-1)">−</button><span class="v">90</span><button class="qx" onclick="nudge(this,1)">+</button></span></div>
+          <button class="addmv">+ ADD COMPETENCE</button>
+        </div>
+      </div>
+      <div class="savebar">
+        <button class="bigbtn" onclick="announceP('Template saved: One-eyed Spectre.');closeEditor()">SAVE TEMPLATE</button>
+        <button class="bigbtn ghost" onclick="closeEditor()">DISCARD</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="gmpanel" id="p-enc">
+    <div class="ph">ENCOUNTER</div><div class="ps">BUILD THE QUEUE — LAUNCH WHEN THE PARTY WALKS IN</div>
+    <div class="encgrid">
+      <div class="pool">
+        <div class="ps">ADD FROM LIBRARY</div>
+        <div class="card" onclick="queueAdd('◉','One-eyed Spectre')"><div class="cg">◉</div><div class="cn">One-eyed Spectre</div><div class="cs">HP 230</div></div>
+        <div class="card" onclick="queueAdd('◉','Common Spectre')"><div class="cg">◉</div><div class="cn">Common Spectre</div><div class="cs">HP 20</div></div>
+        <div class="card" onclick="queueAdd('♟','Tiburce')"><div class="cg">♟</div><div class="cn">Tiburce</div><div class="cs">HP 155</div></div>
+        <div class="card" onclick="queueAdd('☗','Rupture-burnt')"><div class="cg">☗</div><div class="cn">Rupture-burnt</div><div class="cs">HP 170</div></div>
+      </div>
+      <div>
+        <div class="wave"><h4>WAVE 1 <span style="font-size:10px;color:#666">SPAWNS AT LAUNCH</span></h4>
+          <div id="w1">
+            <div class="qrow"><span class="qg">◉</span><span class="qn">One-eyed Spectre</span>
+              <button class="qbtn slotpick" onclick="cycSlot(this)">SLOT 1</button>
+              <button class="qbtn gmctl" onclick="tglAI(this)">GM</button>
+              <button class="qbtn" onclick="cycDrop(this)">DROP: Luck Ticket</button>
+              <button class="qbtn" onclick="announceP('Instance editor: overrides this one enemy, template untouched.')">EDIT THIS ONE</button>
+              <button class="qx" onclick="this.parentElement.remove()">×</button></div>
+            <div class="qrow"><span class="qg">◉</span><span class="qn">One-eyed Spectre <span style="color:var(--amber);font-size:11px">· MODIFIED — HP 310, Swing acc 95</span></span>
+              <button class="qbtn slotpick" onclick="cycSlot(this)">SLOT 3</button>
+              <button class="qbtn" onclick="tglAI(this)">AI</button>
+              <button class="qbtn" onclick="cycDrop(this)">DROP: 40 credits</button>
+              <button class="qbtn mod" onclick="announceP('Instance editor: overrides this one enemy, template untouched.')">EDIT THIS ONE</button>
+              <button class="qx" onclick="this.parentElement.remove()">×</button></div>
+          </div>
+        </div>
+        <div class="wave"><h4>WAVE 2 <span style="font-size:10px;color:#666">TRIGGER: WAVE 1 DEAD, OR MANUAL</span></h4>
+          <div id="w2">
+            <div class="qrow"><span class="qg">♟</span><span class="qn">Tiburce</span>
+              <button class="qbtn slotpick" onclick="cycSlot(this)">SLOT 5</button>
+              <button class="qbtn" onclick="tglAI(this)">AI</button>
+              <button class="qbtn" onclick="cycDrop(this)">DROP: nothing</button>
+              <button class="qbtn" onclick="announceP('Instance editor: overrides this one enemy, template untouched.')">EDIT THIS ONE</button>
+              <button class="qx" onclick="this.parentElement.remove()">×</button></div>
+          </div>
+        </div>
+        <div class="wave"><h4>ENEMY OBJECTS <span style="font-size:10px;color:#666">SHARED POOL — ANY OF YOUR CREATURES CAN USE THESE. DROPS ARE SET PER ENEMY ABOVE.</span></h4>
+          <div class="grant" style="max-width:640px">
+            <button onclick="poolAdd('Silver Flesh')">+ Silver Flesh</button>
+            <button onclick="poolAdd('Luck Ticket')">+ Luck Ticket</button>
+            <button onclick="poolAdd('Belial&#39;s Meat')">+ Belial's Meat</button>
+            <button onclick="poolAdd('Inspiration')">+ Inspiration</button>
+            <button onclick="poolAdd('Expiration')">+ Expiration</button>
+          </div>
+          <div class="picons" id="poolbuild" style="margin-top:8px;min-height:16px"></div>
+        </div>
+        <button class="addwave" onclick="announceP('Wave 3 added.')">+ ADD WAVE</button>
+        <button class="bigbtn" onclick="closeAll();announceP('BATTLE TIME — encounter launched.')">LAUNCH ENCOUNTER</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="gmpanel" id="p-itm">
+    <div class="ph">ITEMS</div><div class="ps">GRANTS GO STRAIGHT TO THE SHARED PARTY INVENTORY</div>
+    <div class="credrow"><span class="dfont" style="font-size:26px;color:var(--amber)">CREDITS</span>
+      <div class="step"><button onclick="nudge(this,-20)">−</button><span class="v">0</span><button onclick="nudge(this,20)">+</button></div>
+      <button class="bigbtn" style="font-size:19px;padding:4px 18px" onclick="announceP('Credits granted to the party.')">GRANT</button></div>
+    <div class="igrid">
+      <div class="icard"><div class="in">Luck Ticket</div><div class="idsc">50 HP, one character</div>
+        <div class="grant"><button onclick="announceP('Party receives Luck Ticket ×1.')">+1</button><button onclick="announceP('Party receives Luck Ticket ×5.')">+5</button></div></div>
+      <div class="icard"><div class="in">Fortune Ticket</div><div class="idsc">200 HP, one character</div>
+        <div class="grant"><button onclick="announceP('Party receives Fortune Ticket ×1.')">+1</button><button onclick="announceP('Party receives Fortune Ticket ×5.')">+5</button></div></div>
+      <div class="icard"><div class="in">Silver Flesh</div><div class="idsc">50 CP</div>
+        <div class="grant"><button onclick="announceP('Party receives Silver Flesh ×1.')">+1</button><button onclick="announceP('Party receives Silver Flesh ×5.')">+5</button></div></div>
+      <div class="icard"><div class="in">Joker</div><div class="idsc">revive · 35% HP</div>
+        <div class="grant"><button onclick="announceP('Party receives Joker ×1.')">+1</button><button onclick="announceP('Party receives Joker ×5.')">+5</button></div></div>
+      <div class="icard"><div class="in">Belial's Meat</div><div class="idsc">cures all statuses</div>
+        <div class="grant"><button onclick="announceP('Party receives Belial&#39;s Meat ×1.')">+1</button><button onclick="announceP('Party receives Belial&#39;s Meat ×5.')">+5</button></div></div>
+      <div class="icard"><div class="in">Abaddon's Meat</div><div class="idsc">full restore · rare · cap 1</div>
+        <div class="grant"><button onclick="announceP('The party feels the parachute in their pack. Abaddon&#39;s Meat ×1.')">+1</button></div></div>
+    </div>
+  </div>
+
+  <div class="gmpanel" id="p-ply">
+    <div class="ph">PLAYERS</div><div class="ps">DIRECT EDITS — CLICK A STATUS TO STRIP IT. USE GENTLY, THEY WILL NOTICE</div>
+    <div class="pcards">
+      <div class="pcard"><div class="pn">Purifier</div><div class="pl">LV 3 · METAL</div>
+        <div class="statrow"><span class="sl">HP</span><div class="step"><button onclick="nudge(this,-10)">−</button><span class="v">132</span><button onclick="nudge(this,10)">+</button></div></div>
+        <div class="statrow"><span class="sl">CP</span><div class="step"><button onclick="nudge(this,-5)">−</button><span class="v">36</span><button onclick="nudge(this,5)">+</button></div></div></div>
+      <div class="pcard"><div class="pn">Bandit</div><div class="pl">LV 3 · SMOKE</div>
+        <div class="statrow"><span class="sl">HP</span><div class="step"><button onclick="nudge(this,-10)">−</button><span class="v">51</span><button onclick="nudge(this,10)">+</button></div></div>
+        <div class="statrow"><span class="sl">CP</span><div class="step"><button onclick="nudge(this,-5)">−</button><span class="v">32</span><button onclick="nudge(this,5)">+</button></div></div></div>
+      <div class="pcard"><div class="pn">Alpha</div><div class="pl">LV 3 · PLASTIC</div>
+        <div class="picons" style="margin-bottom:6px"><span class="icn" style="cursor:pointer" title="click to strip"
+          onclick="this.remove();announceP('Poisoned stripped from Alpha.')">PSN·t3 ×</span></div>
+        <div class="statrow"><span class="sl">HP</span><div class="step"><button onclick="nudge(this,-10)">−</button><span class="v">121</span><button onclick="nudge(this,10)">+</button></div></div>
+        <div class="statrow"><span class="sl">CP</span><div class="step"><button onclick="nudge(this,-5)">−</button><span class="v">22</span><button onclick="nudge(this,5)">+</button></div></div></div>
+      <div class="pcard"><div class="pn">Omega</div><div class="pl">LV 3 · SMOKE</div>
+        <div class="statrow"><span class="sl">HP</span><div class="step"><button onclick="nudge(this,-10)">−</button><span class="v">120</span><button onclick="nudge(this,10)">+</button></div></div>
+        <div class="statrow"><span class="sl">CP</span><div class="step"><button onclick="nudge(this,-5)">−</button><span class="v">41</span><button onclick="nudge(this,5)">+</button></div></div></div>
+      <div class="pcard"><div class="pn">Epsilon</div><div class="pl">LV 3 · MEAT</div>
+        <div class="statrow"><span class="sl">HP</span><div class="step"><button onclick="nudge(this,-10)">−</button><span class="v">25</span><button onclick="nudge(this,10)">+</button></div></div>
+        <div class="statrow"><span class="sl">CP</span><div class="step"><button onclick="nudge(this,-5)">−</button><span class="v">31</span><button onclick="nudge(this,5)">+</button></div></div></div>
+      <div class="pcard"><div class="pn">Burnt</div><div class="pl">LV 3 · MEAT · DOWN</div>
+        <div class="statrow"><span class="sl">HP</span><div class="step"><button onclick="nudge(this,-10)">−</button><span class="v">0</span><button onclick="nudge(this,10)">+</button></div></div>
+        <div class="statrow"><span class="sl">CP</span><div class="step"><button onclick="nudge(this,-5)">−</button><span class="v">29</span><button onclick="nudge(this,5)">+</button></div></div></div>
+    </div>
+  </div>
+
+  <!-- GM PARTY STRIP: your enemies. HP, CP, gauge — click when full to act -->
+  <div class="strip" id="strip">
+    <div class="pc gmown" onclick="gmTurnCard(this,'One-eyed Spectre A')"><div class="pname">One-eyed A <span class="ctl">GM</span></div>
+      <div class="nums"><div class="num">166<em>hp</em><i style="width:72%"></i></div><div class="num cp">15<em>cp</em><i style="width:100%"></i></div></div>
+      <div class="pg eg2" data-rate="8"><i style="width:35%"></i></div>
+      <div class="picons"><span class="icn">BLI</span></div></div>
+    <div class="pc" onclick="announceP('One-eyed B is AI-controlled.')"><div class="pname">One-eyed B <span class="ctl ai">AI</span></div>
+      <div class="nums"><div class="num">94<em>hp</em><i style="width:41%"></i></div><div class="num cp">10<em>cp</em><i style="width:66%"></i></div></div>
+      <div class="pg eg2" data-rate="8"><i style="width:60%"></i></div>
+      <div class="picons"><span class="icn up">▼DEF·2t</span></div></div>
+    <div class="pc gmown" onclick="gmTurnCard(this,'Tiburce')"><div class="pname">Tiburce <span class="ctl">GM</span></div>
+      <div class="nums"><div class="num">155<em>hp</em><i style="width:100%"></i></div><div class="num cp">20<em>cp</em><i style="width:100%"></i></div></div>
+      <div class="pg eg2" data-rate="8"><i style="width:12%"></i></div>
+      <div class="picons"></div></div>
+    <div class="pc deadslot"><div class="pname" style="color:#4a4a4a">One-eyed C</div>
+      <div class="nums"><div class="num" style="color:#4a4a4a">0<em>hp</em><i style="width:0%;background:#333"></i></div></div>
+      <div class="pg"><i style="width:0%"></i></div><div class="picons"></div></div>
+    <div class="pc waveslot"><div class="pname" style="color:#666">WAVE 2</div>
+      <div class="picons"><span class="icn">Tiburce ×1 — trigger: wave 1 dead</span></div></div>
+    <div class="pc waveslot" id="poolcell"><div class="pname" style="color:var(--amber)">OBJECTS</div>
+      <div class="picons" id="poolicons"></div></div>
+  </div>
+
+<script>
+let pendingAction=null,pendingItem=null,paused=false;
+let GEO=[],tool=null,dragA=null;
+const SNAP=16;
+function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function setTool(btn,t){
+  tool=t;
+  document.querySelectorAll('.bt').forEach(b=>b.classList.remove('on'));
+  if(btn&&t)btn.classList.add('on');
+  document.getElementById('field').classList.toggle('building',!!t);
+}
+function fRect(e){
+  const r=document.getElementById('field').getBoundingClientRect();
+  return {x:Math.round((e.clientX-r.left)/SNAP)*SNAP, y:Math.round((e.clientY-r.top)/SNAP)*SNAP};
+}
+function bDown(e){
+  if(!tool)return;
+  e.preventDefault();
+  if(tool==='erase'){
+    const p=fRect(e);
+    for(let i=GEO.length-1;i>=0;i--){const g=GEO[i];
+      if(p.x>=g.x&&p.x<=g.x+g.w&&p.y>=g.y&&p.y<=g.y+g.h){GEO.splice(i,1);renderRoom();return;}}
+    return;
+  }
+  dragA=fRect(e);
+}
+function bMove(e){
+  if(!tool||!dragA)return;
+  const b=fRect(e),pv=document.getElementById('preview');
+  pv.style.display='block';
+  pv.style.left=Math.min(dragA.x,b.x)+'px';pv.style.top=Math.min(dragA.y,b.y)+'px';
+  pv.style.width=Math.abs(b.x-dragA.x)+'px';pv.style.height=Math.abs(b.y-dragA.y)+'px';
+}
+function bUp(e){
+  if(!tool||!dragA)return;
+  const b=fRect(e);
+  const g={x:Math.min(dragA.x,b.x),y:Math.min(dragA.y,b.y),
+           w:Math.abs(b.x-dragA.x),h:Math.abs(b.y-dragA.y)};
+  dragA=null;document.getElementById('preview').style.display='none';
+  if(g.w<SNAP||g.h<SNAP)return;
+  if(tool==='wall')GEO.push({t:'wall',...g});
+  else GEO.push({t:'floor',p:tool.split(':')[1],...g});
+  renderRoom();
+}
+function renderRoom(){
+  const f=document.getElementById('field'),c=document.getElementById('roomcanvas');
+  c.width=f.clientWidth;c.height=f.clientHeight;
+  const x=c.getContext('2d');x.imageSmoothingEnabled=false;
+  const dark=cssVar('--field-dk'),lite=cssVar('--tint'),ink='#000';
+  GEO.filter(g=>g.t==='floor').forEach(g=>{
+    if(g.p==='plain'){x.fillStyle=lite;x.fillRect(g.x,g.y,g.w,g.h);}
+    else if(g.p==='carpet'){x.fillStyle=dark;x.fillRect(g.x,g.y,g.w,g.h);
+      x.fillStyle='rgba(0,0,0,.25)';
+      for(let yy=g.y;yy<g.y+g.h;yy+=6)for(let xx=g.x;xx<g.x+g.w;xx+=8)
+        x.fillRect(xx,yy+((xx/8)%2?0:2),4,2);}
+    else{x.fillStyle=dark;x.fillRect(g.x,g.y,g.w,g.h);
+      x.fillStyle=lite;
+      for(let yy=g.y+8;yy<g.y+g.h-8;yy+=32)for(let xx=g.x+8;xx<g.x+g.w-8;xx+=32){
+        x.fillRect(xx,yy,6,2);x.fillRect(xx,yy,2,6);
+        x.fillRect(xx+16,yy,6,2);x.fillRect(xx+20,yy,2,6);
+        x.fillRect(xx,yy+16,6,2);x.fillRect(xx,yy+12,2,6);
+        x.fillRect(xx+16,yy+16,6,2);x.fillRect(xx+20,yy+12,2,6);}}
+    x.strokeStyle=ink;x.lineWidth=2;x.strokeRect(g.x,g.y,g.w,g.h);
+  });
+  GEO.filter(g=>g.t==='wall').forEach(g=>{
+    x.fillStyle=ink;x.fillRect(g.x,g.y,g.w,g.h);
+    x.fillStyle=lite;x.fillRect(g.x+2,g.y+2,g.w-4,g.h-4);
+    x.fillStyle=dark;x.fillRect(g.x+2,g.y+g.h-6,g.w-4,4);
+  });
+}
+addEventListener('resize',renderRoom);
+function togglePause(){
+  paused=!paused;
+  document.body.classList.toggle('paused',paused);
+  const b=document.getElementById('pausebtn');
+  b.classList.toggle('on',paused);
+  b.textContent=paused?'▶ RESUME':'❚❚ PAUSE';
+  announceP(paused?'Time holds. All gauges frozen on every screen.':'Time resumes.');
+}
+const ROOMS={};let curLoc='smoke mines';
+function saveRoom(){
+  ROOMS[curLoc]={
+    geo:JSON.parse(JSON.stringify(GEO)),
+    pieces:[...document.querySelectorAll('.dropped')].map(d=>({g:d.textContent,n:d.title,l:d.style.left,t:d.style.top,h:d.classList.contains('hiddenpiece')}))};
+  announceP('Room saved: '+curLoc+' ('+GEO.length+' shapes, '+ROOMS[curLoc].pieces.length+' pieces).');
+}
+function loadRoom(loc){
+  document.querySelectorAll('.dropped').forEach(d=>d.remove());
+  const R=ROOMS[loc]||{geo:[],pieces:[]};
+  GEO=JSON.parse(JSON.stringify(R.geo||[]));renderRoom();
+  (R.pieces||[]).forEach(o=>{
+    const d=document.createElement('div');d.className='dropped'+(o.h?' hiddenpiece':'');
+    d.textContent=o.g;d.title=o.n;d.style.left=o.l;d.style.top=o.t;
+    d.ondblclick=()=>d.remove();d.onclick=()=>d.classList.toggle('hiddenpiece');
+    document.getElementById('field').appendChild(d);
+  });
+}
+const EPOOL={'Silver Flesh':2,'Inspiration':1};
+const EFFECT={'Silver Flesh':'restores 50 CP','Luck Ticket':'restores 120 HP','Belial&#39;s Meat':'cures all statuses',"Belial's Meat":'cures all statuses','Inspiration':'75 dmg','Expiration':'400 dmg'};
+const HOSTILE={'Inspiration':1,'Expiration':1};
+function renderPool(){
+  const chips=Object.entries(EPOOL).filter(([n,c])=>c>0).map(([n,c])=>'<span class="icn">'+n+' ×'+c+'</span>').join('')||'<span class="icn" style="color:#555">empty</span>';
+  const cell=document.getElementById('poolicons');if(cell)cell.innerHTML=chips;
+  const b=document.getElementById('poolbuild');if(b)b.innerHTML=chips;
+}
+function poolAdd(n){EPOOL[n]=(EPOOL[n]||0)+1;renderPool();announceP(n+' added to the enemy pool.');}
+function openEPool(){
+  document.getElementById('estack').classList.remove('open');
+  const ep=document.getElementById('epool');
+  const st=document.getElementById('estack');
+  ep.style.left=st.style.left;ep.style.top=st.style.top;
+  ep.dataset.enemy=st.dataset.enemy;
+  ep.innerHTML=Object.entries(EPOOL).filter(([n,c])=>c>0)
+    .map(([n,c])=>'<button class="eact" onclick="eItem(\''+n.replace(/'/g,"\\'")+'\')">'+n+' ×'+c+'<small>'+(EFFECT[n]||'')+'</small></button>').join('')
+    ||'<button class="eact" onclick="this.parentElement.classList.remove(\'open\')">pool is empty</button>';
+  ep.classList.add('open');
+}
+function eItem(n){
+  document.getElementById('epool').classList.remove('open');
+  pendingItem=n;
+  if(HOSTILE[n]){leftMode('party');document.getElementById('partycol').classList.add('targeting');
+    announceP(n+' — pick a target in the PARTY column.');}
+  else announceP(n+' — click one of your creatures in the strip.');
+}
+function announceP(t){document.getElementById('announce').textContent=t;}
+function openPanel(tab,id){
+  const p=document.getElementById(id);const was=p.classList.contains('open');
+  closeAll();
+  if(!was){p.classList.add('open');tab.classList.add('on');}
+}
+function closeAll(){
+  document.querySelectorAll('.gmpanel').forEach(x=>x.classList.remove('open'));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+}
+function setLoc(btn,f,d,t,name,sub){
+  document.querySelectorAll('.loc').forEach(l=>l.classList.remove('here'));btn.classList.add('here');
+  const r=document.documentElement.style;
+  r.setProperty('--field',f);r.setProperty('--field-dk',d);r.setProperty('--tint',t);
+  document.getElementById('zn').textContent=name;document.getElementById('zs').textContent=sub;
+  curLoc=sub;document.getElementById('saveloc').textContent=sub;
+  loadRoom(sub);
+  announceP('The party arrives: '+sub+'.');
+}
+function openEditor(fresh){document.getElementById('lib').style.display='none';
+  const e=document.getElementById('editor');e.classList.add('open');
+  if(fresh){e.querySelector('.edname').value='New Enemy';}}
+function closeEditor(){document.getElementById('lib').style.display='';
+  document.getElementById('editor').classList.remove('open');}
+function nudge(btn,delta){
+  const v=btn.parentElement.querySelector('.v');
+  let n=parseFloat(v.textContent)+delta;
+  if(delta%1!==0)n=Math.round(n*10)/10;
+  v.textContent=Math.max(0,n);
+}
+function pickEl(el){el.parentElement.querySelectorAll('.el').forEach(x=>x.classList.remove('on'));el.classList.add('on');}
+function cyc(t){const v=t.querySelector('.tv');const order=['V','N','L','S'];
+  const nx=order[(order.indexOf(v.textContent)+1)%4];
+  v.textContent=nx;v.className='tv '+nx;}
+function tglAI(b){const gm=b.textContent==='AI';b.textContent=gm?'GM':'AI';b.classList.toggle('gmctl',gm);}
+const DROPS=['DROP: Luck Ticket','DROP: 40 credits','DROP: Silver Flesh','DROP: nothing'];
+function cycDrop(b){b.textContent=DROPS[(DROPS.indexOf(b.textContent)+1)%DROPS.length];}
+function cycSlot(b){let n=+b.textContent.replace('SLOT ','');b.textContent='SLOT '+(n%8+1);}
+function queueAdd(g,n){
+  const row=document.createElement('div');row.className='qrow';
+  row.innerHTML='<span class="qg">'+g+'</span><span class="qn">'+n+'</span>'+
+   '<button class="qbtn slotpick" onclick="cycSlot(this)">SLOT 2</button>'+
+   '<button class="qbtn" onclick="tglAI(this)">AI</button>'+
+   '<button class="qbtn" onclick="cycDrop(this)">DROP: nothing</button>'+
+   '<button class="qbtn" onclick="announceP(\'Instance editor: overrides this one enemy, template untouched.\')">EDIT THIS ONE</button>'+
+   '<button class="qx" onclick="this.parentElement.remove()">×</button>';
+  document.getElementById('w1').appendChild(row);
+}
+/* drag & drop from design column */
+document.querySelectorAll('.dpiece').forEach(p=>{
+  p.addEventListener('dragstart',e=>{
+    e.dataTransfer.setData('g',p.dataset.g);e.dataTransfer.setData('n',p.dataset.n);});
+});
+function dropPiece(e){
+  e.preventDefault();const f=document.getElementById('field');f.classList.remove('dragover');
+  const g=e.dataTransfer.getData('g');if(!g)return;
+  const r=f.getBoundingClientRect();
+  const d=document.createElement('div');d.className='dropped';d.textContent=g;
+  d.style.left=(e.clientX-r.left-18)+'px';d.style.top=(e.clientY-r.top-22)+'px';
+  d.title=e.dataTransfer.getData('n');
+  d.ondblclick=()=>d.remove();
+  d.onclick=()=>d.classList.toggle('hiddenpiece');
+  f.appendChild(d);
+}
+/* enemy gauges + GM turn */
+setInterval(()=>{
+  if(paused)return;
+  document.querySelectorAll('.eg i[data-rate]').forEach(i=>{
+    let f=+i.dataset.fill;if(f>=100)return;
+    f+=(+i.dataset.rate)/3;if(f>100)f=100;
+    i.dataset.fill=f;i.style.width=f+'%';
+  });
+  document.querySelectorAll('.strip .pg[data-rate]').forEach(g=>{
+    const bar=g.querySelector('i');let w=parseFloat(bar.style.width);
+    if(w>=100)return;w=Math.min(100,w+(+g.dataset.rate)/8);bar.style.width=w+'%';
+  });
+},400);
+function gmTurn(en,name){
+  const g=en.querySelector('.eg i');
+  if(+g.dataset.fill<100){announceP(name+"'s gauge is still filling.");return;}
+  const st=document.getElementById('estack');
+  const f=document.getElementById('field').getBoundingClientRect();
+  const r=en.getBoundingClientRect();
+  st.style.left=(r.right-f.left+16)+'px';st.style.top=(r.top-f.top)+'px';
+  st.classList.add('open');
+  st.dataset.enemy=name;
+}
+function eAct(move){
+  pendingAction=move;
+  document.getElementById('estack').classList.remove('open');
+  if(move==='Defend'){announceP(document.getElementById('estack').dataset.enemy+' defends.');resetEnemyGauge();pendingAction=null;return;}
+  leftMode('party');
+  document.getElementById('partycol').classList.add('targeting');
+  announceP(move+' — pick a target in the PARTY column.');
+}
+function targetPC(pc,name){
+  if(pendingItem&&HOSTILE[pendingItem]){
+    announceP(document.getElementById('epool').dataset.enemy+' uses '+pendingItem+' on '+name+'!');
+    EPOOL[pendingItem]--;renderPool();
+    document.getElementById('partycol').classList.remove('targeting');
+    resetEnemyGauge();pendingItem=null;return;}
+  if(!pendingAction)return;
+  announceP(document.getElementById('estack').dataset.enemy+' uses '+pendingAction+' on '+name+'!');
+  document.getElementById('partycol').classList.remove('targeting');
+  resetEnemyGauge();pendingAction=null;
+}
+function leftMode(m){
+  document.getElementById('createcol').style.display=m==='create'?'':'none';
+  document.getElementById('partycol').style.display=m==='party'?'':'none';
+  document.getElementById('lt-create').classList.toggle('on',m==='create');
+  document.getElementById('lt-party').classList.toggle('on',m==='party');
+}
+function useOnCreature(card,name){
+  if(!pendingItem||HOSTILE[pendingItem])return false;
+  announceP(name+' uses '+pendingItem+' ('+(EFFECT[pendingItem]||'')+').');
+  EPOOL[pendingItem]--;renderPool();
+  resetEnemyGauge();pendingItem=null;return true;
+}
+function gmTurnCard(card,name){
+  if(useOnCreature(card,name))return;
+  const g=card.querySelector('.pg i');
+  if(parseFloat(g.style.width)<100){announceP(name+"'s gauge is still filling.");return;}
+  const st=document.getElementById('estack');
+  const f=document.getElementById('field').getBoundingClientRect();
+  const r=card.getBoundingClientRect();
+  st.style.left=(r.left-f.left+10)+'px';st.style.top=(f.height-190)+'px';
+  st.classList.add('open');st.dataset.enemy=name;
+}
+function resetEnemyGauge(){
+  document.querySelectorAll('.enemy .eg i').forEach(i=>{
+    if(+i.dataset.fill>=100){i.dataset.fill=0;i.style.width='0%';}});
+  document.querySelectorAll('.strip .pg i').forEach(i=>{
+    if(parseFloat(i.style.width)>=100)i.style.width='0%';});
+}
+renderPool();
+</script>
+</body>
+</html>

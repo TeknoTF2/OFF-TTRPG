@@ -1,0 +1,3174 @@
+{
+ "meta": {
+  "title": "OFF TTRPG — Campaign Bestiary (consolidated, verified)",
+  "supersedes": "the six per-zone derived files; this is the single canonical enemy database for the campaign",
+  "sources": "canon merged from off.fandom.com (2008 + remaster) and off.miraheze.org (2025 remake); magnitudes derived from party throughput at anchor levels; verified via coverage audit + prose sweep",
+  "party_dps_by_level": {
+   "1": 15.7,
+   "2": 17.7,
+   "3": 19.8,
+   "4": 21.8,
+   "5": 26.4,
+   "6": 30.0,
+   "7": 31.9,
+   "8": 33.8,
+   "9": 40.2,
+   "10": 42.3,
+   "11": 45.6,
+   "12": 49.2,
+   "13": 60.2,
+   "14": 62.5,
+   "15": 64.7,
+   "16": 70.2,
+   "17": 77.7,
+   "18": 79.8
+  },
+  "party_heal_tp": {
+   "1": 11.9,
+   "2": 13.3,
+   "3": 14.7,
+   "4": 16.1,
+   "5": 19.4,
+   "6": 20.7,
+   "7": 21.9,
+   "8": 23.1,
+   "9": 26.7,
+   "10": 28.1,
+   "11": 40.1,
+   "12": 41.6,
+   "13": 50.6,
+   "14": 52.3,
+   "15": 54.1,
+   "16": 55.4,
+   "17": 61.0,
+   "18": 93.7,
+   "19": 95.9,
+   "20": 98.0
+  },
+  "zone_identities": {
+   "Zone 2": "Silence. Mute-heavy fodder (Upside-down, Massu, Whale) escalating into Japhet — the library zone takes the party voice away. CP drain continues via Massu.",
+   "Zone 3": "Vesper fights back: healer adds create kill-order puzzles, hard statuses arrive (Palsy, Furious, double-riders), enemy gauges reach party speed, and the boss drains CP and rewrites elements. The sugar-withdrawal zone makes the party feel the sickness.",
+   "The Room": "The Room turns the party on itself: Madness, Furious, and Asleep dominate fodder; the Queen fights with her own add-on party as the finale's mirror-foreshadow; the Judge hunts individuals. Psychological zone — control of your own characters is what gets attacked."
+  },
+  "notes": {
+   "fight_length_targets_s": {
+    "tutorial": 22,
+    "standard fodder": "30-40",
+    "elite/ambush": "45-60",
+    "boss": "180-210"
+   },
+   "fortuna_note": "Fortuna roams Zones 1-2 (remake location data); usable as a rare spawn in either.",
+   "deferred": "Purified-zone content (Secretaries, Source, Maldicion, Psalmanazar & Herodotus, Justus, Carnival) is endgame Grand-collection content, statted last at Room-tier levels (16-20).",
+   "model": "dpa x gauge-rate x damage-share, x0.85 acc/DEF/element; incoming = frac x heal throughput; calibrated to hand-worked Common Spectre / One-eyed / Dedan examples",
+   "composition_note": "Canon comps mix freely: Blind + Mute Spectres + Cavalry-burnt + Crown in one fight. Build encounters as strikers + 1 healer; two healers (Crown + Elsen?) is the hard variant.",
+   "campaign_sequence": "Room (16-18, ends: Judge) -> Purified Zones + superbosses incl. Sugar/Zone 0 (18-20) -> The Batter & Add-Ons (20, campaign finale)",
+   "new_enemy_statuses": {
+    "Thorns": "lose 10% max HP each time you act, 2 turns (Source). Anti-fast-class: the inverse of Palsy.",
+    "Famine": "Poisoned at double tick, 2/25 max HP (Source).",
+    "Impure": "weak to a random ring element, 2 turns (Maldicion, Carnival-Cancer). Interacts with element-change rules; one-instance applies.",
+    "Vilified": "prevents Competence use — maps onto the system's Muted, applied party-wide (P&H Vilify). CORRECTED: earlier damage-debuff definition was a guess; Cob's Advent wording proves the remake base effect.",
+    "Defamed": "THE CRIT GIFT (canon, corrected): marks one member; guaranteed charged crits for 3 turns; at fade, all damage/healing/statuses that member produced reflect onto the whole party. Curable by Focus. The temptation mechanic — spending the gift is the trap, supporting through it is the answer."
+   },
+   "corrosion_note": "Alpha's Corrosion (level 18) treats Light immunity as Neutral — it unlocks exactly when the party meets the all-Light-immune Secretaries. Engine and campaign click together.",
+   "structure": "Secretaries roam all purified zones as elite packs; Source/Maldicion/P&H are the three keys; Justus is the gate; Sugar (Zone 0), Cob (The Room), and Carnival (Infinite Valley) are the optional peaks. Justus and Carnival-Aquarius mirror the party's own kits — the Batter finale's foreshadow.",
+   "the_mirror_thesis": "Six against four, and the asymmetry is the meaning: the party's Purifier, Alpha, Omega, and Epsilon face their literal canon counterparts — but the Bandit and the Burnt have no mirror. They are this campaign's inventions, the things this world made that the Batter never accounted for. The two classes with no counterpart are the margin the party wins by. Justus foreshadowed it, Carnival rehearsed it, the Queen mourned it: the party has been fighting toward this mirror since Zone 1.",
+   "kill_order_final_exam": "Omega Add-On first (the cure engine), Epsilon second (the buffed AoE), Alpha third (the locks), the Batter last — or any other order, and the fight teaches why. Every lesson from Crown of the Dead through Ipsilon comes due.",
+   "gm_notes": "The Batter speaks in Phase 1 — calm, certain, purposeful. He does not speak in Phase 2. Wide Angle on Bad Batter should return garbage or nothing (canon: resists analysis). If the party loses: the world switches off zone by zone. If they win: they choose what the Judge chose. The ending is theirs."
+  },
+  "entry_count": 59,
+  "schema_version": 2,
+  "software_ready": "all 59 entries carry: element (Sugar for support entities), hp (numeric; compound fights carry units[]), def/res/lck, gauge_s (phase fights carry gauge_phases), status_tiers, and structured moves[] (n/t/mp/acc/fx; acc None = cannot miss, scripted, or pure-status-via-tier-roll, per system doc). MovePower values are multipliers vs the enemy's own Attack scale; exact ATK/ESP splits per move are hand-tuned in software against dmg_per_action.",
+  "engine_scope": "BINDING SCOPE RULE: every special, moves[], units[], and element_start field in this file is ENGINE-FACING MECHANICS, not GM flavor. The enforcement boundary’s ambiguity-goes-GM-side tiebreaker does NOT apply inside this file — these behaviors are implemented, with the standing rule that scripted lines auto-fire for AI instances and surface as prompts for GM-piloted ones.",
+  "enemy_mechanics_vocabulary": "Beyond the standard damage/status/stat/element machinery, enemy kits use these flags — define each ONCE, data-driven thereafter: ignore_def (Photographic Blur, Hoax); pct_current_hp damage riders (Fib 7%, Deceptive Inquiry 15%, Red Herring 7%, Rearrangement 40% — execute-proof by construction); action-blocking statuses extend to the Objects button (Corrupted Vilified = Muted + item-lock, same machinery class as Muted blocking Competences); Impure = weakness-overlay status (target takes 2x from a named ring element, 2 turns, reroll on reapplication); Thorns = on-act self-damage 10% max HP, 2 turns; Famine = Poisoned with parameterized tick (2/25); mark = visible no-effect marker with moves that target the marked member (Watch cycle; AI resolves within 2 actions, 50/50 Boon/Ionosphere); hits:N (Double Attack on the surviving liar = hits:2, sharing the Ashley Bat flag); compound units[] with win_condition and unkillable flags and spawn schedules (Pastel heads, Queen royals, Sugar Dummies, the finale) — REQUIRED core machinery, the win-condition inversion is explicit; decoy units vanish when struck and Wide Angle reveals the real one (Gnosticus — rides the reveal-gating system).",
+  "sanctioned_custom_features": "Exactly TWO mechanisms exceed the vocabulary and are sanctioned as bespoke engine features, fully specified in their entries — implement as written, do not simplify: (1) DEFAMED (P&H): accumulate the marked member’s outputs for 3 of their turns (guaranteed visible charged crits throughout); on expiry, damage dealt hits every party member and heals/buffs cast reflect as party-wide heals/buffs; Focus cures early. (2) CARNIVAL PRIZES: per-Game named condition watched on BOTH sides; any actor meeting it gains an instant 50% gauge fill (Leo: healing / Cancer: elemental attacks / Pisces: being hit / Aquarius: casting any competence). Anything else that seems to need custom code gets flagged to the GM, never half-built."
+ },
+ "enemies": [
+  {
+   "name": "Common Spectre",
+   "anchor_level": 1,
+   "archetype": "tutorial fodder",
+   "element": "Smoke",
+   "element_note": null,
+   "group": 8,
+   "gauge_s": 5.5,
+   "res": 5,
+   "lck": 3,
+   "hp": 20,
+   "dmg_per_action": 9,
+   "fight_target_s": 22,
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 0,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    }
+   ]
+  },
+  {
+   "name": "Magnolia",
+   "anchor_level": 1,
+   "archetype": "fodder",
+   "element": "Plastic",
+   "element_note": null,
+   "group": 3,
+   "gauge_s": 5.5,
+   "res": 8,
+   "lck": 10,
+   "hp": 155,
+   "dmg_per_action": 10,
+   "fight_target_s": 30,
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "light_immune",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 2,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Domestic Socket",
+     "t": "one",
+     "mp": 1.2,
+     "acc": 92,
+     "fx": null
+    },
+    {
+     "n": "Chronic Migraine",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "Blinded (tier)"
+    }
+   ]
+  },
+  {
+   "name": "Speckter-mite",
+   "anchor_level": 2,
+   "archetype": "fodder (remake)",
+   "element": "Smoke",
+   "element_note": "remake addition; specter default",
+   "group": 4,
+   "gauge_s": 5.0,
+   "hp": 120,
+   "dmg_per_action": 7,
+   "res": 5,
+   "lck": 3,
+   "special": "Painful Quandary: hits its target TWICE per action (~7 each) — two accuracy rolls, Defend halves both. Remake HP 25 scaled by fodder ratio.",
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "neutral",
+     "Asleep": "neutral",
+     "Furious": "vulnerable",
+     "Madness": "neutral"
+    }
+   },
+   "def": 0,
+   "moves": [
+    {
+     "n": "Painful Quandary",
+     "t": "one",
+     "mp": 0.5,
+     "acc": 95,
+     "fx": "hits twice, separate accuracy rolls"
+    }
+   ]
+  },
+  {
+   "name": "January",
+   "anchor_level": 2,
+   "archetype": "fodder",
+   "element": "Smoke",
+   "element_note": null,
+   "group": 2,
+   "gauge_s": 5.0,
+   "res": 8,
+   "lck": 3,
+   "hp": 295,
+   "dmg_per_action": 18,
+   "fight_target_s": 35,
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "neutral",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 3,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    }
+   ]
+  },
+  {
+   "name": "Fat Spectre",
+   "anchor_level": 2,
+   "archetype": "fodder+summons",
+   "element": "Smoke",
+   "element_note": null,
+   "group": 1,
+   "gauge_s": 5.0,
+   "res": 8,
+   "lck": 3,
+   "hp": 760,
+   "dmg_per_action": 36,
+   "fight_target_s": 45,
+   "special": "Summons Ah, ah! on turns 1/2/4 (canon schedule)",
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 5,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.1,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Summon",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted: spawns Ah, ah! on its turns 1/2/4"
+    }
+   ]
+  },
+  {
+   "name": "Ah, ah!",
+   "anchor_level": 2,
+   "archetype": "nuisance add",
+   "element": "Sugar",
+   "element_note": " | set to Sugar per system doc (every enemy has exactly one element); mechanically identical to elementless",
+   "group": 3,
+   "gauge_s": 4.5,
+   "res": 5,
+   "lck": 3,
+   "hp": 15,
+   "dmg_per_action": 0,
+   "special": "Chronic Migraine (Blinded, tier roll); spawned by Fat Spectre on schedule",
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "light_immune",
+     "Palsied": "light_immune",
+     "Asleep": "light_immune",
+     "Furious": "light_immune",
+     "Madness": "light_immune"
+    }
+   },
+   "def": 0,
+   "moves": [
+    {
+     "n": "Chronic Migraine",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "Blinded (tier)"
+    }
+   ]
+  },
+  {
+   "name": "One-eyed Spectre",
+   "anchor_level": 3,
+   "archetype": "fodder",
+   "element": "Smoke",
+   "element_note": null,
+   "group": 3,
+   "gauge_s": 5.0,
+   "res": 8,
+   "lck": 3,
+   "hp": 230,
+   "dmg_per_action": 14,
+   "fight_target_s": 35,
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 5,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Swing",
+     "t": "one",
+     "mp": 2.0,
+     "acc": 90,
+     "fx": "5 CP"
+    }
+   ]
+  },
+  {
+   "name": "Rupture-burnt",
+   "anchor_level": 3,
+   "archetype": "bomb fodder (remake)",
+   "element": "Meat",
+   "element_note": "burnt Elsen -> Meat per system doc",
+   "group": 2,
+   "gauge_s": 5.0,
+   "hp": 170,
+   "dmg_per_action": 10,
+   "res": 8,
+   "lck": 3,
+   "special": "Mandatory Overtime: all-party 0.6x Meat. CLOCK OUT: at <=30% HP or 4th action — all-party ~22 Meat and dies. Zone 1's Fission-precursor: burst it or eat the blast. (Names are grim Elsen labor jokes; keep them.)",
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "neutral",
+     "Asleep": "neutral",
+     "Furious": "vulnerable",
+     "Madness": "neutral"
+    }
+   },
+   "def": 4,
+   "moves": [
+    {
+     "n": "Mandatory Overtime",
+     "t": "all",
+     "mp": 0.6,
+     "acc": 92,
+     "fx": null
+    },
+    {
+     "n": "Clock Out",
+     "t": "all",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted at <=30% HP or 4th action: ~22 to all, dies"
+    }
+   ]
+  },
+  {
+   "name": "Burnt (enemy)",
+   "anchor_level": 3,
+   "archetype": "fodder",
+   "element": "Meat",
+   "element_note": "system doc (Burnts are Meat, per Elemental Runs)",
+   "group": 2,
+   "gauge_s": 4.8,
+   "res": 8,
+   "lck": 3,
+   "hp": 375,
+   "dmg_per_action": 22,
+   "fight_target_s": 40,
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "neutral",
+     "Asleep": "neutral",
+     "Furious": "vulnerable",
+     "Madness": "neutral"
+    }
+   },
+   "def": 8,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    }
+   ]
+  },
+  {
+   "name": "Tiburce",
+   "anchor_level": 3,
+   "archetype": "fodder (CP drain)",
+   "element": "Meat",
+   "element_note": "GM-assignable: no canon weak/resist; fleshy ghoul → Meat",
+   "group": 3,
+   "gauge_s": 4.8,
+   "res": 8,
+   "lck": 3,
+   "hp": 230,
+   "dmg_per_action": 12,
+   "fight_target_s": 35,
+   "special": "Partie Quarrée: drains 8-12 CP instead of damage on ~1/3 of actions",
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 5,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Partie Quarree",
+     "t": "one",
+     "mp": 0,
+     "acc": 95,
+     "fx": "drains 8-12 CP"
+    }
+   ]
+  },
+  {
+   "name": "Troquantary",
+   "anchor_level": 4,
+   "archetype": "fodder",
+   "element": "Metal",
+   "element_note": null,
+   "group": 3,
+   "gauge_s": 4.6,
+   "res": 8,
+   "lck": 3,
+   "hp": 290,
+   "dmg_per_action": 16,
+   "fight_target_s": 40,
+   "special": "Heaven's Smile: DEF Down -15 (2 turns), no damage",
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 10,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Heaven's Smile",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "DEF Down -15 (2 turns)"
+    }
+   ]
+  },
+  {
+   "name": "Arpagon",
+   "anchor_level": 4,
+   "archetype": "fodder",
+   "element": "Smoke",
+   "element_note": null,
+   "group": 3,
+   "gauge_s": 4.8,
+   "res": 8,
+   "lck": 10,
+   "hp": 290,
+   "dmg_per_action": 16,
+   "fight_target_s": 40,
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 6,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    }
+   ]
+  },
+  {
+   "name": "笑",
+   "anchor_level": 5,
+   "archetype": "nuisance add",
+   "element": "Sugar",
+   "element_note": " | set to Sugar per system doc (every enemy has exactly one element); mechanically identical to elementless",
+   "group": 3,
+   "gauge_s": 4.0,
+   "res": 5,
+   "lck": 3,
+   "hp": 25,
+   "dmg_per_action": 0,
+   "special": "Chronic Migraine (Blinded) / Partie Quarrée (drain 10 CP, acc 95)",
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 0,
+   "moves": [
+    {
+     "n": "Chronic Migraine",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "Blinded (tier)"
+    },
+    {
+     "n": "Partie Quarree",
+     "t": "one",
+     "mp": 0,
+     "acc": 95,
+     "fx": "drains 10 CP"
+    }
+   ]
+  },
+  {
+   "name": "Dedan",
+   "anchor_level": 5,
+   "archetype": "boss",
+   "element": "Metal",
+   "element_note": "derived: steel body (Zone 2 library)",
+   "group": 1,
+   "gauge_s": 2.4,
+   "res": 28,
+   "lck": 10,
+   "hp": 4200,
+   "dmg_per_action": 40,
+   "fight_target_s": 200,
+   "special": "Kit per worksheet: Minute/Hour/Sweep Hand, Half Past phase at 40%, 笑 summons at 55/45/15%",
+   "zone": "Zone 1",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 20,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Minute Hand",
+     "t": "one",
+     "mp": 1.1,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Hour Hand",
+     "t": "one",
+     "mp": 0.6,
+     "acc": 90,
+     "fx": "Asleep (tier)"
+    },
+    {
+     "n": "Sweep Hand",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 90,
+     "fx": "Furious (tier)"
+    },
+    {
+     "n": "Half Past",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted at 40% HP: Hasty until death"
+    },
+    {
+     "n": "Summon",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted at 55/45/15%: 2/2/3 x 笑"
+    }
+   ]
+  },
+  {
+   "name": "Upside-down Spectre",
+   "anchor_level": 6,
+   "archetype": "fodder",
+   "element": "Smoke",
+   "element_note": null,
+   "group": 3,
+   "gauge_s": 5.0,
+   "res": 12,
+   "lck": 3,
+   "hp": 350,
+   "dmg_per_action": 20,
+   "fight_target_s": 35,
+   "special": "Heavy Silence: ported as all-enemies 0.5x Smoke + Muted (tier roll per hit). SCHEMA FLAG: canon hits exactly two targets; system targeting has no N-target mode — extend schema or keep this port.",
+   "zone": "Zone 2",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "neutral",
+     "Asleep": "neutral",
+     "Furious": "vulnerable",
+     "Madness": "neutral"
+    }
+   },
+   "def": 10,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Heavy Silence",
+     "t": "all",
+     "mp": 0.5,
+     "acc": 92,
+     "fx": "Muted (tier per hit)"
+    }
+   ]
+  },
+  {
+   "name": "Gilles de Rais",
+   "anchor_level": 6,
+   "archetype": "fodder",
+   "element": "Metal",
+   "element_note": "remake weakness data; 2008 gimmick preserved as optional trait",
+   "group": 3,
+   "gauge_s": 4.8,
+   "res": 12,
+   "lck": 5,
+   "hp": 350,
+   "dmg_per_action": 20,
+   "fight_target_s": 35,
+   "special": "Attack-only, LCK 5. OPTIONAL 2008 trait (martial check): Esp-scaled damage halved, Atk-scaled doubled — the canon Add-Ons-resist/Bat-weak gimmick. Costs one custom rule; drop if schema purity wins.",
+   "zone": "Zone 2",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 8,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    }
+   ]
+  },
+  {
+   "name": "Massu",
+   "anchor_level": 7,
+   "archetype": "fodder",
+   "element": "Meat",
+   "element_note": null,
+   "group": 3,
+   "gauge_s": 5.0,
+   "res": 12,
+   "lck": 3,
+   "hp": 370,
+   "dmg_per_action": 22,
+   "fight_target_s": 35,
+   "special": "Heavy Silence (as above) + Partie Quarree: drains 10-14 CP on ~1/3 of actions.",
+   "zone": "Zone 2",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "neutral",
+     "Asleep": "neutral",
+     "Furious": "vulnerable",
+     "Madness": "neutral"
+    }
+   },
+   "def": 10,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Heavy Silence",
+     "t": "all",
+     "mp": 0.5,
+     "acc": 92,
+     "fx": "Muted (tier per hit)"
+    },
+    {
+     "n": "Partie Quarree",
+     "t": "one",
+     "mp": 0,
+     "acc": 95,
+     "fx": "drains 10-14 CP"
+    }
+   ]
+  },
+  {
+   "name": "Speckter-mite Swarm",
+   "anchor_level": 7,
+   "archetype": "fodder",
+   "element": "Smoke",
+   "element_note": null,
+   "group": 2,
+   "gauge_s": 4.5,
+   "res": 12,
+   "lck": 3,
+   "hp": 445,
+   "dmg_per_action": 28,
+   "fight_target_s": 30,
+   "special": "Hesitant Inquiry: hits all party members 3x per use at ~1/3 damage each — crit and Defend interact per hit.",
+   "zone": "Zone 2",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "neutral",
+     "Asleep": "neutral",
+     "Furious": "vulnerable",
+     "Madness": "neutral"
+    }
+   },
+   "def": 6,
+   "moves": [
+    {
+     "n": "Hesitant Inquiry",
+     "t": "all",
+     "mp": 0.33,
+     "acc": 93,
+     "fx": "hits each target 3x, separate rolls"
+    }
+   ]
+  },
+  {
+   "name": "Fission Specter",
+   "anchor_level": 7,
+   "archetype": "nuisance/bomb",
+   "element": "Smoke",
+   "element_note": null,
+   "group": 2,
+   "gauge_s": 4.5,
+   "res": 5,
+   "lck": 3,
+   "hp": 60,
+   "dmg_per_action": 0,
+   "special": "Bomb: Shortened Fuse (damages self ~20), Extended Fuse (heals a target ~25), Self-Destruct at <=25% HP or 3rd action: all-enemies ~30 Smoke and dies. Party chooses: burst it past the threshold or eat the blast.",
+   "zone": "Zone 2",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 0,
+   "moves": [
+    {
+     "n": "Shortened Fuse",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "damages self ~20"
+    },
+    {
+     "n": "Extended Fuse",
+     "t": "ally",
+     "mp": 0,
+     "acc": null,
+     "fx": "heals target ~25"
+    },
+    {
+     "n": "Self-Destruct",
+     "t": "all",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted at <=25% HP or 3rd action: ~30 Smoke to all, dies"
+    }
+   ]
+  },
+  {
+   "name": "Whale",
+   "anchor_level": 8,
+   "archetype": "elite solo",
+   "element": "Metal",
+   "element_note": "GM-assignable: Beasts-are-Metal precedent (Elemental Runs)",
+   "group": 1,
+   "gauge_s": 4.2,
+   "res": 16,
+   "lck": 3,
+   "hp": 2205,
+   "dmg_per_action": 68,
+   "fight_target_s": 70,
+   "special": "DEF 30 (canon tank, DFS 120 highest in zone). Murmur of the Flies: all-enemies 0.6x + Muted tier roll. Solo elite.",
+   "def": 30,
+   "zone": "Zone 2",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "neutral",
+     "Blinded": "neutral",
+     "Muted": "light_immune",
+     "Palsied": "light_immune",
+     "Asleep": "light_immune",
+     "Furious": "neutral",
+     "Madness": "light_immune"
+    }
+   },
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Murmur of the Flies",
+     "t": "all",
+     "mp": 0.6,
+     "acc": 92,
+     "fx": "Muted (tier per hit)"
+    }
+   ]
+  },
+  {
+   "name": "Valzong-burnt",
+   "anchor_level": 8,
+   "archetype": "fast fodder",
+   "element": "Meat",
+   "element_note": null,
+   "group": 1,
+   "gauge_s": 3.4,
+   "res": 12,
+   "lck": 10,
+   "hp": 1420,
+   "dmg_per_action": 52,
+   "fight_target_s": 45,
+   "special": "Fast (3.4s) with 10% crit; charged crits visible. May arrive with 2 Junior Spectres.",
+   "zone": "Zone 2",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 10,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Murmur of the Flies",
+     "t": "all",
+     "mp": 0.6,
+     "acc": 92,
+     "fx": "Muted (tier per hit)"
+    }
+   ]
+  },
+  {
+   "name": "Fortuna",
+   "anchor_level": 8,
+   "archetype": "rare loot",
+   "element": "Sugar",
+   "element_note": " | set to Sugar per system doc (every enemy has exactly one element); mechanically identical to elementless",
+   "group": 1,
+   "gauge_s": 3.0,
+   "res": 20,
+   "lck": 3,
+   "hp": 90,
+   "dmg_per_action": 0,
+   "special": "Rare loot enemy: takes no offensive actions; flees after its 2nd gauge fill (3.0s each). Kill inside ~6s for a premium drop. Bandit Cutpurse doubles it. LCK-themed: name it the crit-rate tutor if you want flavor.",
+   "zone": "Zone 2",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "strong_immune",
+     "Blinded": "strong_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "strong_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 15,
+   "moves": [
+    {
+     "n": "Flee",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted: escapes on 2nd gauge fill"
+    }
+   ]
+  },
+  {
+   "name": "Porter Spectre",
+   "anchor_level": 9,
+   "archetype": "burst puzzle",
+   "element": "Meat",
+   "element_note": "matched to Junior Spectre (weak to smoke -> Meat)",
+   "group": 1,
+   "gauge_s": 9.0,
+   "res": 10,
+   "lck": 3,
+   "hp": 340,
+   "dmg_per_action": 0,
+   "special": "9.0s telegraphed gauge; on first fill splits into 7 Junior Spectres and is gone. Burst 340 HP in the window for the Joker drop and no swarm. Party burst with focus+crits ~45/s at L9: tight but real.",
+   "zone": "Zone 2",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "neutral",
+     "Palsied": "neutral",
+     "Asleep": "neutral",
+     "Furious": "vulnerable",
+     "Madness": "neutral"
+    },
+    "balance_note": "hard control tightened from canon all-vulnerable to neutral: this entry carries a mechanic (heal engine / burst window) that guaranteed Palsy would delete"
+   },
+   "def": 8,
+   "moves": [
+    {
+     "n": "Split",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted on first gauge fill: becomes 7 Junior Spectres; Joker drop only if killed first"
+    }
+   ]
+  },
+  {
+   "name": "Junior Spectre",
+   "anchor_level": 9,
+   "archetype": "swarm",
+   "element": "Meat",
+   "element_note": null,
+   "group": 7,
+   "gauge_s": 4.0,
+   "res": 8,
+   "lck": 3,
+   "hp": 180,
+   "dmg_per_action": 10,
+   "fight_target_s": 30,
+   "special": "Self-Destruct: on 2nd action, all-enemies ~18 Meat and dies. Swarm rewards AoE (Long String / Absolute Tragedy online at 9).",
+   "zone": "Zone 2",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "neutral",
+     "Asleep": "neutral",
+     "Furious": "vulnerable",
+     "Madness": "neutral"
+    }
+   },
+   "def": 4,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Self-Destruct",
+     "t": "all",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted on 2nd action: ~18 Meat to all, dies"
+    }
+   ]
+  },
+  {
+   "name": "Japhet",
+   "anchor_level": 10,
+   "archetype": "boss",
+   "element": "Meat",
+   "element_note": "GM-assignable: Meat rotates the matchup seesaw — Dedan (Metal) doubled Alpha and halved Smoke classes; Japhet (Meat) doubles Bandit/Omega and halves Alpha",
+   "group": 1,
+   "gauge_s": 3.0,
+   "res": 28,
+   "lck": 8,
+   "hp": 5100,
+   "dmg_per_action": 40,
+   "fight_target_s": 210,
+   "special": "Three forms at 20/35/45% of 5100 HP. CANONICAL ROTATIONS (scripted, per canon — the fight is learnable): Form 1 \"Parasite\": Warble, Warble, Alto (repeat). Form 2 \"Master\": Warble, Alto, Warble, Soprano. Form 3 \"Firebird\": Soprano, Alto, Head-Voice, Warble, Tenor. Moves: Warble 1.1x Meat acc 95 | Alto 0.8x + Muted acc 90 | Soprano 1.5x Esp acc 92 | Head-Voice 2.2x acc 90 | Tenor 1.0x + Poisoned acc 90. SUMMONS (canon: \"he attempts to summon various spectres\"): each form transition summons 2 Upside-down Spectres at Zone 2 stats — the adds arrive exactly when his gauge quickens, and they carry Mute too. This is his real action economy; the party's AoE (Long String, Absolute Tragedy, fresh at 9-10) is the intended answer. Pressure model: direct ~18/s in form 3 + Poison ticks on afflicted members (~2/s each) + Mute landing on Purifier/Omega deleting heal throughput — the three stack to ~0.9x heal capacity without needing Hasty or adds. Mute on Omega/Burnt disables their kits — stock cure items; Focus cannot self-cure a Muted Omega. Statuses: Strong immune Palsied/Asleep/Muted/Madness; Light immune Blinded/Furious/Poisoned; stat changes land.",
+   "zone": "Zone 2",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 22,
+   "gauge_phases": {
+    "Parasite": 3.0,
+    "Master": 2.6,
+    "Firebird": 2.2
+   },
+   "moves": [
+    {
+     "n": "Warble",
+     "t": "one",
+     "mp": 1.1,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Alto",
+     "t": "one",
+     "mp": 0.8,
+     "acc": 90,
+     "fx": "Muted (tier)"
+    },
+    {
+     "n": "Soprano",
+     "t": "one",
+     "mp": 1.5,
+     "acc": 92,
+     "fx": "ESP-scaled"
+    },
+    {
+     "n": "Head-Voice",
+     "t": "one",
+     "mp": 2.2,
+     "acc": 90,
+     "fx": "Firebird only"
+    },
+    {
+     "n": "Tenor",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 90,
+     "fx": "Poisoned (tier), Firebird only"
+    },
+    {
+     "n": "Summon",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted on form transition: 2 Upside-down Spectres"
+    }
+   ]
+  },
+  {
+   "name": "Blind Spectre",
+   "anchor_level": 11,
+   "archetype": "fast fodder",
+   "element": "Smoke",
+   "element_note": "no canon data; spectre default Smoke",
+   "group": 2,
+   "gauge_s": 3.8,
+   "res": 16,
+   "lck": 4,
+   "hp": 735,
+   "dmg_per_action": 46,
+   "fight_target_s": 35,
+   "special": "Hasty Judgment: fast plain attack. The speed IS the threat: 3.8s gauge, first fodder that outpaces half the party.",
+   "zone": "Zone 3",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 12,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Hasty Judgment",
+     "t": "one",
+     "mp": 1.2,
+     "acc": 93,
+     "fx": null
+    }
+   ]
+  },
+  {
+   "name": "Mute Spectre",
+   "anchor_level": 11,
+   "archetype": "fodder",
+   "element": "Smoke",
+   "element_note": "no canon data; spectre default Smoke",
+   "group": 2,
+   "gauge_s": 4.0,
+   "res": 16,
+   "lck": 4,
+   "hp": 735,
+   "dmg_per_action": 48,
+   "fight_target_s": 35,
+   "special": "Heavy Silence port (all-enemies 0.5x + Muted tier roll) — Zone 2 threat returning at Zone 3 numbers.",
+   "zone": "Zone 3",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 12,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Heavy Silence",
+     "t": "all",
+     "mp": 0.5,
+     "acc": 92,
+     "fx": "Muted (tier per hit)"
+    }
+   ]
+  },
+  {
+   "name": "Cavalry-burnt",
+   "anchor_level": 12,
+   "archetype": "fodder",
+   "element": "Meat",
+   "element_note": null,
+   "group": 3,
+   "gauge_s": 4.0,
+   "res": 16,
+   "lck": 10,
+   "hp": 655,
+   "dmg_per_action": 36,
+   "fight_target_s": 40,
+   "special": "Inhuman Decadence: 0.9x Meat + Furious AND Poisoned (both tier-roll on hit). Double-rider — priced into low damage per the rider-discount rule. Canon 10% crit; charged crits visible.",
+   "zone": "Zone 3",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 14,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Inhuman Decadence",
+     "t": "one",
+     "mp": 0.9,
+     "acc": 90,
+     "fx": "Furious AND Poisoned (tier each)"
+    }
+   ]
+  },
+  {
+   "name": "Crown of the Dead",
+   "anchor_level": 12,
+   "archetype": "healer add",
+   "element": "Meat",
+   "element_note": null,
+   "group": 1,
+   "gauge_s": 4.2,
+   "res": 14,
+   "lck": 4,
+   "hp": 480,
+   "dmg_per_action": 0,
+   "special": "Aspirating Suzerain: heals one ally ~55 and cures its Poisoned. Never attacks. Always escorts strikers — the kill-order puzzle. Party DPS vs its heal rate: ignoring it extends fights ~40%.",
+   "zone": "Zone 3",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "neutral",
+     "Palsied": "neutral",
+     "Asleep": "neutral",
+     "Furious": "vulnerable",
+     "Madness": "neutral"
+    },
+    "balance_note": "hard control tightened from canon all-vulnerable to neutral: this entry carries a mechanic (heal engine / burst window) that guaranteed Palsy would delete"
+   },
+   "def": 10,
+   "moves": [
+    {
+     "n": "Aspirating Suzerain",
+     "t": "ally",
+     "mp": 0,
+     "acc": null,
+     "fx": "heals ~55, cures Poisoned"
+    }
+   ]
+  },
+  {
+   "name": "Elsen?",
+   "anchor_level": 12,
+   "archetype": "healer add",
+   "element": "Meat",
+   "element_note": null,
+   "group": 1,
+   "gauge_s": 4.2,
+   "res": 14,
+   "lck": 4,
+   "hp": 520,
+   "dmg_per_action": 0,
+   "special": "Remake addition, same job as Crown (Aspirating Suzerain ~55/cast). Use in Area 4 comps for double-healer nightmares.",
+   "zone": "Zone 3",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "neutral",
+     "Asleep": "neutral",
+     "Furious": "vulnerable",
+     "Madness": "neutral"
+    }
+   },
+   "def": 10,
+   "moves": [
+    {
+     "n": "Aspirating Suzerain",
+     "t": "ally",
+     "mp": 0,
+     "acc": null,
+     "fx": "heals ~55"
+    }
+   ]
+  },
+  {
+   "name": "Von Gacy",
+   "anchor_level": 13,
+   "archetype": "elite fodder",
+   "element": "Metal",
+   "element_note": "canon mirror-match resist (metal)",
+   "group": 2,
+   "gauge_s": 4.0,
+   "res": 18,
+   "lck": 4,
+   "hp": 1375,
+   "dmg_per_action": 70,
+   "fight_target_s": 50,
+   "special": "Swan Dive: 1.2x Metal + Palsied (tier roll) — the first player-facing Palsy. A Palsied player burns a full gauge cycle; on Epsilon that is 4.4 wall-clock seconds of nothing. Cure items or Focus answer it.",
+   "zone": "Zone 3",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 16,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Swan Dive",
+     "t": "one",
+     "mp": 1.2,
+     "acc": 90,
+     "fx": "Palsied (tier)"
+    }
+   ]
+  },
+  {
+   "name": "Critic-burnt",
+   "anchor_level": 13,
+   "archetype": "story beat",
+   "element": "Metal",
+   "element_note": "canon weak to plastic",
+   "group": 1,
+   "gauge_s": 5.0,
+   "res": 30,
+   "lck": 4,
+   "hp": 1200,
+   "dmg_per_action": 2,
+   "special": "STORY BEAT (Hugo precedent): ATK trivial, never threatens. Screams HELP and self-buffs ESP/DEF/AGI at 66%/33% thresholds. No rewards, per canon. The fight is a moral question, not an encounter. GM may skip combat entirely.",
+   "zone": "Zone 3",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "strong_immune",
+     "Blinded": "strong_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "strong_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 12,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": "trivial (~2 dmg)"
+    },
+    {
+     "n": "HELP",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted at 66%/33%: self ESP/DEF/AGI up; story beat"
+    }
+   ]
+  },
+  {
+   "name": "Pastel-burnt",
+   "anchor_level": 14,
+   "archetype": "miniboss",
+   "element": "Meat",
+   "element_note": "GM-assignable: burnt Elsen amalgam -> Meat",
+   "group": 1,
+   "gauge_s": 2.8,
+   "res": 22,
+   "lck": 4,
+   "hp": 780,
+   "dmg_per_action": 44,
+   "special": "Multi-part miniboss, ~120s. Body attacks with Inhuman Decadence (Furious+Poisoned) but is not the win condition: kill 4 heads spawning sequentially (~every 18s): 3x Head One at 130 HP, then Head Two at 260 HP. Heads heal the body cosmetically and die to burst. Killing all heads kills the body (canon). The kill-the-adds inversion: the \"boss\" is the distraction.",
+   "zone": "Zone 3",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 18,
+   "units": [
+    {
+     "name": "Monster (body)",
+     "hp": "unkillable (display ???)",
+     "gauge_s": 2.8,
+     "win_condition": false
+    },
+    {
+     "name": "Head One",
+     "hp": 130,
+     "count": 3,
+     "gauge_s": null,
+     "spawn": "sequential ~every 18s",
+     "win_condition": true
+    },
+    {
+     "name": "Head Two",
+     "hp": 260,
+     "count": 1,
+     "gauge_s": null,
+     "spawn": "after Head Ones",
+     "win_condition": true
+    }
+   ],
+   "moves": [
+    {
+     "n": "Inhuman Decadence",
+     "t": "one",
+     "mp": 1.1,
+     "acc": 90,
+     "fx": "Furious AND Poisoned (tier each); body move"
+    },
+    {
+     "n": "Head Attack",
+     "t": "one",
+     "mp": 0.6,
+     "acc": 92,
+     "fx": "per living head"
+    }
+   ]
+  },
+  {
+   "name": "Enoch",
+   "anchor_level": 15,
+   "archetype": "boss",
+   "element": "Plastic",
+   "element_note": "GM-assignable: completes the boss rotation — Dedan (Metal) favored Alpha, Japhet (Meat) favored Bandit/Omega, Enoch (Plastic) doubles the Meat pair (Epsilon, Burnt). Every duplicate-element pair now has its boss.",
+   "group": 1,
+   "gauge_s": 2.6,
+   "res": 30,
+   "lck": 10,
+   "hp": 8250,
+   "dmg_per_action": 48,
+   "special": "Zone finale, ~225s at 8250 HP. Kit from canon: Attack; Double Attack (two hits in one action — the canonical solo-boss action-economy fix, frequency rises below 60% HP); Dramatic Crescendo (drains 15 CP — boss-scale CP pressure); Dramatic Irony (0.8x + Furious); Law of Causation (0.8x + Poisoned); Trigger Element (sets one party member's element, 2 target-turns — FIRST enemy element manipulation; the Burnt cancels it by naming the target's native element, and Sweet Madness makes the Burnt itself untouchable. This is the Burnt's showcase fight); Climax (below 30% HP — canon-confirmed threshold: all-enemies 1.8x Plastic nuke, once, telegraphed one gauge in advance — the Defend/Sable Rush moment). Statuses: Strong immune Palsied/Asleep/Muted/Madness; Light immune Blinded/Furious/Poisoned; stat changes land.",
+   "zone": "Zone 3",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 24,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Double Attack",
+     "t": "one",
+     "mp": 0.9,
+     "acc": 93,
+     "fx": "two hits, one action; frequency rises below 60%"
+    },
+    {
+     "n": "Dramatic Crescendo",
+     "t": "one",
+     "mp": 0,
+     "acc": 95,
+     "fx": "drains 15 CP"
+    },
+    {
+     "n": "Dramatic Irony",
+     "t": "one",
+     "mp": 0.8,
+     "acc": 90,
+     "fx": "Furious (tier)"
+    },
+    {
+     "n": "Law of Causation",
+     "t": "one",
+     "mp": 0.8,
+     "acc": 90,
+     "fx": "Poisoned (tier)"
+    },
+    {
+     "n": "Trigger Element",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "sets target element (2 target-turns); Burnt cancels via native element"
+    },
+    {
+     "n": "Climax",
+     "t": "all",
+     "mp": 1.8,
+     "acc": null,
+     "fx": "scripted below 30% HP, once, telegraphed one gauge ahead"
+    }
+   ]
+  },
+  {
+   "name": "Bear",
+   "anchor_level": 16,
+   "archetype": "fodder pack",
+   "element": "Metal",
+   "element_note": "Beasts-are-Metal precedent (canon confirms Bat-weak here)",
+   "group": 4,
+   "gauge_s": 3.6,
+   "res": 18,
+   "lck": 4,
+   "hp": 735,
+   "dmg_per_action": 30,
+   "fight_target_s": 40,
+   "special": "Magical Amnesia: 0.9x + Blinded (tier roll). Canon appears once as EIGHT — run as two waves of four, or all eight as the Room's door-opener set-piece.",
+   "zone": "The Room",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 14,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Magical Amnesia",
+     "t": "one",
+     "mp": 0.9,
+     "acc": 90,
+     "fx": "Blinded (tier)"
+    }
+   ]
+  },
+  {
+   "name": "Abstract Spectre",
+   "anchor_level": 16,
+   "archetype": "fodder swarm",
+   "element": "Metal",
+   "element_note": "canon: weak to plastic (strong-weak variant exists)",
+   "group": 5,
+   "gauge_s": 4.6,
+   "res": 18,
+   "lck": 4,
+   "hp": 590,
+   "dmg_per_action": 30,
+   "fight_target_s": 40,
+   "special": "Immediate Forfeiture: 0.8x + MADNESS (tier roll) — the first player-facing Madness. A Madness'd striker attacks the party on autopilot; the Room turns the party on itself. Canon 2-of-5 variant carries Strong weakness to Plastic: Alpha deletes those two.",
+   "zone": "The Room",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 12,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Immediate Forfeiture",
+     "t": "one",
+     "mp": 0.8,
+     "acc": 88,
+     "fx": "Madness (tier)"
+    }
+   ]
+  },
+  {
+   "name": "Ballman",
+   "anchor_level": 16,
+   "archetype": "set-piece",
+   "element": "Sugar",
+   "element_note": "set-piece; elementless like the comic it lives in | set to Sugar per system doc (every enemy has exactly one element); mechanically identical to elementless",
+   "group": 8,
+   "gauge_s": 3.5,
+   "res": 30,
+   "lck": 4,
+   "hp": 250,
+   "dmg_per_action": 20,
+   "special": "SET-PIECE: comic-book fight (Panic in Ballville). Canon stats are a joke (500s, AGL 650) because canon hands you the Boxxer. Options: (a) minigame — party plays comic heroes with fixed stats one session, or (b) straight fodder at listed numbers. GM call; canon endorses (a).",
+   "zone": "The Room",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "strong_immune",
+     "Blinded": "strong_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "strong_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 15,
+   "moves": [
+    {
+     "n": "Comic Sock",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 90,
+     "fx": "set-piece rules apply"
+    }
+   ]
+  },
+  {
+   "name": "Infernal Spectre",
+   "anchor_level": 17,
+   "archetype": "elite pair",
+   "element": "Plastic",
+   "element_note": "canon: weak to meat -> Plastic",
+   "group": 2,
+   "gauge_s": 3.2,
+   "res": 20,
+   "lck": 6,
+   "hp": 1925,
+   "dmg_per_action": 54,
+   "fight_target_s": 55,
+   "special": "Love Game (canon 0 CP): 1.0x + Furious, spammable. Furious pairs — two of these keep half the party swinging wild.",
+   "zone": "The Room",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 16,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Love Game",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 92,
+     "fx": "Furious (tier); costless, spammable"
+    }
+   ]
+  },
+  {
+   "name": "Obese Spectre",
+   "anchor_level": 17,
+   "archetype": "elite solo",
+   "element": "Meat",
+   "element_note": "canon: weak to smoke -> Meat",
+   "group": 1,
+   "gauge_s": 2.8,
+   "res": 20,
+   "lck": 4,
+   "hp": 4550,
+   "dmg_per_action": 72,
+   "fight_target_s": 65,
+   "special": "Dance of the Nails: 1.1x + Asleep (tier roll). Per-hit capped by fast gauge (2.8s): sustained pressure comes from Asleep halving player actions, not raw damage — on Epsilon, one action per ~9s wall-clock.",
+   "zone": "The Room",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "vulnerable",
+     "Blinded": "vulnerable",
+     "Muted": "vulnerable",
+     "Palsied": "vulnerable",
+     "Asleep": "vulnerable",
+     "Furious": "vulnerable",
+     "Madness": "vulnerable"
+    }
+   },
+   "def": 20,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Dance of the Nails",
+     "t": "one",
+     "mp": 1.1,
+     "acc": 90,
+     "fx": "Asleep (tier)"
+    }
+   ]
+  },
+  {
+   "name": "Delta (royal)",
+   "anchor_level": 17,
+   "archetype": "boss add",
+   "element": "Sugar",
+   "element_note": "royal Add-Ons: elementless, mirroring player-facing Sugar-adjacent support entities | set to Sugar per system doc (every enemy has exactly one element); mechanically identical to elementless",
+   "group": 1,
+   "gauge_s": 3.2,
+   "res": 22,
+   "lck": 4,
+   "hp": 1150,
+   "dmg_per_action": 30,
+   "special": "Long Silence: all-party 0.7x; Short Silence: single 1.0x. The escort striker.",
+   "zone": "The Room",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 18,
+   "moves": [
+    {
+     "n": "Short Silence",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 92,
+     "fx": null
+    },
+    {
+     "n": "Long Silence",
+     "t": "all",
+     "mp": 0.7,
+     "acc": 90,
+     "fx": null
+    }
+   ]
+  },
+  {
+   "name": "Sigma (royal)",
+   "anchor_level": 17,
+   "archetype": "boss add",
+   "element": "Sugar",
+   "element_note": " | set to Sugar per system doc (every enemy has exactly one element); mechanically identical to elementless",
+   "group": 1,
+   "gauge_s": 3.4,
+   "res": 22,
+   "lck": 4,
+   "hp": 1150,
+   "dmg_per_action": 0,
+   "special": "Major/Minor Chord: ATK Up 25% / DEF Up +20 (3 turns) on Queen or an add. Buff cancellation (your Up/Down contact rule) is the counterplay — Nougat/Gaussian strip what Sigma builds.",
+   "zone": "The Room",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 18,
+   "moves": [
+    {
+     "n": "Major Chord",
+     "t": "ally",
+     "mp": 0,
+     "acc": null,
+     "fx": "ATK Up 25% (3 turns)"
+    },
+    {
+     "n": "Minor Chord",
+     "t": "ally",
+     "mp": 0,
+     "acc": null,
+     "fx": "DEF Up +20 (3 turns)"
+    }
+   ]
+  },
+  {
+   "name": "Ipsilon (royal)",
+   "anchor_level": 17,
+   "archetype": "boss add",
+   "element": "Sugar",
+   "element_note": " | set to Sugar per system doc (every enemy has exactly one element); mechanically identical to elementless",
+   "group": 1,
+   "gauge_s": 3.4,
+   "res": 22,
+   "lck": 4,
+   "hp": 1150,
+   "dmg_per_action": 0,
+   "special": "Treble Clef: heals an ally ~90. Alto Clef: cosmetic CP restore (enemy CP is bookkeeping). The kill-order answer is Ipsilon first — three zones of healer-add training pay off here.",
+   "zone": "The Room",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 18,
+   "moves": [
+    {
+     "n": "Treble Clef",
+     "t": "ally",
+     "mp": 0,
+     "acc": null,
+     "fx": "heals ~90"
+    },
+    {
+     "n": "Alto Clef",
+     "t": "ally",
+     "mp": 0,
+     "acc": null,
+     "fx": "cosmetic CP restore"
+    }
+   ]
+  },
+  {
+   "name": "The Queen",
+   "anchor_level": 17,
+   "archetype": "boss",
+   "element": "Metal",
+   "element_note": "GM-assignable: chess/porcelain white -> Metal. Also the emotionally correct echo: the campaign opened against Metal (Dedan) and the Room closes its arc the same way",
+   "group": 1,
+   "gauge_s": 2.4,
+   "res": 30,
+   "lck": 10,
+   "hp": 6900,
+   "dmg_per_action": 52,
+   "fight_target_s": 240,
+   "special": "Epic, ~240s with escort: Queen 6900 + adds 3x1150 (total ~10,350 pool). Kit (canon, chess-named, each with its quote): Castling King 1.1x + Furious | Castling Queen 1.1x + Poisoned | Scholar's Mate 1.1x + Asleep | White Fianchetto 1.1x + Blinded | Mirror Play 1.7x heavy single | Immortal Anderssen 0.9x ALL | Fool's Mate: drains 8 CP from EVERY party member, no damage. She is the status omnibus plus party-wide CP drain — the Room asks whether the party can manage four statuses at once while solving a kill-order. Her quotes should be read aloud on every cast. Statuses: boss template (Strong immune to hard control).",
+   "zone": "The Room",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 26,
+   "moves": [
+    {
+     "n": "Castling King",
+     "t": "one",
+     "mp": 1.1,
+     "acc": 92,
+     "fx": "Furious (tier)"
+    },
+    {
+     "n": "Castling Queen",
+     "t": "one",
+     "mp": 1.1,
+     "acc": 92,
+     "fx": "Poisoned (tier)"
+    },
+    {
+     "n": "Scholar's Mate",
+     "t": "one",
+     "mp": 1.1,
+     "acc": 92,
+     "fx": "Asleep (tier)"
+    },
+    {
+     "n": "White Fianchetto",
+     "t": "one",
+     "mp": 1.1,
+     "acc": 92,
+     "fx": "Blinded (tier)"
+    },
+    {
+     "n": "Mirror Play",
+     "t": "one",
+     "mp": 1.7,
+     "acc": 90,
+     "fx": null
+    },
+    {
+     "n": "Immortal Anderssen",
+     "t": "all",
+     "mp": 0.9,
+     "acc": 90,
+     "fx": null
+    },
+    {
+     "n": "Fool's Mate",
+     "t": "all",
+     "mp": 0,
+     "acc": 95,
+     "fx": "drains 8 CP from each party member"
+    }
+   ]
+  },
+  {
+   "name": "The Judge",
+   "anchor_level": 18,
+   "archetype": "boss (Room finale)",
+   "element": "Meat",
+   "element_note": "GM-assignable: a cat is Meat. Weak to Smoke -> Bandit and Omega carry the finale",
+   "group": 1,
+   "gauge_s": 2.3,
+   "res": 32,
+   "lck": 14,
+   "hp": 9800,
+   "dmg_per_action": 64,
+   "fight_target_s": 220,
+   "special": "Room finale, ~220s at 9800 HP, gauge 2.3s, LCK 14 — the crit boss; Negative Space finally answers a boss directly. Kit (canon): the Aneurysm ladder — Conniving 1.0x / Malignant 1.5x / Critical 2.2x (~140) — plus ANEURYSM RUPTURE below 30% HP: 3.2x single-target (~300), one-shot territory on the Bandit; telegraphed one gauge ahead, answered by Defend, Ganache ATK Down, Sacred Mission, or a revive. The Sclerosis suite carries Muted/Blinded/Poisoned/Palsied at tier rolls. Design identity: the assassination boss — no AoE at all; he picks a victim and the party rotates protection. Save Third Base (party heal, online at 18) is deliberately weak against him: focused damage beats spread healing. Statuses: Strong immune hard control; Light immune Furious/Poisoned; Blinded NEUTRAL by design — at LCK 14 with visible charged crits (a crit Rupture is ~600, lethal to anyone), Negative Space is the intended counterplay and must be able to land. A glowing gauge below 30% HP is the table's emergency-button moment.",
+   "zone": "The Room",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "neutral",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 26,
+   "moves": [
+    {
+     "n": "Conniving Aneurysm",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Malignant Aneurysm",
+     "t": "one",
+     "mp": 1.5,
+     "acc": 93,
+     "fx": null
+    },
+    {
+     "n": "Critical Aneurysm",
+     "t": "one",
+     "mp": 2.2,
+     "acc": 90,
+     "fx": null
+    },
+    {
+     "n": "Aneurysm Rupture",
+     "t": "one",
+     "mp": 3.2,
+     "acc": 90,
+     "fx": "scripted below 30% HP, telegraphed one gauge ahead"
+    },
+    {
+     "n": "Unknown Sclerosis",
+     "t": "one",
+     "mp": 0.6,
+     "acc": 90,
+     "fx": "Muted (tier)"
+    },
+    {
+     "n": "Atypical Sclerosis",
+     "t": "one",
+     "mp": 0.6,
+     "acc": 90,
+     "fx": "Blinded (tier)"
+    },
+    {
+     "n": "Purulent Sclerosis",
+     "t": "one",
+     "mp": 0.6,
+     "acc": 90,
+     "fx": "Poisoned (tier)"
+    },
+    {
+     "n": "Staggering Sclerosis",
+     "t": "one",
+     "mp": 0.6,
+     "acc": 90,
+     "fx": "Palsied (tier)"
+    }
+   ]
+  },
+  {
+   "name": "Secretary (Zone 1)",
+   "anchor_level": 18,
+   "archetype": "elite roaming pack",
+   "element": "Metal",
+   "element_note": "canon: weak to plastic across all tiers — Alpha carries the purified zones",
+   "group": "1-3",
+   "gauge_s": 3.4,
+   "hp": 1600,
+   "dmg_per_action": 34,
+   "res": 30,
+   "lck": 8,
+   "special": "Logical Value: 0.6x drain (heals self) + Furious, Muted, Poisoned all tier-roll, acc 75 (canon 50). Natural Logarithm: 1.3x in a RANDOM ring element each cast. ALL TIERS: Light immunity to EVERY status (canon) — this is what Alpha's Corrosion (18) was built for: it arrives exactly when the party enters the purified zones. Kits escalate per tier per canon; stats climb steeply (canon 800/1500/2600 alt-bracket ratio preserved).",
+   "zone": "Purified Zones & Superbosses",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "light_immune",
+     "Palsied": "light_immune",
+     "Asleep": "light_immune",
+     "Furious": "light_immune",
+     "Madness": "light_immune"
+    }
+   },
+   "def": 18,
+   "moves": [
+    {
+     "n": "Logical Value",
+     "t": "one",
+     "mp": 0.6,
+     "acc": 75,
+     "fx": "drain (heals self); Furious+Muted+Poisoned (tier each)"
+    },
+    {
+     "n": "Natural Logarithm",
+     "t": "one",
+     "mp": 1.3,
+     "acc": 90,
+     "fx": "random ring element per cast"
+    }
+   ]
+  },
+  {
+   "name": "Secretary (Zone 2)",
+   "anchor_level": 18,
+   "archetype": "elite roaming pack",
+   "element": "Metal",
+   "element_note": "canon: weak to plastic across all tiers — Alpha carries the purified zones",
+   "group": "1-3",
+   "gauge_s": 3.0,
+   "hp": 2900,
+   "dmg_per_action": 40,
+   "res": 30,
+   "lck": 8,
+   "special": "Derivation: 1.5x single. Oblique Asymptote: 1.0x drain (heals self) + Poisoned. ALL TIERS: Light immunity to EVERY status (canon) — this is what Alpha's Corrosion (18) was built for: it arrives exactly when the party enters the purified zones. Kits escalate per tier per canon; stats climb steeply (canon 800/1500/2600 alt-bracket ratio preserved).",
+   "zone": "Purified Zones & Superbosses",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "light_immune",
+     "Palsied": "light_immune",
+     "Asleep": "light_immune",
+     "Furious": "light_immune",
+     "Madness": "light_immune"
+    }
+   },
+   "def": 26,
+   "moves": [
+    {
+     "n": "Derivation",
+     "t": "one",
+     "mp": 1.5,
+     "acc": 92,
+     "fx": null
+    },
+    {
+     "n": "Oblique Asymptote",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 92,
+     "fx": "drain (heals self); Poisoned (tier)"
+    }
+   ]
+  },
+  {
+   "name": "Secretary (Zone 3)",
+   "anchor_level": 19,
+   "archetype": "elite roaming pack",
+   "element": "Metal",
+   "element_note": "canon: weak to plastic across all tiers — Alpha carries the purified zones",
+   "group": "1-3",
+   "gauge_s": 2.4,
+   "hp": 4200,
+   "dmg_per_action": 46,
+   "res": 30,
+   "lck": 8,
+   "special": "Division by Zero: 1.2x + Poisoned AND Asleep (double rider). Vertical Limit: 1.9x heavy single. ALL TIERS: Light immunity to EVERY status (canon) — this is what Alpha's Corrosion (18) was built for: it arrives exactly when the party enters the purified zones. Kits escalate per tier per canon; stats climb steeply (canon 800/1500/2600 alt-bracket ratio preserved).",
+   "zone": "Purified Zones & Superbosses",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "light_immune",
+     "Palsied": "light_immune",
+     "Asleep": "light_immune",
+     "Furious": "light_immune",
+     "Madness": "light_immune"
+    }
+   },
+   "def": 24,
+   "moves": [
+    {
+     "n": "Division by Zero",
+     "t": "one",
+     "mp": 1.2,
+     "acc": 90,
+     "fx": "Poisoned AND Asleep (tier each)"
+    },
+    {
+     "n": "Vertical Limit",
+     "t": "one",
+     "mp": 1.9,
+     "acc": 90,
+     "fx": null
+    }
+   ]
+  },
+  {
+   "name": "Source",
+   "anchor_level": 19,
+   "archetype": "superboss (Zone 1 purified)",
+   "element": "Meat",
+   "element_note": "GM-assignable: verdant/root theme",
+   "group": 1,
+   "gauge_s": 3.2,
+   "hp": 4600,
+   "dmg_per_action": 44,
+   "res": 30,
+   "lck": 8,
+   "special": "The regen race — CANON CADENCE: Source casts Flourish on EVERY action (self-heal 60, ~19/s at 3.2s gauge), occasionally paired with a rider ability the same turn. VERDANT BONDS: below 65% HP his every-turn healing gains +55 (~36/s total) — the walls close. Party sustained ~47/s usable: above 65% you gain ~28/s net; below, base output nets ~11/s and only spike windows (charged crits, Ultimate Homeruns, element exploitation) make real progress. AGI DOWN IS THE TECH: 25% fewer of his turns is 25% less healing — the one fight where Epsilon's and Omega's slows outdamage their damage. RETURN TO NATURE: party-wide THORNS — lose 10% max HP each time you act, 2 turns (anti-Bandit; acting costs blood). FAMINE: Poisoned at double tick (2/25 max HP). Statuses: superboss template; stat changes land.",
+   "zone": "Purified Zones & Superbosses",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 26,
+   "moves": [
+    {
+     "n": "Flourish",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "heals self 60, cast component of EVERY action"
+    },
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 0.9,
+     "acc": 93,
+     "fx": null
+    },
+    {
+     "n": "Return to Nature",
+     "t": "all",
+     "mp": 0,
+     "acc": null,
+     "fx": "Thorns (tier each): lose 10% max HP on acting, 2 turns"
+    },
+    {
+     "n": "Famine",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "Poisoned at double tick 2/25 (tier)"
+    },
+    {
+     "n": "Verdant Bonds",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted below 65%: every-turn healing +55"
+    }
+   ]
+  },
+  {
+   "name": "Maldicion",
+   "anchor_level": 19,
+   "archetype": "superboss (Zone 2 purified)",
+   "element": "rotating (Impure)",
+   "element_note": "element warfare incarnate — starts random, rerolls itself",
+   "group": 1,
+   "gauge_s": 2.6,
+   "hp": 9500,
+   "dmg_per_action": 52,
+   "res": 30,
+   "lck": 8,
+   "special": "The element storm — the Burnt's final exam. IMPURE (new status, remake): target becomes weak to a random ring element, 2 turns. Entropic Piety: self-hit 0.8x + rerolls his OWN Impure weakness. Unstable Purity: 1.4x single + Impure on the target. Clamor Claws: full-party 1.0x in WHATEVER ELEMENT HE IS CURRENTLY WEAK TO — tracking his weakness tells you the incoming element, and Sable Rush (set party element to resist it) is the designed answer. Wide Angle reads his current weakness: the 2 CP scout competence becomes boss-critical. Wants: element tracking, Sable Rush timing, exploit windows. Sweet Madness keeps the Burnt unshiftable.",
+   "zone": "Purified Zones & Superbosses",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "element_start": "random ring element at fight start (Impure self-reroll thereafter)",
+   "def": 22,
+   "moves": [
+    {
+     "n": "Entropic Piety",
+     "t": "self",
+     "mp": 0.8,
+     "acc": null,
+     "fx": "damages self, rerolls own Impure weakness"
+    },
+    {
+     "n": "Unstable Purity",
+     "t": "one",
+     "mp": 1.4,
+     "acc": 92,
+     "fx": "Impure (tier): weak to random element 2 turns"
+    },
+    {
+     "n": "Clamor Claws",
+     "t": "all",
+     "mp": 1.0,
+     "acc": 92,
+     "fx": "element = own current weakness"
+    }
+   ]
+  },
+  {
+   "name": "Psalmanazar & Herodotus",
+   "anchor_level": 19,
+   "archetype": "superboss duo (Zone 3 purified)",
+   "element": "Smoke (both)",
+   "element_note": "GM-assignable: liars and smoke",
+   "group": 2,
+   "gauge_s": 3.0,
+   "hp": 9200,
+   "dmg_per_action": 38,
+   "res": 30,
+   "lck": 8,
+   "special": "The liars' duo — two bodies, one fight, natural action economy. Shared kit (canon): VILIFY: whole party rolls Vilified = Muted (competence lock). SUBTERFUGE: marks ONE party member with DEFAMED — THE CRIT GIFT: for 3 of their turns the marked member rolls a charged crit on EVERY gauge fill (visibly glowing, every time). When Defamed fades, everything they did during the window reflects onto the entire party: accumulated damage dealt hits every party member; healing and buffs cast reflect as healing and buffs to everyone. The trap is the temptation — a striker who spends three guaranteed crits attacking deals ~350-450 to each party member at the fade (a wipe); a marked member who heals, buffs, or Defends turns the lie into a blessing. Focus can cure Defamed early — stripping your own guaranteed crits, the cure that feels bad to use. FIB: 1.0x + 7% of target current HP. DECEPTIVE INQUIRY: 1.2x + 15% current HP — execute-proof strikes. FACADE: spawns THREE Gnosticus (shell game, per canon: only ONE is real — 280 HP, casts Red Herring at 1.0x + 7% current HP; the two fakes vanish when struck, the wasted action being the point. Wide Angle reveals the real one: the 2 CP scout earns its keep against liars). When one brother dies the survivor gains Double Attack permanently. The whole fight is epistemology: what is real, what is a gift, what is a lie. Statuses: superboss template; stat changes land.",
+   "zone": "Purified Zones & Superbosses",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 24,
+   "units": [
+    {
+     "name": "Psalmanazar",
+     "hp": 4600,
+     "gauge_s": 3.0
+    },
+    {
+     "name": "Herodotus",
+     "hp": 4600,
+     "gauge_s": 3.0
+    },
+    {
+     "name": "Gnosticus",
+     "hp": 280,
+     "gauge_s": 3.5,
+     "count": "3 per Facade, 1 real"
+    }
+   ],
+   "moves": [
+    {
+     "n": "Fib",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 93,
+     "fx": "+7% target current HP (Psalmanazar)"
+    },
+    {
+     "n": "Deceptive Inquiry",
+     "t": "one",
+     "mp": 1.2,
+     "acc": 90,
+     "fx": "+15% target current HP (Psalmanazar)"
+    },
+    {
+     "n": "Subterfuge",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "Defamed: 3 turns guaranteed crits, then all output reflects onto party (Psalmanazar)"
+    },
+    {
+     "n": "Vilify",
+     "t": "all",
+     "mp": 0,
+     "acc": null,
+     "fx": "Muted (tier each) (Herodotus)"
+    },
+    {
+     "n": "Facade",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "spawns 3 Gnosticus, 1 real (Herodotus)"
+    },
+    {
+     "n": "Red Herring",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 92,
+     "fx": "+7% current HP (Gnosticus)"
+    }
+   ]
+  },
+  {
+   "name": "Justus",
+   "anchor_level": 20,
+   "archetype": "superboss gate (all three purified)",
+   "element": "Plastic",
+   "element_note": "GM-assignable: the artificial arbiter",
+   "group": 1,
+   "gauge_s": 2.2,
+   "hp": 10400,
+   "dmg_per_action": 56,
+   "res": 32,
+   "lck": 10,
+   "special": "THE PROTO-MIRROR: Justus fights with the party's own competences — canon kit is Requisite Bracket (Alpha: 1.0x + Blinded, lands at 80 flat), Photographic Blur (Omega: 1.3x that IGNORES DEF entirely), Surrealist Tragedy (Epsilon: all-party 1.1x Esp-scaled), and Irrevocable Drama (Epsilon corrupted: self-Hasty, recast every ~45s — he keeps re-accelerating and the party cannot strip it). Four Add-On kits in one body, one fight before the Batter: the campaign's foreshadow made mechanical. Unlocked by defeating Source, Maldicion, and P&H. Fast (2.2s) + rolling Hasty = the highest sustained action rate of any enemy except Sugar.",
+   "zone": "Purified Zones & Superbosses",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 26,
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Requisite Bracket",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 80,
+     "fx": "Blinded (tier); flat 80 accuracy"
+    },
+    {
+     "n": "Photographic Blur",
+     "t": "one",
+     "mp": 1.3,
+     "acc": 92,
+     "fx": "ignores DEF"
+    },
+    {
+     "n": "Surrealist Tragedy",
+     "t": "all",
+     "mp": 1.1,
+     "acc": 92,
+     "fx": "ESP-scaled"
+    },
+    {
+     "n": "Irrevocable Drama",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted ~every 45s: self-Hasty, unstrippable"
+    }
+   ]
+  },
+  {
+   "name": "Sugar (+4 Dummies)",
+   "anchor_level": 20,
+   "archetype": "superboss (Zone 0)",
+   "element": "Sugar",
+   "element_note": "the ONLY Sugar-element entity: no weakness, no resistance, exactly as the ring promises — elements simply do not help here",
+   "group": "1 + 4 adds",
+   "gauge_s": 1.8,
+   "hp": 11240,
+   "dmg_per_action": 58,
+   "res": 32,
+   "lck": 12,
+   "special": "The status hurricane at machine-gun speed — fastest entity in the campaign (canon AGL 250 both her and the Dummies). Kit (canon 2008 weights + remake statuses, Confused=Madness per GM ruling): Quatre-Quarts 1.9x heavy + Madness | Caramel Dur 1.2x + Palsied | Mille-Feuilles: ATK Down 25% + Furious | Dame Blanche: cheap pure Madness (no damage, no accuracy roll) | Parfait au Chocolat: all-party 1.1x. The DUMMIES are the fight: 60 HP each but acting every 1.6s — Sick Mask heals Sugar ~130, Empathetic Mask gives her DEF Up +20, and BLIND MASK GRANTS SUGAR HASTY (remake, canon-sanctioned enemy-side Hasty). Four dummies die to four attacks — but every gauge spent killing one is a gauge Sugar spends casting Madness. Elements dead, statuses everywhere: this is the anti-Carnival — the fight where half the party's tech does not apply.",
+   "zone": "Purified Zones & Superbosses",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 20,
+   "units": [
+    {
+     "name": "Sugar",
+     "hp": 11000,
+     "gauge_s": 1.8
+    },
+    {
+     "name": "Dummy",
+     "hp": 60,
+     "count": 4,
+     "gauge_s": 1.6
+    }
+   ],
+   "moves": [
+    {
+     "n": "Quatre-Quarts",
+     "t": "one",
+     "mp": 1.9,
+     "acc": 90,
+     "fx": "Madness (tier)"
+    },
+    {
+     "n": "Caramel Dur",
+     "t": "one",
+     "mp": 1.2,
+     "acc": 90,
+     "fx": "Palsied (tier)"
+    },
+    {
+     "n": "Mille-Feuilles",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "ATK Down 25% (3 turns) + Furious (tier)"
+    },
+    {
+     "n": "Dame Blanche",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "Madness (tier), pure status"
+    },
+    {
+     "n": "Parfait au Chocolat",
+     "t": "all",
+     "mp": 1.1,
+     "acc": 90,
+     "fx": null
+    },
+    {
+     "n": "Dummy: Attack",
+     "t": "one",
+     "mp": 0.5,
+     "acc": 95,
+     "fx": null
+    },
+    {
+     "n": "Dummy: Sick Mask",
+     "t": "ally",
+     "mp": 0,
+     "acc": null,
+     "fx": "heals Sugar ~130"
+    },
+    {
+     "n": "Dummy: Empathetic Mask",
+     "t": "ally",
+     "mp": 0,
+     "acc": null,
+     "fx": "Sugar DEF Up +20 (3 turns)"
+    },
+    {
+     "n": "Dummy: Blind Mask",
+     "t": "ally",
+     "mp": 0,
+     "acc": null,
+     "fx": "grants Sugar Hasty"
+    }
+   ]
+  },
+  {
+   "name": "Carnival",
+   "anchor_level": 20,
+   "archetype": "ultimate optional superboss (Infinite Valley)",
+   "element": "rotating by Game",
+   "element_note": "takes the element theme of whichever Game is active (Leo Meat / Cancer Impure-rotating / Pisces Smoke / Aquarius Plastic)",
+   "group": 1,
+   "gauge_s": 2.2,
+   "hp": 13600,
+   "dmg_per_action": 60,
+   "res": 32,
+   "lck": 10,
+   "special": "THE CAPSTONE RAID, ~290s at 13600 HP: four Games at 25% HP each, cycling Leo -> Cancer -> Pisces -> Aquarius, each borrowing a superboss kit the party has already beaten (canon: 13 competences). LEO (Source): Flourish self-heal + Swan Dive Palsy. CANCER (Maldicion): Clamor Claws + Unstable Purity with Impure. PISCES (P&H): Red Herring (+7% current HP) + HOAX: all-party, ignores DEF. AQUARIUS (Justus): Surrealist Tragedy, Requisite Bracket, and ULTIMATE HOMERUN — the Purifier's own capstone, 2.6x + Madness, cast at the party. PRIZES (remake mechanic, canon-corrected): BIDIRECTIONAL TEMPO WAR. Each Game names a condition — Leo: using healing / Cancer: using elemental attacks / Pisces: being hit / Aquarius: using any competence — and EITHER SIDE that meets it wins a prize: the winner's current gauge instantly fills 50%. The conditions apply to Carnival too: in Leo his Flourish self-heals win HIM prizes (healing accelerates him), in Pisces every hit the party takes accelerates them (getting hurt is tempo), in Aquarius every competence anyone casts accelerates its caster — a fight where the rules of speed change every phase and the party must play each Game's condition harder than Carnival does. Carnival is the final exam on every mechanic the endgame taught, and Aquarius firing the party's own ultimate back is the last note before the Batter does it for real.",
+   "zone": "Purified Zones & Superbosses",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "element_start": "Meat (Leo opens); shifts per Game",
+   "def": 26,
+   "moves": [
+    {
+     "n": "Flourish",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "Leo: heals self 10% max"
+    },
+    {
+     "n": "Swan Dive",
+     "t": "one",
+     "mp": 1.2,
+     "acc": 90,
+     "fx": "Leo: Palsied (tier)"
+    },
+    {
+     "n": "Clamor Claws",
+     "t": "all",
+     "mp": 1.0,
+     "acc": 92,
+     "fx": "Cancer: element = own current weakness"
+    },
+    {
+     "n": "Unstable Purity",
+     "t": "one",
+     "mp": 1.4,
+     "acc": 92,
+     "fx": "Cancer: Impure (tier)"
+    },
+    {
+     "n": "Red Herring",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 92,
+     "fx": "Pisces: +7% current HP"
+    },
+    {
+     "n": "Hoax",
+     "t": "all",
+     "mp": 1.2,
+     "acc": 90,
+     "fx": "Pisces: ignores DEF"
+    },
+    {
+     "n": "Surrealist Tragedy",
+     "t": "all",
+     "mp": 1.1,
+     "acc": 92,
+     "fx": "Aquarius: ESP-scaled"
+    },
+    {
+     "n": "Requisite Bracket",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 80,
+     "fx": "Aquarius: Blinded (tier)"
+    },
+    {
+     "n": "Ultimate Homerun",
+     "t": "one",
+     "mp": 2.6,
+     "acc": 88,
+     "fx": "Aquarius: Madness (tier)"
+    }
+   ]
+  },
+  {
+   "name": "Cob",
+   "anchor_level": 20,
+   "archetype": "superboss (The Room)",
+   "element": "Smoke",
+   "element_note": "GM-assignable: auroras and ionosphere — sky-stuff is Smoke",
+   "group": 1,
+   "gauge_s": 2.0,
+   "hp": 8600,
+   "def": 35,
+   "dmg_per_action": 46,
+   "res": 32,
+   "lck": 8,
+   "special": "THE CAPRICIOUS GOD (Aries to Carnival's Sagittarius). Tankiest superboss: DEF 35 (remake 78, highest in the game) and fast (2.0s). THE WATCH CYCLE: every ~25s, WATCH WITH GREAT INTEREST marks a random party member (visible, no effect). Within his next two actions he resolves it as either GRANT A BOON — heals the watched member 75% of current HP, a genuine gift — or IONOSPHERE: 9999 to the watched member. Unconditional death; no mitigation survives it. The answers are Sacred Mission (once), a ready revive, or accepting the loss — the fight is revive-economy management against a god who sometimes blesses instead. Roughly 50/50, never telegraphed which. RESHUFFLE PRESSURE: Rearrangement of Solid Objects — all-party 0.8x + 40% of each target's CURRENT HP (execute-proof, softens everyone before the next judgment). CONJUGATE AURORAS: self-heal 1160 (13.5% max) as an action — the DPS-check component. ADVENT OF THE CORRUPTED ERA (once per fight, below 50% HP): whole party rolls Corrupted Vilified — Muted AND item-locked, 2 turns. In this economy that is the scariest debuff possible: no competences, no items, no revives — Attack and Defend only while the judgment cycle keeps running. Statuses: superboss template; stat changes land (DEF shred is the honest tech against DEF 35).",
+   "zone": "Purified Zones & Superbosses",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 93,
+     "fx": null
+    },
+    {
+     "n": "Watch with Great Interest",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted ~every 25s: marks a random member, visible, no effect"
+    },
+    {
+     "n": "Grant a Boon",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "watched member only: heals 75% current HP"
+    },
+    {
+     "n": "Ionosphere",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "watched member only: 9999, unconditional"
+    },
+    {
+     "n": "Rearrangement of Solid Objects",
+     "t": "all",
+     "mp": 0.8,
+     "acc": 90,
+     "fx": "+40% of each target current HP"
+    },
+    {
+     "n": "Conjugate Auroras",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "heals self 1160"
+    },
+    {
+     "n": "Advent of the Corrupted Era",
+     "t": "all",
+     "mp": 0,
+     "acc": null,
+     "fx": "scripted once below 50%: Corrupted Vilified (tier each) = Muted + item-lock, 2 turns"
+    }
+   ]
+  },
+  {
+   "name": "The Batter",
+   "phase": 1,
+   "anchor_level": 20,
+   "element": "Metal",
+   "element_note": "the bat is metal — the Purifier's own element; a true mirror match resolves neutral, per the ring",
+   "hp": 6400,
+   "gauge_s": 2.2,
+   "dmg_per_action": 46,
+   "res": 34,
+   "lck": 10,
+   "def": 28,
+   "special": "THE MIRROR. His kit IS the Purifier class kit at boss scale — the system's own provenance made flesh: Furious Homerun 2.1x Sugar | Special Homerun 2.9x Sugar | ULTIMATE HOMERUN 3.8x Sugar (~every 40s, telegraphed one gauge ahead) | the four ELEMENTAL RUNS — he reads the party and casts the Run that doubles against his chosen target: element chess played back at them | Save Second Base — heals an Add-On ~150 (his healing keeps HIS party alive; kill-order pressure) | Wide Angle, cosmetically, because he is scouting them. PURIFICATION (his level-10 passive): +25% damage against any player below 30% HP — he finishes the wounded. SACRED MISSION (his level-2 passive) IS THE PHASE TRANSITION: the first lethal blow leaves him at 1 HP. He stands. He speaks his line. And then the party sees what the Judge saw.",
+   "zone": "Finale",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "moves": [
+    {
+     "n": "Attack",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 95,
+     "fx": "Metal"
+    },
+    {
+     "n": "Furious Homerun",
+     "t": "one",
+     "mp": 2.1,
+     "acc": 90,
+     "fx": "Sugar"
+    },
+    {
+     "n": "Special Homerun",
+     "t": "one",
+     "mp": 2.9,
+     "acc": 88,
+     "fx": "Sugar"
+    },
+    {
+     "n": "Ultimate Homerun",
+     "t": "one",
+     "mp": 3.8,
+     "acc": 88,
+     "fx": "Sugar; scripted ~every 40s, telegraphed"
+    },
+    {
+     "n": "Elemental Run",
+     "t": "one",
+     "mp": 1.5,
+     "acc": 90,
+     "fx": "casts the element that doubles vs chosen target"
+    },
+    {
+     "n": "Save Second Base",
+     "t": "ally",
+     "mp": 0,
+     "acc": null,
+     "fx": "heals an Add-On ~150"
+    }
+   ]
+  },
+  {
+   "name": "Alpha (Add-On)",
+   "phase": 1,
+   "anchor_level": 20,
+   "element": "Plastic",
+   "hp": 1900,
+   "gauge_s": 3.0,
+   "dmg_per_action": 30,
+   "res": 26,
+   "lck": 6,
+   "special": "The party Alpha's dark twin: Saturated/Complete String (Plastic, doubled vs the party Purifier) and the Bracket ladder at the party — Open (Poisoned), Closed (Blinded + ATK Down 25%), Broken (Muted), and ONE Impossible Bracket (Palsied) per fight. Chain Mastery: its statuses cure at RES -5. The lockdown ring.",
+   "zone": "Finale",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 16,
+   "moves": [
+    {
+     "n": "Saturated String",
+     "t": "one",
+     "mp": 1.6,
+     "acc": 91,
+     "fx": "Plastic, ESP-scaled"
+    },
+    {
+     "n": "Complete String",
+     "t": "one",
+     "mp": 2.9,
+     "acc": 89,
+     "fx": "Plastic"
+    },
+    {
+     "n": "Open Bracket",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "Poisoned (tier)"
+    },
+    {
+     "n": "Closed Bracket",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "Blinded (tier) + ATK Down 25% (2 turns)"
+    },
+    {
+     "n": "Broken Bracket",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "Muted (tier)"
+    },
+    {
+     "n": "Impossible Bracket",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "Palsied (tier); ONCE per fight"
+    }
+   ]
+  },
+  {
+   "name": "Omega (Add-On)",
+   "phase": 1,
+   "anchor_level": 20,
+   "element": "Smoke",
+   "hp": 1900,
+   "gauge_s": 3.2,
+   "dmg_per_action": 24,
+   "res": 26,
+   "lck": 6,
+   "special": "The enemy cure engine and the kill-order answer: FOCUS on the Batter or an Add-On — cures all their statuses AND strips one stat Down (Fixer) — undoing Alpha-player Brackets and Burnt-player shreds turn for turn. Photographic Blur (party-wide Blinded roll), Gaussian Blur (DEF Down -20 on a player). While it lives, the party's debuff game bails water.",
+   "zone": "Finale",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 18,
+   "moves": [
+    {
+     "n": "Optimized Blur",
+     "t": "one",
+     "mp": 1.0,
+     "acc": 93,
+     "fx": "AGI Down 15% (2 turns)"
+    },
+    {
+     "n": "Photographic Blur",
+     "t": "all",
+     "mp": 0.8,
+     "acc": 91,
+     "fx": "Blinded (tier per hit)"
+    },
+    {
+     "n": "Gaussian Blur",
+     "t": "one",
+     "mp": 0,
+     "acc": null,
+     "fx": "DEF Down -20 (2 turns)"
+    },
+    {
+     "n": "Focus",
+     "t": "ally",
+     "mp": 0,
+     "acc": null,
+     "fx": "cures all statuses + strips one stat Down (Fixer)"
+    }
+   ]
+  },
+  {
+   "name": "Epsilon (Add-On)",
+   "phase": 1,
+   "anchor_level": 20,
+   "element": "Meat",
+   "hp": 1900,
+   "gauge_s": 3.4,
+   "dmg_per_action": 34,
+   "res": 26,
+   "lck": 6,
+   "special": "The enemy engine room: Grand/Absolute Tragedy — party-wide Meat AoE every other action — and the Dramas: ATK Up 20% / DEF Up +15 on the enemy team (3 turns). Your Up/Down contact-cancellation rule is the tech: Nougat Crash and Gaussian Blur strip what it builds. Standing Ovation: its Tragedies deal +20% while any Drama runs — silence the Dramas or eat bigger waves.",
+   "zone": "Finale",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "light_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "def": 16,
+   "moves": [
+    {
+     "n": "Grand Tragedy",
+     "t": "all",
+     "mp": 1.15,
+     "acc": 93,
+     "fx": "Meat, ESP-scaled"
+    },
+    {
+     "n": "Absolute Tragedy",
+     "t": "all",
+     "mp": 1.4,
+     "acc": 93,
+     "fx": "Meat"
+    },
+    {
+     "n": "Comic Drama",
+     "t": "allies",
+     "mp": 0,
+     "acc": null,
+     "fx": "team ATK Up 15% (2 turns)"
+    },
+    {
+     "n": "Baroque Drama",
+     "t": "allies",
+     "mp": 0,
+     "acc": null,
+     "fx": "team DEF Up +15 (2 turns)"
+    }
+   ]
+  },
+  {
+   "name": "BAD BATTER",
+   "phase": 2,
+   "anchor_level": 20,
+   "element": "Metal",
+   "element_note": "GM-assignable, but Metal retained is the thesis: nothing transformed except what the party can see. Same creature. Same element. Seen truly.",
+   "hp": 8200,
+   "gauge_s": 1.9,
+   "dmg_per_action": 54,
+   "res": 36,
+   "lck": 12,
+   "def": 24,
+   "special": "THE BEAST, ~150s. Phase 1 was chess; phase 2 is violence. No heals, no allies, no element games — the fastest sustained gauge of any final entity (1.9s) with visible charged crits at LCK 12. Kit: DEAD AIM 2.4x single | SANCTIFY: all-party 1.2x SUGAR (purification turned on the party — unresistable by design, the one Sugar-damage enemy in the campaign besides its old self) | SILENCE: all-party Muted roll, the switch motif made mechanical | PURIFICATION retained: +25% vs players below 30% — wounded players are prey, triage is survival | Ultimate Homerun, still, because the swing never changed. By now the party's items and CP are the campaign's last reserves: this phase is the economy document's final exam. Statuses: Strong immune to everything hard, Light immune to the rest — but stat changes STILL LAND, because they always do. The Burnt cannot change its element (Sweet Madness) and the beast cannot change what it is. Fitting.",
+   "zone": "Finale",
+   "status_tiers": {
+    "note": "vulnerable=100, neutral=80, light_immune=45, strong_immune=never (tier base minus target RES, floor 5%); stat changes always land per system doc",
+    "tiers": {
+     "Poisoned": "light_immune",
+     "Blinded": "light_immune",
+     "Muted": "strong_immune",
+     "Palsied": "strong_immune",
+     "Asleep": "strong_immune",
+     "Furious": "strong_immune",
+     "Madness": "strong_immune"
+    }
+   },
+   "moves": [
+    {
+     "n": "Dead Aim",
+     "t": "one",
+     "mp": 2.4,
+     "acc": 90,
+     "fx": null
+    },
+    {
+     "n": "Sanctify",
+     "t": "all",
+     "mp": 1.2,
+     "acc": 90,
+     "fx": "Sugar damage — unresistable by design"
+    },
+    {
+     "n": "Silence",
+     "t": "all",
+     "mp": 0,
+     "acc": null,
+     "fx": "Muted (tier each)"
+    },
+    {
+     "n": "Ultimate Homerun",
+     "t": "one",
+     "mp": 3.8,
+     "acc": 88,
+     "fx": "still, because the swing never changed"
+    },
+    {
+     "n": "Purification",
+     "t": "self",
+     "mp": 0,
+     "acc": null,
+     "fx": "passive: +25% damage vs targets below 30% HP"
+    }
+   ]
+  }
+ ]
+}
