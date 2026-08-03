@@ -192,8 +192,15 @@ function targetPlayer(m) {
   pendingAction = null;
   if (a.kind === 'move') gm('enemy-action', { enemyId: a.enemyId, action: { kind: 'move', move: a.move, targetId: m.id } });
   if (a.kind === 'pool-item') gm('enemy-action', { enemyId: a.enemyId, action: { kind: 'pool-item', item: a.item, targetId: m.id } });
-  renderPartyCol(App.view);
+  render(App.view);
 }
+
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (pendingAction) { pendingAction = null; announce('Action lowered.'); render(App.view); }
+    $('estack').classList.remove('open');
+  }
+});
 
 // ---------------------------------------------------------------- FIELD
 const SLOT_POS = [
@@ -232,9 +239,10 @@ function renderField(view) {
       const pm = view.party.find(x => x.id === pid);
       if (!pm) return;
       const a = anchors[i] || anchors[0];
+      const targeting = pendingAction && !pm.down && pendingAction.kind !== 'pool-item-friendly';
       const div = el('div', {
-        class: 'benemy' + (pm.down ? ' deadE' : ''),
-        style: `right:${a.right};bottom:${a.bottom};left:auto;top:auto;width:130px;cursor:${pendingAction ? 'crosshair' : 'pointer'}`,
+        class: 'benemy' + (pm.down ? ' deadE' : '') + (targeting ? ' gm-target' : ''),
+        style: `right:${a.right};bottom:${a.bottom};left:auto;top:auto;width:130px`,
         'data-id': pm.id,
       });
       div.appendChild(artEl(partyArt(pm.klass), pm.name, a.h));
@@ -415,8 +423,8 @@ function enemyClicked(e) {
       if (mv.t === 'one') {
         pendingAction = { enemyId: e.id, kind: 'move', move: mv.n };
         setLeftMode('party');
-        renderPartyCol(App.view);
-        announce(`${mv.n} — pick a target in the PARTY column.`);
+        render(App.view);
+        announce(`${mv.n} — click a party sprite on the field (or the PARTY column).`);
       } else {
         gm('enemy-action', { enemyId: e.id, action: { kind: 'move', move: mv.n } });
       }
@@ -440,8 +448,8 @@ function enemyClicked(e) {
         if (hostile) {
           pendingAction = { enemyId: e.id, kind: 'pool-item', item: n };
           setLeftMode('party');
-          renderPartyCol(App.view);
-          announce(`${n} — pick a target in the PARTY column.`);
+          render(App.view);
+          announce(`${n} — click a party sprite on the field (or the PARTY column).`);
         } else {
           // friendly pool item: target one of the GM's own creatures
           pendingAction = { enemyId: e.id, kind: 'pool-item-friendly', item: n };

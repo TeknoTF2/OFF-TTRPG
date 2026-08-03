@@ -75,6 +75,8 @@ body { display: grid; grid-template-rows: 56px 1fr; grid-template-columns: 210px
 .benemy .ectl { font-size: 8px; letter-spacing: 1px; margin-top: 3px; color: var(--blk); background: var(--wht); display: inline-block; padding: 1px 5px; cursor: pointer; }
 .benemy .ectl.gm { background: var(--red); color: var(--wht); }
 .benemy.deadE { opacity: .3; }
+.benemy.gm-target { outline: 3px dashed var(--red); outline-offset: 4px; cursor: crosshair; }
+.benemy.gm-target .ename { color: var(--amber); }
 .estack { position: absolute; display: none; flex-direction: column; gap: 8px; z-index: 7; max-height: 75%; overflow-y: auto; }
 .estack.open { display: flex; }
 .eact { background: var(--blk); color: var(--wht); font-family: var(--disp); font-size: 20px; padding: 2px 20px 4px 14px; border: 0; border-left: 4px solid var(--red); cursor: pointer; text-align: left; transform: skewX(-4deg); width: max-content; }

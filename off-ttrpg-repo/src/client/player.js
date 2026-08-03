@@ -9,6 +9,7 @@ const seat = new URLSearchParams(location.search).get('seat') || localStorage.ge
 if (!/^P[1-6]$/.test(seat)) location.href = '/';
 
 let armed = null;         // {kind:'attack'|'comp'|'item', comp?, item?, element?, targetSpec}
+let kselIdx = 0;          // keyboard target cursor within the current legal target list
 let lastStateAt = 0;
 let sheetOpen = false;
 const $ = id => document.getElementById(id);
@@ -105,10 +106,14 @@ function itemClicked(name, n) {
     if (!armed || armed.kind !== 'item-pick') return;   // must arm via Objects first
     const tgt = item.effect.target === 'one enemy' ? 'enemy' : 'ally';
     armed = { kind: 'item', item: name, targetSpec: tgt };
-    announce(`${name} — choose a ${tgt === 'enemy' ? 'target' : 'party member'}.`);
+    kselIdx = 0;
+    rerender();
+    announce(`${name} — choose a ${tgt === 'enemy' ? 'target' : 'party member'}. Arrows cycle, Enter confirms.`);
   } else {
     // Out of combat, anything in the shared inventory can be used freely by anyone.
     armed = { kind: 'ooc-item', item: name, targetSpec: 'ally' };
+    kselIdx = 0;
+    rerender();
     announce(`${name} — choose a party member.`);
   }
 }
@@ -127,9 +132,11 @@ function renderBattle(view) {
   wrap.innerHTML = '';
   const m = me();
   const myTurn = m && m.holding && !m.down;
+  const cursor = armed ? kselTarget() : null;
   for (const e of [...b.enemies].sort((a, x) => (a.slot || 0) - (x.slot || 0))) {
     const targetable = myTurn && !e.dead && armed && ['attack', 'comp-target-enemy', 'item-enemy'].includes(armedMode());
-    const div = el('div', { class: 'enemy' + (e.dead ? ' dead' : '') + (targetable ? ' targetable' : ''), 'data-id': e.id });
+    const onCursor = targetable && cursor && cursor.id === e.id;
+    const div = el('div', { class: 'enemy' + (e.dead ? ' dead' : '') + (targetable ? ' targetable' : '') + (onCursor ? ' ksel' : ''), 'data-id': e.id });
     const art = enemyArt(e.template);
     const artNode = artEl(art, e.name, Math.round(150 * (e.size || 1)));
     artNode.classList && artNode.classList.add('eart');
@@ -165,8 +172,9 @@ function renderBattle(view) {
     const pm = view.party.find(x => x.id === pid);
     if (!pm) return;
     const a = anchors[i] || anchors[0];
+    const onCursorA = armed && allyTargetable(pm) && (() => { const c = kselTarget(); return c && c.id === pm.id; })();
     const div = el('div', {
-      class: 'ally' + (pm.id === seat ? ' me' : '') + (pm.down ? ' downed' : '') + (allyTargetable(pm) ? ' targetable' : ''),
+      class: 'ally' + (pm.id === seat ? ' me' : '') + (pm.down ? ' downed' : '') + (allyTargetable(pm) ? ' targetable' : '') + (onCursorA ? ' ksel' : ''),
       style: `right:${a.right};bottom:${a.bottom}`, 'data-id': pm.id,
     });
     div.appendChild(artEl(partyArt(pm.klass), pm.name, a.h));
@@ -185,6 +193,35 @@ function armedMode() {
   if (armed.kind === 'item') return armed.targetSpec === 'enemy' ? 'item-enemy' : 'item-ally';
   if (armed.kind === 'ooc-item') return 'ooc-ally';
   return armed.kind;
+}
+
+// The legal target list for whatever is armed — what the arrow keys cycle over.
+function targetList() {
+  const view = App.view;
+  if (!view || !armed) return [];
+  const mode = armedMode();
+  const inBattle = view.battle && view.mode === 'battle';
+  if (mode === 'attack' || mode === 'comp-target-enemy' || mode === 'item-enemy') {
+    if (!inBattle) return [];
+    return [...view.battle.enemies].filter(e => !e.dead).sort((a, b) => (a.slot || 0) - (b.slot || 0))
+      .map(e => ({ kind: 'enemy', id: e.id }));
+  }
+  if (mode === 'comp-target-ally' || mode === 'item-ally' || mode === 'ooc-ally') {
+    const me2 = me();
+    const comp = armed.kind === 'comp' && me2 ? me2.competences.find(c => c.name === armed.comp) : null;
+    const item = armed.kind === 'item' || armed.kind === 'ooc-item'
+      ? App.staticData.items.catalog.find(c => c.name === armed.item) : null;
+    const wantsDown = (comp && comp.kind === 'revive') || (item && item.effect.type === 'revive');
+    return view.party.filter(pm => wantsDown ? pm.down : !pm.down).map(pm => ({ kind: 'ally', id: pm.id }));
+  }
+  return [];
+}
+
+function kselTarget() {
+  const list = targetList();
+  if (!list.length) return null;
+  kselIdx = ((kselIdx % list.length) + list.length) % list.length;
+  return list[kselIdx];
 }
 
 function allyTargetable(pm) {
@@ -211,7 +248,7 @@ function renderStack(view) {
   if (!myTurn) { armed = null; $('subs').classList.remove('open'); $('inv').classList.remove('armed'); }
 }
 
-$('btnAttack').onclick = () => { setSel('btnAttack'); armed = { kind: 'attack' }; $('subs').classList.remove('open'); $('inv').classList.remove('armed'); announce('Attack — choose an enemy.'); rerender(); };
+$('btnAttack').onclick = () => { setSel('btnAttack'); armed = { kind: 'attack' }; kselIdx = 0; $('subs').classList.remove('open'); $('inv').classList.remove('armed'); announce('Attack — choose an enemy.'); rerender(); };
 $('btnDefend').onclick = () => { setSel('btnDefend'); armed = null; send({ t: 'action', action: { kind: 'defend' } }); };
 $('btnObj').onclick = () => { setSel('btnObj'); armed = { kind: 'item-pick' }; $('subs').classList.remove('open'); rerender(); announce('Objects — pick one from the column.'); };
 $('btnComp').onclick = () => { setSel('btnComp'); armed = null; openCompDrawer(); };
@@ -260,6 +297,7 @@ function pickComp(c) {
 }
 
 function armComp(c, element) {
+  kselIdx = 0;
   $('subs').classList.remove('open');
   if (c.target === 'one enemy') {
     armed = { kind: 'comp', comp: c.name, element, targetSpec: 'one enemy' };
@@ -321,7 +359,8 @@ function renderStrip(view) {
   strip.innerHTML = '';
   for (const pm of view.party) {
     const targetable = allyTargetable(pm) && !pm.down || (armedMode() === 'ooc-ally');
-    const pc = el('div', { class: 'pc' + (pm.id === seat ? ' me' : '') + (pm.down ? ' deadpc' : '') + (targetable ? ' targetable' : ''), 'data-id': pm.id });
+    const onCursorP = armed && targetable && (() => { const c = kselTarget(); return c && c.id === pm.id; })();
+    const pc = el('div', { class: 'pc' + (pm.id === seat ? ' me' : '') + (pm.down ? ' deadpc' : '') + (targetable ? ' targetable' : '') + (onCursorP ? ' ksel' : ''), 'data-id': pm.id });
     pc.appendChild(el('div', { class: 'r1' }, el('span', { class: 'pname' }, pm.name), el('span', { class: 'plvl' }, `LV${pm.level}`)));
     pc.appendChild(el('div', { class: 'nums' },
       el('div', { class: 'num', style: pm.hp / pm.maxHp <= .2 && !pm.down ? 'color:var(--red)' : '' }, `${pm.hp}`, el('em', {}, 'hp'), el('i', { style: `width:${Math.round(pm.hp / pm.maxHp * 100)}%${pm.hp / pm.maxHp <= .2 ? ';background:var(--red)' : ''}` })),
@@ -476,8 +515,23 @@ function renderGate(gate) {
 const OW = { keys: {}, moving: false, animClock: 0, seq: [0, 1, 2, 1], seqi: 1, imgs: {} };
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
+  const view = App.view;
+  // Battle targeting: arrows walk the legal targets, Enter/Space/Z strikes, Escape lowers the arm.
+  if (view && view.mode === 'battle' && armed) {
+    const list = targetList();
+    if (list.length && ['ArrowLeft', 'ArrowUp'].includes(e.key)) { kselIdx--; e.preventDefault(); rerender(); return; }
+    if (list.length && ['ArrowRight', 'ArrowDown'].includes(e.key)) { kselIdx++; e.preventDefault(); rerender(); return; }
+    if (list.length && ['Enter', ' ', 'z', 'Z'].includes(e.key)) {
+      e.preventDefault();
+      const t = kselTarget();
+      if (t) targetClicked(t);
+      rerender();
+      return;
+    }
+    if (e.key === 'Escape') { armed = null; $('subs').classList.remove('open'); rerender(); return; }
+  }
   if (e.key.startsWith('Arrow') || 'wasd'.includes(e.key)) { OW.keys[e.key] = true; e.preventDefault(); }
-  if ((e.key === 'e' || e.key === 'E' || e.key === ' ') && App.view && App.view.mode === 'overworld') tryExamine();
+  if ((e.key === 'e' || e.key === 'E' || e.key === ' ') && view && view.mode === 'overworld') tryExamine();
 });
 addEventListener('keyup', e => { OW.keys[e.key] = false; });
 
