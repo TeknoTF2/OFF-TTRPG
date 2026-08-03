@@ -131,7 +131,7 @@ function renderBattle(view) {
     const targetable = myTurn && !e.dead && armed && ['attack', 'comp-target-enemy', 'item-enemy'].includes(armedMode());
     const div = el('div', { class: 'enemy' + (e.dead ? ' dead' : '') + (targetable ? ' targetable' : ''), 'data-id': e.id });
     const art = enemyArt(e.template);
-    const artNode = artEl(art, e.name, 92);
+    const artNode = artEl(art, e.name, Math.round(150 * (e.size || 1)));
     artNode.classList && artNode.classList.add('eart');
     const artBox = el('div', { class: 'eart' }); artBox.appendChild(artNode);
     div.appendChild(artBox);
@@ -152,9 +152,14 @@ function renderBattle(view) {
   // allies in the Batter-and-rings arrangement (randomized per encounter)
   const allies = $('allies');
   allies.innerHTML = '';
+  // Batter-and-rings, sized to own the right side: one forward anchor, the rest orbiting.
   const anchors = [
-    { right: '9vw', bottom: '84px' }, { right: '16vw', bottom: '140px' }, { right: '5vw', bottom: '170px' },
-    { right: '14vw', bottom: '230px' }, { right: '4vw', bottom: '256px' }, { right: '10vw', bottom: '310px' },
+    { right: '9vw', bottom: '80px', h: 175 },
+    { right: '21vw', bottom: '170px', h: 145 },
+    { right: '3vw', bottom: '205px', h: 145 },
+    { right: '17vw', bottom: '305px', h: 140 },
+    { right: '2vw', bottom: '345px', h: 140 },
+    { right: '10vw', bottom: '415px', h: 135 },
   ];
   (b.partySlots || []).forEach((pid, i) => {
     const pm = view.party.find(x => x.id === pid);
@@ -164,7 +169,7 @@ function renderBattle(view) {
       class: 'ally' + (pm.id === seat ? ' me' : '') + (pm.down ? ' downed' : '') + (allyTargetable(pm) ? ' targetable' : ''),
       style: `right:${a.right};bottom:${a.bottom}`, 'data-id': pm.id,
     });
-    div.appendChild(artEl(partyArt(pm.klass), pm.name, 56));
+    div.appendChild(artEl(partyArt(pm.klass), pm.name, a.h));
     div.appendChild(el('div', { class: 'aname outline' }, pm.name));
     div.onclick = () => targetClicked({ kind: 'ally', id: pm.id });
     allies.appendChild(div);

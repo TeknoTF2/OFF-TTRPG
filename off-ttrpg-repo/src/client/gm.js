@@ -217,7 +217,7 @@ function renderField(view) {
     for (const e of view.battle.enemies) {
       const p = SLOT_POS[(e.slot || 1) - 1] || SLOT_POS[0];
       const div = el('div', { class: 'benemy' + (e.dead ? ' deadE' : ''), style: `left:${p.left}%;top:${p.top}%`, 'data-id': e.id });
-      div.appendChild(artEl(enemyArt(e.template), e.name, 66));
+      div.appendChild(artEl(enemyArt(e.template), e.name, Math.round(90 * (e.size || 1))));
       div.appendChild(el('div', { class: 'ename outline' }, e.name));
       div.appendChild(el('div', { class: 'ehp' }, el('i', { style: `width:${Math.round(e.hp / e.maxHp * 100)}%` })));
       div.appendChild(el('div', { class: 'eg' + (e.critCharged ? ' critcharge' : '') }, el('i', { style: `width:${Math.round(e.gauge * 100)}%`, 'data-egid': e.id })));
@@ -240,12 +240,14 @@ setInterval(() => { phase = !phase; if (App.view && App.view.mode !== 'battle') 
 
 function fieldScale() {
   const field = $('field');
+  if (!field) return 1;   // seat taken over: the console DOM is gone, intervals wind down
   const room = stagedRoom || { w: 768, h: 576 };
   return Math.min(field.clientWidth / (room.w || 768), field.clientHeight / (room.h || 576));
 }
 
 function drawStaging(view) {
   const canvas = $('roomcanvas');
+  if (!canvas) return;
   const room = stagedRoom || { w: 768, h: 576, floors: [], structs: [], props: [], pieces: [] };
   room.w = room.w || 768; room.h = room.h || 576;
   const sc = fieldScale();
@@ -482,8 +484,9 @@ function renderStrip(view) {
 
 function instanceEditor(e) {
   const hp = prompt(`${e.name} — HP (${e.hp}/${e.maxHp}). New HP:`, e.hp);
-  if (hp == null) return;
-  gm('edit-instance', { enemyId: e.id, patch: { hp: Math.max(0, +hp || 0) } });
+  if (hp != null) gm('edit-instance', { enemyId: e.id, patch: { hp: Math.max(0, +hp || 0) } });
+  const size = prompt(`${e.name} — on-screen size (×${e.size || 1}):`, e.size || 1);
+  if (size != null && +size > 0) gm('edit-instance', { enemyId: e.id, patch: { size: +size } });
 }
 
 // enemy gauge animation
@@ -661,9 +664,9 @@ function renderEnemyEditor(p, view) {
   p.appendChild(nameI);
   const grid = el('div', { class: 'edgrid', style: 'margin-top:14px' });
   const stats = el('div', { class: 'edsec' }, el('h4', {}, 'STATS'));
-  const statDefs = [['hp', 'HP', 10], ['dmg_per_action', 'DMG/ACT', 2], ['gauge_s', 'GAUGE s', 0.2], ['def', 'DEF', 5], ['res', 'RES', 2], ['lck', 'LCK', 1], ['group', 'GROUP', 1]];
+  const statDefs = [['hp', 'HP', 10], ['dmg_per_action', 'DMG/ACT', 2], ['gauge_s', 'GAUGE s', 0.2], ['def', 'DEF', 5], ['res', 'RES', 2], ['lck', 'LCK', 1], ['group', 'GROUP', 1], ['size', 'SIZE ×', 0.25]];
   for (const [key, label, step] of statDefs) {
-    stats.appendChild(labeled(label, stepper(t[key] ?? 0, step, v => { t[key] = v; })));
+    stats.appendChild(labeled(label, stepper(t[key] ?? (key === 'size' ? 1 : 0), step, v => { t[key] = v; })));
   }
   stats.appendChild(el('h4', { style: 'margin-top:12px' }, 'ELEMENT'));
   const ring = el('div', { class: 'elring' });
@@ -809,6 +812,14 @@ function renderEncounter(p, view) {
       const slotB = el('button', { class: 'qbtn' }, `SLOT ${q.slot ?? 'auto'}`);
       slotB.onclick = () => { q.slot = q.slot == null ? 1 : (q.slot % 8) + 1 === 1 ? null : (q.slot % 8) + 1; if (q.slot === 0) q.slot = null; slotB.textContent = `SLOT ${q.slot ?? 'auto'}`; };
       row.appendChild(slotB);
+      const SIZES = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+      const sizeB = el('button', { class: 'qbtn' }, `SIZE ×${q.size ?? 1}`);
+      sizeB.onclick = () => {
+        const cur = SIZES.indexOf(q.size ?? 1);
+        q.size = SIZES[(cur + 1) % SIZES.length];
+        sizeB.textContent = `SIZE ×${q.size}`;
+      };
+      row.appendChild(sizeB);
       const ctlB = el('button', { class: 'qbtn' + (q.control === 'gm' ? ' gmctl' : '') }, q.control.toUpperCase());
       ctlB.onclick = () => { q.control = q.control === 'ai' ? 'gm' : 'ai'; renderPanels(); };
       row.appendChild(ctlB);

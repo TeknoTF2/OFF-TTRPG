@@ -76,8 +76,10 @@ export class SceneRun {
 
   applyToMember(member, key, value) {
     if (key === 'class') {
+      const wasDefaultName = Object.keys(this.data.classKits.classes).includes(member.name);
       member.klass = value;
       member.element = this.data.classKits.classes[value].element;
+      if (wasDefaultName) member.name = value;   // placeholder names follow the chosen class
       const s = statsAt(this.data, value, member.level);
       member.hp = s.hp; member.cp = s.cp;
     } else if (key === 'name') {

@@ -134,6 +134,7 @@ function enemyPublicView(e) {
     statChanges: e.statChanges.map(sc => ({ stat: sc.stat, dir: sc.dir, amount: sc.amount, turnsLeft: sc.turnsLeft })),
     elementSet: e.elementSet ? e.elementSet.element : null,
     sprite: e.sprite, portrait: e.portrait, template: e.template,
+    size: e.size || 1,
     revealed,
   };
   if (revealed) {
@@ -787,6 +788,7 @@ function handleGm(msg) {
       if ('level' in p) store.setLevel(m, p.level | 0);
       if ('name' in p) m.name = String(p.name).slice(0, 40);
       if ('klass' in p && data.classKits.classes[p.klass]) {
+        if (Object.keys(data.classKits.classes).includes(m.name)) m.name = p.klass;
         m.klass = p.klass; m.element = data.classKits.classes[p.klass].element;
         const s = statsAt(data, p.klass, m.level); m.hp = Math.min(m.hp, s.hp) || s.hp; m.cp = Math.min(m.cp, s.cp) || s.cp;
       }

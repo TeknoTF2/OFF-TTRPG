@@ -167,6 +167,7 @@ export class Battle {
       statusTiers: (o.status_tiers ?? tmpl.status_tiers)?.tiers || {},
       control: q.control || 'ai',
       slot: q.slot ?? null,
+      size: q.size ?? o.size ?? tmpl.size ?? 1,   // on-screen scale, the GM's per-enemy dial
       drop: q.drop || { type: 'none' },
       wave: waveIdx,
       statuses: [], statChanges: [],
