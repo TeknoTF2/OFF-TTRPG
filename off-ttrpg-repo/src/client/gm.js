@@ -10,7 +10,8 @@ const RING = ['Plastic', 'Metal', 'Smoke', 'Meat', 'Sugar'];
 
 let activeTab = null;
 let leftMode = 'create';
-let pendingAction = null;      // {enemyId, kind, move|item}
+let pendingAction = null;      // {enemyId, kind, move|item} — an enemy acting at the party
+let pendingPilot = null;       // {seat, kind, comp?, item?, element?, wants:'enemy'|'ally'} — the GM playing an absent character
 let stagedRoom = null;         // local editing copy of the current room
 let stagedDirty = false;
 let tool = null, dragA = null, stamp = null;
@@ -168,8 +169,9 @@ function renderPartyCol(view) {
   col.innerHTML = '';
   col.classList.toggle('targeting', !!pendingAction);
   for (const m of view.party) {
-    const pm = el('div', { class: 'pm' + (m.down ? ' dead' : ''), 'data-id': m.id });
-    pm.appendChild(el('div', { class: 'pmn' }, `${m.name} `, el('span', { style: 'font-size:9px;color:#777' }, `LV${m.level}`)));
+    const pm = el('div', { class: 'pm' + (m.down ? ' dead' : ''), style: m.benched ? 'opacity:.4' : '', 'data-id': m.id });
+    pm.appendChild(el('div', { class: 'pmn' }, `${m.name} `, el('span', { style: 'font-size:9px;color:#777' }, `LV${m.level}`),
+      m.benched ? el('span', { class: 'icn', style: 'margin-left:4px;color:#888' }, 'SITTING OUT') : null));
     pm.appendChild(el('div', { class: 'pmnums' },
       el('span', { class: 'pmv' }, `${m.hp}`, el('em', {}, 'hp'), el('i', { style: `width:${Math.round(m.hp / m.maxHp * 100)}%` })),
       el('span', { class: 'pmv cp' }, `${m.cp}`, el('em', {}, 'cp'), el('i', { style: `width:${Math.round(m.cp / m.maxCp * 100)}%` }))));
@@ -181,9 +183,91 @@ function renderPartyCol(view) {
     for (const s of m.statuses) icons.appendChild(statusChip(s));
     for (const sc of m.statChanges) icons.appendChild(statChangeChip(sc));
     pm.appendChild(icons);
-    pm.onclick = () => targetPlayer(m);
+    pm.onclick = () => {
+      if (pendingAction) return targetPlayer(m);
+      if (pendingPilot && pendingPilot.wants === 'ally') return pilotTarget(m);
+      if (m.holding && !m.down && !m.benched && App.view.battle) return openPilotStack(m);
+    };
     col.appendChild(pm);
   }
+}
+
+// ---------------------------------------------------------------- piloting an absent character
+// "The GM pilots the absent character" — the action stack mirrors the player interface.
+function openPilotStack(pm) {
+  const st = $('estack');
+  st.innerHTML = '';
+  st.style.left = '38%'; st.style.top = '18%';
+  st.appendChild(el('div', { class: 'eact', style: 'border-left-color:var(--amber);cursor:default;color:var(--amber)' },
+    `PILOTING ${pm.name.toUpperCase()}`, el('small', {}, `${pm.hp}/${pm.maxHp} hp · ${pm.cp} cp${pm.critCharged ? ' · CRIT CHARGED' : ''}`)));
+  const atk = el('button', { class: 'eact' }, 'Attack', el('small', {}, 'then click an enemy'));
+  atk.onclick = () => { st.classList.remove('open'); armPilot(pm, { kind: 'attack', wants: 'enemy' }, 'Attack — click an enemy.'); };
+  st.appendChild(atk);
+  for (const c of (pm.competences || []).filter(c => c.unlocked)) {
+    const afford = pm.cp >= c.cp;
+    const b = el('button', { class: 'eact', style: afford ? '' : 'opacity:.4' },
+      `${c.name} — ${c.cp}`, el('small', {}, `${c.target}${c.element ? ' · ' + c.element : ''} · ${c.effect}`));
+    b.onclick = () => {
+      if (!afford) return;
+      if (c.choosesElement) {
+        st.innerHTML = '';
+        for (const elName of ['Plastic', 'Metal', 'Smoke', 'Meat']) {
+          const eb = el('button', { class: 'eact' }, elName);
+          eb.onclick = () => { st.classList.remove('open'); pilotComp(pm, c, elName); };
+          st.appendChild(eb);
+        }
+        return;
+      }
+      st.classList.remove('open');
+      pilotComp(pm, c, null);
+    };
+    st.appendChild(b);
+  }
+  const def = el('button', { class: 'eact' }, 'Defend', el('small', {}, '+25 DEF until next fill'));
+  def.onclick = () => { st.classList.remove('open'); gm('player-action', { seat: pm.id, action: { kind: 'defend' } }); };
+  st.appendChild(def);
+  const inv = App.view.inventory || {};
+  const names = Object.keys(inv).filter(n => inv[n] > 0);
+  const obj = el('button', { class: 'eact' }, 'Objects', el('small', {}, names.length ? `${names.length} kinds in the shared inventory` : 'inventory is empty'));
+  obj.onclick = () => {
+    st.innerHTML = '';
+    for (const n of names) {
+      const item = App.staticData.items.catalog.find(c => c.name === n);
+      if (!item || item.effect.outOfCombatOnly) continue;
+      const b = el('button', { class: 'eact' }, `${n} ×${inv[n]}`, el('small', {}, item.desc));
+      b.onclick = () => {
+        st.classList.remove('open');
+        const wants = item.effect.target === 'one enemy' ? 'enemy' : 'ally';
+        armPilot(pm, { kind: 'item', item: n, wants }, `${n} — click ${wants === 'enemy' ? 'an enemy' : 'a party member'}.`);
+      };
+      st.appendChild(b);
+    }
+    st.classList.add('open');
+  };
+  st.appendChild(obj);
+  st.classList.add('open');
+}
+
+function pilotComp(pm, c, element) {
+  if (c.target === 'one enemy') return armPilot(pm, { kind: 'competence', comp: c.name, element, wants: 'enemy' }, `${c.name} — click an enemy.`);
+  if (c.target === 'one ally') return armPilot(pm, { kind: 'competence', comp: c.name, element, wants: 'ally' }, `${c.name} — click a party member.`);
+  gm('player-action', { seat: pm.id, action: { kind: 'competence', competence: c.name, element } });
+}
+
+function armPilot(pm, arm, note) {
+  pendingPilot = { seat: pm.id, ...arm };
+  announce(`Piloting ${pm.name}: ${note} (Esc lowers it.)`);
+  render(App.view);
+}
+
+function pilotTarget(t) {
+  if (!pendingPilot) return;
+  const a = pendingPilot;
+  pendingPilot = null;
+  if (a.kind === 'attack') gm('player-action', { seat: a.seat, action: { kind: 'attack', targetId: t.id } });
+  if (a.kind === 'competence') gm('player-action', { seat: a.seat, action: { kind: 'competence', competence: a.comp, targetId: t.id, element: a.element } });
+  if (a.kind === 'item') gm('player-action', { seat: a.seat, action: { kind: 'item', item: a.item, targetId: t.id } });
+  render(App.view);
 }
 
 function targetPlayer(m) {
@@ -198,6 +282,7 @@ function targetPlayer(m) {
 addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (pendingAction) { pendingAction = null; announce('Action lowered.'); render(App.view); }
+    if (pendingPilot) { pendingPilot = null; announce('Pilot action lowered.'); render(App.view); }
     $('estack').classList.remove('open');
   }
 });
@@ -237,7 +322,7 @@ function renderField(view) {
     ];
     (view.battle.partySlots || []).forEach((pid, i) => {
       const pm = view.party.find(x => x.id === pid);
-      if (!pm) return;
+      if (!pm || pm.benched) return;
       const a = anchors[i] || anchors[0];
       const targeting = pendingAction && !pm.down && pendingAction.kind !== 'pool-item-friendly';
       const div = el('div', {
@@ -254,12 +339,17 @@ function renderField(view) {
       for (const st of pm.statuses) icons.appendChild(statusChip(st));
       for (const sc of pm.statChanges) icons.appendChild(statChangeChip(sc));
       div.appendChild(icons);
-      div.onclick = () => targetPlayer(pm);   // an armed enemy action lands here too
+      div.onclick = () => {
+        if (pendingAction) return targetPlayer(pm);
+        if (pendingPilot && pendingPilot.wants === 'ally') return pilotTarget(pm);
+        if (pm.holding && !pm.down && !pm.benched) return openPilotStack(pm);
+      };
       overlay.appendChild(div);
     });
     for (const e of view.battle.enemies) {
       const p = SLOT_POS[(e.slot || 1) - 1] || SLOT_POS[0];
-      const div = el('div', { class: 'benemy' + (e.dead ? ' deadE' : ''), style: `left:${p.left}%;top:${p.top}%`, 'data-id': e.id });
+      const wantsMe = pendingPilot && pendingPilot.wants === 'enemy' && !e.dead;
+      const div = el('div', { class: 'benemy' + (e.dead ? ' deadE' : '') + (wantsMe ? ' gm-target' : ''), style: `left:${p.left}%;top:${p.top}%`, 'data-id': e.id });
       div.appendChild(artEl(enemyArt(e.template), e.name, Math.round(90 * (e.size || 1))));
       div.appendChild(el('div', { class: 'ename outline' }, e.name));
       div.appendChild(el('div', { class: 'ehp' }, el('i', { style: `width:${Math.round(e.hp / e.maxHp * 100)}%` })));
@@ -267,7 +357,10 @@ function renderField(view) {
       const tag = el('div', { class: 'ectl' + (e.control === 'gm' ? ' gm' : '') }, e.control.toUpperCase());
       tag.onclick = ev => { ev.stopPropagation(); gm('toggle-control', { enemyId: e.id }); };
       div.appendChild(tag);
-      div.onclick = () => enemyClicked(e);
+      div.onclick = () => {
+        if (pendingPilot && pendingPilot.wants === 'enemy' && !e.dead) return pilotTarget(e);
+        enemyClicked(e);
+      };
       overlay.appendChild(div);
     }
   } else {
@@ -490,6 +583,7 @@ function renderStrip(view) {
     for (const sc of e.statChanges) icons.appendChild(statChangeChip(sc));
     pc.appendChild(icons);
     pc.onclick = () => {
+      if (pendingPilot && pendingPilot.wants === 'enemy' && !e.dead) return pilotTarget(e);
       if (pendingAction && pendingAction.kind === 'pool-item-friendly') {
         const a = pendingAction; pendingAction = null;
         gm('enemy-action', { enemyId: a.enemyId, action: { kind: 'pool-item', item: a.item, targetId: e.id } });
@@ -1088,6 +1182,9 @@ function renderPlayers(p, view) {
     const downB = el('button', { class: 'qbtn' }, m.down ? 'REVIVE' : 'DOWN');
     downB.onclick = () => gm('player-edit', { seat: m.id, patch: m.down ? { down: false, hp: Math.max(1, Math.round(m.maxHp * .35)) } : { down: true } });
     elRow.appendChild(downB);
+    const benchB = el('button', { class: 'qbtn' + (m.benched ? ' gmctl' : '') }, m.benched ? 'REJOIN' : 'SIT OUT');
+    benchB.onclick = () => gm('player-bench', { seat: m.id, benched: !m.benched });
+    elRow.appendChild(benchB);
     const renameB = el('button', { class: 'qbtn' }, 'RENAME');
     renameB.onclick = () => { const n = prompt('Name:', m.name); if (n) gm('player-edit', { seat: m.id, patch: { name: n } }); };
     elRow.appendChild(renameB);

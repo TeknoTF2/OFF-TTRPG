@@ -212,7 +212,7 @@ function targetList() {
     const item = armed.kind === 'item' || armed.kind === 'ooc-item'
       ? App.staticData.items.catalog.find(c => c.name === armed.item) : null;
     const wantsDown = (comp && comp.kind === 'revive') || (item && item.effect.type === 'revive');
-    return view.party.filter(pm => wantsDown ? pm.down : !pm.down).map(pm => ({ kind: 'ally', id: pm.id }));
+    return view.party.filter(pm => !pm.benched && (wantsDown ? pm.down : !pm.down)).map(pm => ({ kind: 'ally', id: pm.id }));
   }
   return [];
 }
@@ -358,10 +358,10 @@ function renderStrip(view) {
   const strip = $('strip');
   strip.innerHTML = '';
   for (const pm of view.party) {
-    const targetable = allyTargetable(pm) && !pm.down || (armedMode() === 'ooc-ally');
+    const targetable = !pm.benched && (allyTargetable(pm) && !pm.down || (armedMode() === 'ooc-ally'));
     const onCursorP = armed && targetable && (() => { const c = kselTarget(); return c && c.id === pm.id; })();
-    const pc = el('div', { class: 'pc' + (pm.id === seat ? ' me' : '') + (pm.down ? ' deadpc' : '') + (targetable ? ' targetable' : '') + (onCursorP ? ' ksel' : ''), 'data-id': pm.id });
-    pc.appendChild(el('div', { class: 'r1' }, el('span', { class: 'pname' }, pm.name), el('span', { class: 'plvl' }, `LV${pm.level}`)));
+    const pc = el('div', { class: 'pc' + (pm.id === seat ? ' me' : '') + (pm.down ? ' deadpc' : '') + (targetable ? ' targetable' : '') + (onCursorP ? ' ksel' : ''), style: pm.benched ? 'opacity:.35' : '', 'data-id': pm.id });
+    pc.appendChild(el('div', { class: 'r1' }, el('span', { class: 'pname' }, pm.name), el('span', { class: 'plvl' }, pm.benched ? 'OUT' : `LV${pm.level}`)));
     pc.appendChild(el('div', { class: 'nums' },
       el('div', { class: 'num', style: pm.hp / pm.maxHp <= .2 && !pm.down ? 'color:var(--red)' : '' }, `${pm.hp}`, el('em', {}, 'hp'), el('i', { style: `width:${Math.round(pm.hp / pm.maxHp * 100)}%${pm.hp / pm.maxHp <= .2 ? ';background:var(--red)' : ''}` })),
       el('div', { class: 'num cp' }, `${pm.cp}`, el('em', {}, 'cp'), el('i', { style: `width:${Math.round(pm.cp / pm.maxCp * 100)}%` }))));

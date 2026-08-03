@@ -167,7 +167,7 @@ function enemyGmView(e) {
 function memberView(m, { self = false } = {}) {
   const base = memberBase(data, m);
   const v = {
-    id: m.id, klass: m.klass, name: m.name, level: m.level, down: m.down,
+    id: m.id, klass: m.klass, name: m.name, level: m.level, down: m.down, benched: !!m.benched,
     hp: m.hp, cp: m.cp, maxHp: base.hp, maxCp: base.cp,
     element: currentElement(m), nativeElement: m.element,
     elementSet: m.elementSet ? m.elementSet.element : null,
@@ -800,6 +800,25 @@ function handleGm(msg) {
       if (m.hp === 0 && !('down' in p)) m.down = true;
       if (m.hp > 0 && m.down && 'hp' in p) m.down = false;
       touch(); break;
+    }
+    case 'player-bench': {
+      const m = c.party.find(x => x.id === msg.seat);
+      if (!m) break;
+      store.recordUndo(`${msg.benched ? 'bench' : 'return'} ${m.name}`);
+      m.benched = !!msg.benched;
+      if (m.benched) { m.holding = false; m.gauge = 0; }
+      if (battle) battle.partySlots = battle.partySlots.filter(id => id !== m.id || !m.benched);
+      if (battle && !m.benched && !battle.partySlots.includes(m.id)) battle.partySlots.push(m.id);
+      emit({ kind: 'announce', text: m.benched ? `${m.name} sits this one out.` : `${m.name} rejoins the party.` });
+      if (battle) battle.checkEnd();
+      touch(); break;
+    }
+    case 'player-action': {
+      // The GM pilots the absent character, mirroring the player interface.
+      if (!battle) break;
+      const m = c.party.find(x => x.id === msg.seat);
+      if (m) { battle.playerAction(m, msg.action || {}); touch(); }
+      break;
     }
     case 'player-add-status': {
       const m = c.party.find(x => x.id === msg.seat);
