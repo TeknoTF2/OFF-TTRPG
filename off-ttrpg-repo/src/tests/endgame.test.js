@@ -230,3 +230,37 @@ test('unit templates exist for compound fights', () => {
   }
   assert.equal(data.enemiesByName['Dummy'].moves.some(m => m.n === 'Sick Mask'), true);
 });
+
+// ---------- absent players: bench and pilot ----------
+test('a benched seat sits out: not a target, not counted for the wipe, AoE skips it', () => {
+  const { b, campaign } = makeBattle({ enemies: [{ template: 'Rupture-burnt', control: 'ai' }, { template: 'Common Spectre' }], rng: alwaysHigh });
+  const eps = seatOf(campaign, 'Epsilon');
+  eps.benched = true;
+  // enemy blast hits the whole party except the benched seat
+  const e = b.enemies[0];
+  e.hp = Math.floor(e.maxHp * 0.2);
+  e.gauge = 1; b.onGaugeFill(e);   // Clock Out
+  assert.equal(eps.hp, memberBase(data, eps).hp, 'benched Epsilon untouched by the blast');
+  // wipe counts only active members
+  for (const m of campaign.party) if (!m.benched) { m.hp = 0; m.down = true; }
+  b.checkEnd();
+  assert.equal(b.frozen, true, 'five down + one benched is a wipe');
+  assert.equal(eps.down, false);
+});
+
+test('benched seats refuse their own actions', () => {
+  const { b, campaign } = makeBattle();
+  const p = seatOf(campaign, 'Purifier');
+  p.benched = true; p.holding = true;
+  assert.equal(b.playerAction(p, { kind: 'defend' }).refuse, true);
+});
+
+test('the GM pilots an absent character through the normal action path', () => {
+  const { b, campaign } = makeBattle({ rng: () => 0.5 });
+  const p = seatOf(campaign, 'Purifier');
+  p.holding = true;
+  // playerAction is the same entry the seat itself would use — the pilot mirrors it
+  const res = b.playerAction(p, { kind: 'attack', targetId: b.enemies[0].id });
+  assert.equal(res.ok, true);
+  assert.equal(p.holding, false);
+});

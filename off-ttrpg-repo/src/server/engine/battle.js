@@ -58,7 +58,8 @@ export class Battle {
 
   // ---------- helpers ----------
   party() { return this.campaign.party; }
-  livingParty() { return this.party().filter(p => !p.down); }
+  livingParty() { return this.party().filter(p => !p.down && !p.benched); }
+  activeParty() { return this.party().filter(p => !p.benched); }
   livingEnemies() { return this.enemies.filter(e => !e.dead); }
   memberByClass(k) { return this.party().find(p => p.klass === k); }
   find(id) { return this.party().find(p => p.id === id) || this.enemies.find(e => e.id === id); }
@@ -68,7 +69,7 @@ export class Battle {
   float(targetId, text, style) { this.emit({ kind: 'float', targetId, text, style }); }
 
   randomizePartySlots() {
-    const order = this.party().map(p => p.id);
+    const order = this.party().filter(p => !p.benched).map(p => p.id);
     for (let i = order.length - 1; i > 0; i--) {
       const j = Math.floor(this.rng() * (i + 1));
       [order[i], order[j]] = [order[j], order[i]];
@@ -604,7 +605,7 @@ export class Battle {
   // and nothing is spent — the click simply doesn't respond.
 
   canAct(p) {
-    return !this.over && !this.frozen && !this.campaign.paused && !p.down && p.holding;
+    return !this.over && !this.frozen && !this.campaign.paused && !p.down && !p.benched && p.holding;
   }
 
   // Furious: the player still clicks — they pick a target; the engine substitutes a
@@ -751,7 +752,7 @@ export class Battle {
     let targets = [];
     if (rider.kind === 'revive') {
       const t = this.find(targetId);
-      if (!t || t.kind !== 'player' || !t.down) return { ok: false, refuse: true };
+      if (!t || t.kind !== 'player' || !t.down || t.benched) return { ok: false, refuse: true };
       targets = [t];
     } else if (targetSpec === 'one enemy') {
       const t = this.find(targetId);
@@ -763,7 +764,7 @@ export class Battle {
       if (!targets.length) return { ok: false, refuse: true };
     } else if (targetSpec === 'one ally') {
       const t = this.find(targetId);
-      if (!t || t.kind !== 'player' || t.down) return { ok: false, refuse: true };
+      if (!t || t.kind !== 'player' || t.down || t.benched) return { ok: false, refuse: true };
       targets = [t];
     } else if (targetSpec === 'all allies') {
       targets = this.livingParty();
@@ -1219,7 +1220,7 @@ export class Battle {
     // one player target
     if (chosenId) {
       const t = this.find(chosenId);
-      return t && !this.dead(t) && t.kind === 'player' ? [t] : [];
+      return t && !this.dead(t) && t.kind === 'player' && !t.benched ? [t] : [];
     }
     const pool = this.livingParty();
     return pool.length ? [pool[Math.floor(this.rng() * pool.length)]] : [];
