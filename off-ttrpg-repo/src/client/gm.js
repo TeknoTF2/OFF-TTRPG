@@ -30,9 +30,14 @@ App.onEvent = e => {
   if (e.kind === 'reload-diff') showReloadDiff(e.diff, e.total);
 };
 
+let wasBattle = false;
 App.onState = view => {
   lastStateAt = performance.now();
   document.body.classList.toggle('paused', !!view.paused);
+  const inBattle = view.mode === 'battle' && !!view.battle;
+  if (inBattle && !wasBattle) setLeftMode('party');   // the fight starts: monitors up
+  if (!inBattle && wasBattle) setLeftMode('create');
+  wasBattle = inBattle;
   render(view);
 };
 
@@ -214,6 +219,36 @@ function renderField(view) {
     for (let i = 0; i < 8; i++) {
       overlay.appendChild(el('div', { class: 'slot', style: `left:${SLOT_POS[i].left}%;top:${SLOT_POS[i].top}%` }, `${i + 1}`));
     }
+    // The party, on the field where the GM can see the whole stage.
+    const anchors = [
+      { right: '7vw', bottom: '16%', h: 130 },
+      { right: '17vw', bottom: '28%', h: 108 },
+      { right: '2vw', bottom: '33%', h: 108 },
+      { right: '14vw', bottom: '47%', h: 104 },
+      { right: '1vw', bottom: '52%', h: 104 },
+      { right: '8vw', bottom: '63%', h: 100 },
+    ];
+    (view.battle.partySlots || []).forEach((pid, i) => {
+      const pm = view.party.find(x => x.id === pid);
+      if (!pm) return;
+      const a = anchors[i] || anchors[0];
+      const div = el('div', {
+        class: 'benemy' + (pm.down ? ' deadE' : ''),
+        style: `right:${a.right};bottom:${a.bottom};left:auto;top:auto;width:130px;cursor:${pendingAction ? 'crosshair' : 'pointer'}`,
+        'data-id': pm.id,
+      });
+      div.appendChild(artEl(partyArt(pm.klass), pm.name, a.h));
+      div.appendChild(el('div', { class: 'ename outline' }, pm.name));
+      div.appendChild(el('div', { class: 'ehp' }, el('i', { style: `width:${Math.round(pm.hp / pm.maxHp * 100)}%` })));
+      div.appendChild(el('div', { class: 'eg' + (pm.critCharged ? ' critcharge' : '') },
+        el('i', { style: `width:${Math.round(pm.gauge * 100)}%;background:${pm.critCharged ? 'var(--red)' : 'var(--wht)'}`, 'data-gid2': pm.id })));
+      const icons = el('div', { class: 'picons', style: 'justify-content:center' });
+      for (const st of pm.statuses) icons.appendChild(statusChip(st));
+      for (const sc of pm.statChanges) icons.appendChild(statChangeChip(sc));
+      div.appendChild(icons);
+      div.onclick = () => targetPlayer(pm);   // an armed enemy action lands here too
+      overlay.appendChild(div);
+    });
     for (const e of view.battle.enemies) {
       const p = SLOT_POS[(e.slot || 1) - 1] || SLOT_POS[0];
       const div = el('div', { class: 'benemy' + (e.dead ? ' deadE' : ''), style: `left:${p.left}%;top:${p.top}%`, 'data-id': e.id });
@@ -501,11 +536,11 @@ setInterval(() => {
     }
   }
   for (const pm of view.party) {
+    const w = pm.holding || pm.down ? pm.gauge : Math.min(1, pm.gauge + dt / pm.gaugeSeconds);
     const g = document.querySelector(`[data-gid="${pm.id}"] i`);
-    if (g) {
-      const w = pm.holding || pm.down ? pm.gauge : Math.min(1, pm.gauge + dt / pm.gaugeSeconds);
-      g.style.width = `${Math.round(w * 100)}%`;
-    }
+    if (g) g.style.width = `${Math.round(w * 100)}%`;
+    const g2 = document.querySelector(`[data-gid2="${pm.id}"]`);
+    if (g2) g2.style.width = `${Math.round(w * 100)}%`;
   }
 }, 120);
 
