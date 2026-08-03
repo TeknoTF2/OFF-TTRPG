@@ -1,0 +1,61 @@
+{
+  "_meta": {
+    "purpose": "Structured move effects and scripted behaviors for Zone 1 enemies, transcribed from off-campaign-bestiary.json fx/special strings and docs/off-restat-worksheet.md. Scripted triggers auto-fire for AI-controlled instances only; for GM-piloted instances they surface as prompts and never act uninvoked. Enemies outside this file resolve plain-damage moves generically; any move whose fx string is not covered here fires its damage (if any) and surfaces its fx text to the GM as a prompt — never half-implemented.",
+    "moveEffects_vocabulary": {
+      "status": "pure or rider status application, rolls the TARGET's tier (players: neutral tier base 80 minus RES, per the worksheet's boss examples) — 'tier' entries name the status",
+      "statChange": "never rolls",
+      "drainCp": "[min,max] drained from the target's CP, no damage",
+      "hits": "number of separate accuracy rolls / damage packets in one action",
+      "cpCost": "CP the move spends (enemy CP defaults to unlimited — see build notes)",
+      "scripted": "excluded from the AI's uniform-random legal move pool; fired only by triggers below"
+    }
+  },
+  "moveEffects": {
+    "Common Spectre": {},
+    "Magnolia": { "Chronic Migraine": { "status": "Blinded" } },
+    "Speckter-mite": { "Painful Quandary": { "hits": 2 } },
+    "January": {},
+    "Fat Spectre": { "Summon": { "scripted": true } },
+    "Ah, ah!": { "Chronic Migraine": { "status": "Blinded" } },
+    "One-eyed Spectre": { "Swing": { "cpCost": 5 } },
+    "Rupture-burnt": { "Clock Out": { "scripted": true } },
+    "Burnt (enemy)": {},
+    "Tiburce": { "Partie Quarree": { "drainCp": [8, 12] } },
+    "Troquantary": { "Heaven's Smile": { "statChange": { "stat": "DEF", "dir": "down", "amount": 15, "turns": 2 } } },
+    "Arpagon": {},
+    "笑": {
+      "Chronic Migraine": { "status": "Blinded" },
+      "Partie Quarree": { "drainCp": [10, 10] }
+    },
+    "Dedan": {
+      "Hour Hand": { "status": "Asleep" },
+      "Sweep Hand": { "status": "Furious" },
+      "Half Past": { "scripted": true },
+      "Summon": { "scripted": true }
+    }
+  },
+  "triggers": {
+    "Fat Spectre": [
+      { "id": "summon-t1", "when": { "turn": 1 }, "action": { "summon": { "name": "Ah, ah!", "count": 1 } }, "label": "Summon Ah, ah!" },
+      { "id": "summon-t2", "when": { "turn": 2 }, "action": { "summon": { "name": "Ah, ah!", "count": 1 } }, "label": "Summon Ah, ah!" },
+      { "id": "summon-t4", "when": { "turn": 4 }, "action": { "summon": { "name": "Ah, ah!", "count": 1 } }, "label": "Summon Ah, ah!" }
+    ],
+    "Rupture-burnt": [
+      {
+        "id": "clock-out", "when": { "hpPctLte": 30, "orTurn": 4 },
+        "action": { "blast": { "damage": 22, "target": "all" }, "die": true },
+        "label": "Clock Out — ~22 Meat to all, then dies"
+      }
+    ],
+    "Dedan": [
+      { "id": "summon-55", "when": { "hpPctLte": 55 }, "action": { "summon": { "name": "笑", "count": 2 } }, "label": "Summon 2 × 笑" },
+      { "id": "summon-45", "when": { "hpPctLte": 45 }, "action": { "summon": { "name": "笑", "count": 2 } }, "label": "Summon 2 × 笑" },
+      {
+        "id": "half-past", "when": { "hpPctLte": 40 },
+        "action": { "selfStatus": { "status": "Hasty", "permanent": true } },
+        "label": "Half Past — Hasty until death, no cure check"
+      },
+      { "id": "summon-15", "when": { "hpPctLte": 15 }, "action": { "summon": { "name": "笑", "count": 3 } }, "label": "Summon 3 × 笑" }
+    ]
+  }
+}

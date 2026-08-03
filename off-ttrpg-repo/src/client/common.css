@@ -1,0 +1,75 @@
+/* OFF TTRPG — shared visual language.
+   Fonts per assets/fonts/Readme.txt: off-game-font for menus, headers and large
+   ALL-CAPS titles; 7-12 serif for all other text, standard formatting. */
+
+@font-face {
+  font-family: 'OFF Display';
+  src: url('/assets/fonts/off-game-font.otf/off-game-font.otf') format('opentype');
+}
+@font-face {
+  font-family: 'OFF Body';
+  src: url('/assets/fonts/7-12-serif.otf/7-12-serif.otf') format('opentype');
+}
+
+:root {
+  --field: #2e6d9e; --field-dk: #1d4b70; --tint: #7fa8c6; --pale: #cfe3f2;
+  --amber: #f2a71b; --red: #d0231f; --blk: #0c0c0c; --panel: #131313; --wht: #f4f2ec;
+  --disp: 'OFF Display', monospace;
+  --mono: 'OFF Body', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0; }
+html, body { height: 100%; }
+body { background: var(--blk); color: var(--wht); font-family: var(--mono); image-rendering: pixelated; }
+
+.outline { text-shadow: 2px 0 var(--blk), -2px 0 var(--blk), 0 2px var(--blk), 0 -2px var(--blk), 2px 2px var(--blk), -2px -2px var(--blk), 2px -2px var(--blk), -2px 2px var(--blk); }
+.dfont { font-family: var(--disp); }
+
+button { font-family: inherit; color: inherit; }
+
+/* skewed black action boxes */
+.act {
+  background: var(--blk); color: var(--wht); font-family: var(--disp); font-size: 30px; letter-spacing: 1px;
+  padding: 4px 26px 6px 18px; border: 0; cursor: pointer; text-align: left; position: relative;
+  transform: skewX(-4deg); width: max-content; min-width: 190px; transition: transform .06s;
+}
+.act:hover { transform: skewX(-4deg) translateX(4px); }
+.act.sel { color: var(--amber); }
+.act:disabled { opacity: .35; cursor: not-allowed; }
+
+/* status / stat-change icon chips */
+.icn { font-size: 10px; font-weight: 600; letter-spacing: .5px; background: var(--blk); border: 1px solid #2a2a2a; color: var(--wht); padding: 2px 4px; line-height: 1.1; cursor: help; font-family: var(--mono); }
+.icn.up { color: var(--amber); }
+.icn.down b { color: var(--amber); }
+.icn.elem { background: transparent; border: 1px solid var(--blk); color: var(--blk); }
+
+/* floats */
+.float { position: absolute; left: 50%; top: -8px; transform: translateX(-50%); font-family: var(--disp); font-size: 36px; opacity: 0; pointer-events: none; white-space: nowrap; z-index: 8; }
+.float.show { animation: rise 1s ease-out forwards; }
+@keyframes rise { 0% { opacity: 1; top: 0; } 100% { opacity: 0; top: -44px; } }
+.float.dmg { color: var(--wht); }
+.float.crit { color: var(--red); }
+.float.miss { color: var(--wht); letter-spacing: 4px; opacity: .85; }
+.float.heal { color: #9fe3a0; }
+
+/* PAUSED overlay */
+#pausedOverlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.45); color: var(--wht); font-family: var(--disp); font-size: 90px; letter-spacing: 14px; text-shadow: 4px 4px 0 #000; z-index: 90; animation: pblink 1.6s steps(2) infinite; pointer-events: none; }
+body.paused #pausedOverlay { display: flex; }
+@keyframes pblink { 50% { opacity: .75; } }
+
+/* scene / cutscene effects */
+#fxOverlay { position: fixed; inset: 0; z-index: 95; pointer-events: none; display: none; }
+#fxOverlay.static { display: block; background: repeating-conic-gradient(#333 0 25%, #111 0 50%) 0 0 / 4px 4px; animation: staticJitter .08s steps(2) infinite; opacity: .85; }
+#fxOverlay.whiteout { display: block; background: #fff; }
+@keyframes staticJitter { 50% { transform: translate(2px, -2px); } }
+body.inverted { filter: invert(1); }
+
+/* generic gm-style panel bits reused by both clients */
+.gauge { height: 8px; background: #232323; position: relative; }
+.gauge i { display: block; height: 100%; background: var(--wht); }
+.gauge.critcharge i { background: var(--red); }
+.gauge.held::after { content: ""; position: absolute; inset: 0; border: 1px solid var(--wht); animation: blink 1.2s steps(2) infinite; }
+.gauge.critcharge.held::after { border-color: var(--red); }
+@keyframes blink { 50% { opacity: 0; } }
+
+.silhouette { display: inline-flex; align-items: flex-end; justify-content: center; background: #555; border: 2px solid var(--blk); color: var(--blk); font-family: var(--disp); }

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OFF TTRPG</title>
+<link rel="stylesheet" href="/common.css">
+<style>
+body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; overflow: hidden; }
+h1 { font-family: var(--disp); font-size: 64px; letter-spacing: 8px; font-weight: 400; text-shadow: 4px 4px 0 #000; z-index: 2; }
+.sub { font-size: 12px; letter-spacing: 4px; color: #777; z-index: 2; }
+.seats { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; z-index: 2; }
+.seat { background: var(--panel); border: 1px solid #2a2a2a; color: var(--wht); font-family: var(--disp); font-size: 28px; padding: 10px 26px 12px; cursor: pointer; transform: skewX(-4deg); }
+.seat:hover { border-color: var(--amber); color: var(--amber); }
+.seat.gm { border-color: #4a1210; color: var(--red); }
+.seat.gm:hover { border-color: var(--red); }
+canvas { position: fixed; inset: 0; z-index: 0; }
+</style>
+</head>
+<body>
+<canvas id="sparkles"></canvas>
+<h1>OFF</h1>
+<div class="sub">A GAME FOR THE PLAYERS · AN UNRESTRICTED CREATION ENGINE FOR THE GM</div>
+<div class="seats" id="seats"></div>
+<script>
+for (let i = 1; i <= 6; i++) {
+  const b = document.createElement('button');
+  b.className = 'seat'; b.textContent = 'SEAT ' + i;
+  b.onclick = () => location.href = '/player.html?seat=P' + i + location.search.replace('?', '&');
+  document.getElementById('seats').appendChild(b);
+}
+const g = document.createElement('button');
+g.className = 'seat gm'; g.textContent = 'THE JUDGE\'S SEAT';
+g.onclick = () => location.href = '/gm.html' + location.search;
+document.getElementById('seats').appendChild(g);
+
+// the lobby is the Nothingness — sparkle field
+const c = document.getElementById('sparkles'), x = c.getContext('2d');
+let stars = [];
+function resize() { c.width = innerWidth; c.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+for (let i = 0; i < 40; i++) stars.push({ x: Math.random(), y: Math.random(), p: Math.random() * Math.PI * 2, s: .4 + Math.random() * .8 });
+(function anim() {
+  x.clearRect(0, 0, c.width, c.height);
+  for (const s of stars) {
+    s.p += 0.015; s.x += 0.00006; if (s.x > 1) s.x = 0;
+    const a = (Math.sin(s.p) + 1) / 2 * .8;
+    x.fillStyle = `rgba(244,242,236,${a})`;
+    x.fillRect(s.x * c.width, s.y * c.height, 2 * s.s, 2 * s.s);
+  }
+  requestAnimationFrame(anim);
+})();
+</script>
+</body>
+</html>

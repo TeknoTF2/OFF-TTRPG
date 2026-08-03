@@ -1,0 +1,29 @@
+{
+  "_meta": {
+    "purpose": "The item catalog's effect column, transcribed from docs/off-economy.md Part 3 — the one part of the economy doc the enforcement boundary assigns to the engine. Prices are carried as Zone 1 baseline reference only; income, stock, and drop quantities remain GM-side and are NOT in this file.",
+    "flags": [
+      "Inspiration/Expiration accuracy is not stated anywhere in the docs; implemented as cannot-miss, neutral (elementless) damage, charged crits apply since they deal damage. Flagged for GM ruling.",
+      "Joker: 35% HP per the system doc, which explicitly overrides canon's 25%. Revived characters return at 50% gauge (system doc, Death)."
+    ]
+  },
+  "catalog": [
+    { "name": "Luck Ticket", "priceZ1": 20, "section": "RESTORATIVE", "desc": "50 HP, one character", "effect": { "type": "healHp", "amount": 50, "target": "one ally" } },
+    { "name": "Fortune Ticket", "priceZ1": 90, "section": "RESTORATIVE", "desc": "200 HP, one character", "effect": { "type": "healHp", "amount": 200, "target": "one ally" } },
+    { "name": "Silver Flesh", "priceZ1": 180, "section": "RESTORATIVE", "desc": "50 CP", "effect": { "type": "healCp", "amount": 50, "target": "one ally" } },
+    { "name": "Golden Flesh", "priceZ1": 480, "section": "RESTORATIVE", "desc": "100 CP", "effect": { "type": "healCp", "amount": 100, "target": "one ally" } },
+    { "name": "Joker", "priceZ1": 150, "section": "RESTORATIVE", "desc": "revive · 35% HP", "effect": { "type": "revive", "hpPct": 35, "target": "one ally" } },
+    { "name": "Moloch's Meat", "priceZ1": 30, "section": "CURES", "desc": "cures Poisoned", "effect": { "type": "cureStatus", "status": "Poisoned", "target": "one ally" } },
+    { "name": "Belial's Meat", "priceZ1": 100, "section": "CURES", "desc": "cures all statuses", "effect": { "type": "cureAllStatuses", "target": "one ally" } },
+    { "name": "Eye", "priceZ1": 20, "section": "COMBAT", "desc": "reveal one enemy", "effect": { "type": "reveal", "target": "one enemy" } },
+    { "name": "Inspiration", "priceZ1": 200, "section": "COMBAT", "desc": "75 dmg + ATK/ESP", "effect": { "type": "attack", "base": 75, "target": "one enemy" } },
+    { "name": "Expiration", "priceZ1": 900, "section": "COMBAT", "desc": "400 dmg + ATK/ESP", "effect": { "type": "attack", "base": 400, "target": "one enemy" } },
+    { "name": "Abaddon's Meat", "priceZ1": null, "section": "HELD", "desc": "full party restore · out of combat only", "effect": { "type": "fullPartyRestore", "outOfCombatOnly": true } },
+    { "name": "Taurus Orb", "priceZ1": null, "section": "ORBS", "desc": "+50 max HP, permanent", "effect": { "type": "orb", "stat": "hp", "amount": 50, "outOfCombatOnly": true } },
+    { "name": "Libra Orb", "priceZ1": null, "section": "ORBS", "desc": "+15 max CP, permanent", "effect": { "type": "orb", "stat": "cp", "amount": 15, "outOfCombatOnly": true } },
+    { "name": "Scorpio Orb", "priceZ1": null, "section": "ORBS", "desc": "+5 ATK, permanent", "effect": { "type": "orb", "stat": "atk", "amount": 5, "outOfCombatOnly": true } },
+    { "name": "Gemini Orb", "priceZ1": null, "section": "ORBS", "desc": "+5 DEF, permanent", "effect": { "type": "orb", "stat": "def", "amount": 5, "outOfCombatOnly": true } },
+    { "name": "Capricorn Orb", "priceZ1": null, "section": "ORBS", "desc": "+5 ESP, permanent", "effect": { "type": "orb", "stat": "esp", "amount": 5, "outOfCombatOnly": true } },
+    { "name": "Virgo Orb", "priceZ1": null, "section": "ORBS", "desc": "+5 AGI, permanent · rarest", "effect": { "type": "orb", "stat": "agi", "amount": 5, "outOfCombatOnly": true } }
+  ],
+  "_orbs_note": "Orb effects from docs/off-economy.md Part 5 (engine-side item effects). Pricing (300 × zone) and the one-per-zone checklist are GM reference — the GM prices orbs in the shop's stock gate. Virgo appears exactly twice in the campaign, by GM placement."
+}

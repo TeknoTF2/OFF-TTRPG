@@ -1,0 +1,20 @@
+{
+  "name": "off-ttrpg",
+  "version": "0.1.0",
+  "description": "OFF TTRPG — build 1: vertical slice (engine + player client + GM console)",
+  "main": "server/server.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^8.21.2"
+  },
+  "type": "module"
+}
