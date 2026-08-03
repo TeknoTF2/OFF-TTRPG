@@ -44,5 +44,27 @@ export function loadAll() {
   const enemiesByName = {};
   for (const e of bestiary.enemies) enemiesByName[e.name] = e;
 
+  // Compound fights: expand the units[] of multi-body entries into standalone
+  // templates (Psalmanazar, Herodotus, Gnosticus, Sugar, Dummy, Pastel heads...)
+  // so the Encounter builder can queue them. Values come from the bestiary's own
+  // units data via scripts.unitTemplates — derivation, not invention.
+  for (const [name, u] of Object.entries(scripts.unitTemplates || {})) {
+    const base = enemiesByName[u.base];
+    if (!base) continue;
+    const moves = (base.moves || [])
+      .filter(m => (u.moves || []).includes(m.n))
+      .map(m => ({ ...m, n: (u.renameMoves || {})[m.n] || m.n }));
+    enemiesByName[name] = {
+      ...base,
+      name,
+      hp: u.hp, gauge_s: u.gauge_s,
+      dmg_per_action: u.dmg_per_action ?? base.dmg_per_action,
+      element: u.element ?? base.element,
+      moves,
+      archetype: `unit of ${u.base}`,
+      derivedFrom: u.base,
+    };
+  }
+
   return { levelTables, classKits, bestiary, enemiesByName, palettes, gear, riders, items, itemsByName, scripts };
 }

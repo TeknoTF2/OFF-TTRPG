@@ -154,7 +154,12 @@ function enemyGmView(e) {
     holding: e.holding, critCharged: e.critCharged, control: e.control,
     cp: e.cp, moves: e.moves, drop: e.drop, wave: e.wave, defending: e.defending,
     revealed: battle ? battle.revealed.has(e.id) : false,
-    prompts: battle && !e.dead ? battle.pendingTriggers(e).map(t => ({ id: t.id, label: t.label })) : [],
+    form: e.form || null,
+    watch: e.watch || null,
+    prompts: battle && !e.dead
+      ? battle.allTriggers(e).filter(t => !battle.triggerSpent(e, t))
+          .map(t => ({ id: t.id, label: t.label, ready: battle.triggerReady(e, t) }))
+      : [],
   };
 }
 
@@ -291,8 +296,7 @@ function launchEncounter(def) {
   const c = campaign();
   const enc = JSON.parse(JSON.stringify(def));
   enc.waves = enc.waves && enc.waves.length ? enc.waves : [{ trigger: 'launch', queue: [] }];
-  // Cutpurse draws from the zone drop table, not the pool.
-  enc.cutpurseTable = enc.cutpurseTable || c.zoneDropTables[c.location.zone] || [];
+  // Cutpurse steals its bonus drops from the encounter's enemy object pool (GM ruling).
   const isBoss = enc.waves.some(w => w.queue.some(q => {
     const t = c.templates[q.template] || data.enemiesByName[q.template];
     return t && String(t.archetype || '').includes('boss');
@@ -907,7 +911,7 @@ const server = http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({
         kits: data.classKits, items: data.items, palettes: data.palettes, gear: data.gear,
-        bestiary: data.bestiary.enemies.map(e => ({
+        bestiary: Object.values(data.enemiesByName).map(e => ({
           name: e.name, zone: e.zone, hp: e.hp, element: e.element, archetype: e.archetype,
           gauge_s: e.gauge_s, dmg_per_action: e.dmg_per_action, group: e.group,
           def: e.def, res: e.res, lck: e.lck, moves: e.moves, status_tiers: e.status_tiers,

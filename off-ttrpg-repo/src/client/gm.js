@@ -5,7 +5,7 @@ import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, st
 import { drawRoomKit } from '/roomkit.js';
 
 const $ = id => document.getElementById(id);
-const STATUSES = ['Poisoned', 'Blinded', 'Muted', 'Palsied', 'Asleep', 'Furious', 'Madness', 'Hasty', 'Taunted'];
+const STATUSES = ['Poisoned', 'Blinded', 'Muted', 'Palsied', 'Asleep', 'Furious', 'Madness', 'Hasty', 'Taunted', 'Thorns', 'Famine', 'Impure', 'Vilified', 'Corrupted', 'Defamed'];
 const RING = ['Plastic', 'Metal', 'Smoke', 'Meat', 'Sugar'];
 
 let activeTab = null;
@@ -363,7 +363,9 @@ function enemyClicked(e) {
   st.innerHTML = '';
   st.style.left = '30%'; st.style.top = '18%';
   for (const pr of e.prompts || []) {
-    const b = el('button', { class: 'eact prompt' }, pr.label, el('small', {}, 'scripted — fire it, or ignore it'));
+    const b = el('button', { class: 'eact prompt', style: pr.ready ? '' : 'opacity:.55' },
+      (pr.ready ? '▶ ' : '') + pr.label,
+      el('small', {}, pr.ready ? 'scripted — fire it, or ignore it' : 'condition not met — yours to call early anyway'));
     b.onclick = () => { st.classList.remove('open'); gm('enemy-action', { enemyId: e.id, action: { kind: 'trigger', triggerId: pr.id } }); };
     st.appendChild(b);
   }
@@ -820,6 +822,21 @@ function renderEncounter(p, view) {
         renderPanels();
       };
       row.appendChild(dropB);
+      const itemsB = el('button', { class: 'qbtn' + (q.items && Object.keys(q.items).length ? ' mod' : '') },
+        q.items && Object.keys(q.items).length ? `ITEMS: ${Object.entries(q.items).map(([n, c]) => n + '×' + c).join(', ')}` : 'ITEMS');
+      itemsB.onclick = () => {
+        const cur = q.items ? Object.entries(q.items).map(([n, c]) => `${n}:${c}`).join(', ') : '';
+        const t = prompt('This enemy carries (feeds the shared pool; Ursa Shot and Cutpurse steal from it) — "Item:count, Item:count":', cur);
+        if (t == null) return;
+        q.items = {};
+        for (const part of t.split(',')) {
+          const [n, c] = part.split(':').map(x => x.trim());
+          if (n) q.items[n] = +(c || 1);
+        }
+        if (!Object.keys(q.items).length) delete q.items;
+        renderPanels();
+      };
+      row.appendChild(itemsB);
       const edit = el('button', { class: 'qbtn' + (q.overrides ? ' mod' : '') }, q.overrides ? 'MODIFIED' : 'EDIT THIS ONE');
       edit.onclick = () => {
         const cur = JSON.stringify(q.overrides || {});
@@ -856,10 +873,7 @@ function renderEncounter(p, view) {
     chips.appendChild(chip);
   }
   poolSec.appendChild(chips);
-  poolSec.appendChild(el('div', { class: 'ps', style: 'margin-top:10px' }, 'CUTPURSE TABLE (ZONE DROPS FOR BANDIT BONUS KILLS — EMPTY = NO BONUS DROP)'));
-  const cutI = el('input', { type: 'text', value: (enc.cutpurseTable || []).join(', '), style: 'width:100%' });
-  cutI.onchange = () => enc.cutpurseTable = cutI.value.split(',').map(s => s.trim()).filter(Boolean);
-  poolSec.appendChild(cutI);
+  poolSec.appendChild(el('div', { class: 'ps', style: 'margin-top:10px' }, 'URSA SHOT AND CUTPURSE BOTH STEAL FROM THIS POOL — STOCKING IT SETS THE FIGHT\'S STEAL TABLE AND THE BANDIT\'S BONUS DROPS.'));
   right.appendChild(poolSec);
 
   const bar = el('div', { style: 'display:flex;gap:10px;flex-wrap:wrap' });

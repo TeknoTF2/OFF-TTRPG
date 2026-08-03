@@ -17,7 +17,18 @@ export function elementMult(attackEl, targetEl) {
 export const STATUSES = [
   'Poisoned', 'Blinded', 'Muted', 'Palsied', 'Asleep',
   'Furious', 'Madness', 'Hasty', 'Taunted',
+  // Endgame additions (build spec §2), riding the existing status machinery.
+  // Thorns/Impure/Defamed carry fixed own-turn durations instead of cure checks;
+  // Vilified = Muted; Corrupted (Cob's variant) also locks items.
+  'Thorns', 'Famine', 'Impure', 'Vilified', 'Corrupted', 'Defamed',
 ];
+
+export const FIXED_TURN_STATUSES = { Thorns: 2, Impure: 2, Defamed: 3, Corrupted: 2 };
+export const THORNS_FRAC = 0.10;          // of max HP, each time the holder acts
+export const FAMINE_FRAC = 2 / 25;        // Poisoned at double tick
+
+export function ringNext(el) { return RING[(RING.indexOf(el) + 1) % 4]; }
+export function ringPrev(el) { return RING[(RING.indexOf(el) + 3) % 4]; }
 
 // tier base − target RES, floor 5%; strong immunity is absolute.
 export const TIER_BASE = { vulnerable: 100, neutral: 80, light_immune: 45, strong_immune: null };

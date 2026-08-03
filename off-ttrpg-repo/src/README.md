@@ -11,7 +11,7 @@ stock checklists, per-leg quantities, and rest placement are nowhere in this cod
 cd off-ttrpg-repo/src
 npm install
 npm start          # http://localhost:8420
-npm test           # 37 engine rule tests
+npm test           # 55 engine rule tests
 ```
 
 Open the URL: the lobby offers six player seats and the Judge's seat (GM console).
@@ -60,8 +60,8 @@ half-price selling), the character sheet with the soul block, and the lobby spar
 **GM console.** Location (rooms, teleports = poison ticks, palette/music per room, clone),
 Enemies (bestiary library → template editor with tiers/moves/element, campaign overlay —
 the data file is never touched — clone-anything), Encounter (waves with spawn triggers,
-slots, GM/AI flags, per-instance overrides, drops, pool, Cutpurse table, backdrop/palette/
-music, save/launch), Items (grant/deduct/set, credits, gear grants, the one-press wipe
+slots, GM/AI flags, per-instance overrides, drops, per-enemy ITEMS feeding the shared
+pool, backdrop/palette/music, save/launch), Items (grant/deduct/set, credits, gear grants, the one-press wipe
 toll), Players (the universal override: HP/CP/level/status/stat-change/element/down/class),
 Shop stock gate (ON/OFF + price per item; players see only what's on), Jukebox and
 Stingers tabs, Cutscene tab with the intro's conductor (choice matrix, never-locked
@@ -87,53 +87,85 @@ server/engine/    formulas.js · members.js · battle.js — the rules, tested
 server/data/      transcription tables (see below) + the intro scene
 server/           dataload · state/persistence · scenes · server (HTTP+WS)
 client/           index (seats) · player.* · gm.* · common.* · roomkit.js
-tests/            37 rule tests, each named for the doc sentence it locks
+tests/            55 rule tests, each named for the doc sentence it locks
 ```
 
 The three transcription tables are the only place doc prose was converted to data, each
 with source notes: `comp-riders.json` (Part 4 effect semantics), `items.json` (the
-catalog's effect column + orbs from economy Part 5), `enemy-scripts.json` (Zone 1 move
-effects and scripted triggers). Loading fails loud if a competence lacks a classification.
+catalog's effect column + orbs from economy Part 5), `enemy-scripts.json` (the full bestiary's move
+effects, scripted triggers, rotations, passives, and compound-fight unit templates). Loading fails loud if a competence lacks a classification.
 
-## Rulings I had to make — flagged for the GM, not silently resolved
+## GM rulings received and implemented (session 2)
 
-1. **Enemy damage variance**: the bestiary carries none, so enemy hits are deterministic
-   `dmg_per_action × MP`. If you want the worksheet's "~13–17" feel, say the word and
-   variance becomes a data field.
-2. **Speckter-mite**: moves data says MP 0.5 ×2 hits (≈ dpa 7 per action); the special
-   prose says "~7 each" (≈ 14 per action). The moves data wins here — flag if wrong.
-3. **Tiburce**: the special says drain "on ~1/3 of actions", but the AI rule is uniform
-   over legal moves, which makes it 1/2 (two moves). The rule wins.
-4. **Closed Bracket** carries `target: null` in the kits JSON; implemented as one enemy
-   per the Bracket ladder.
-5. **Inspiration/Expiration accuracy** is stated nowhere; implemented cannot-miss, and
-   charged crits apply (they deal damage).
-6. **Enemy CP** isn't in the bestiary rows; pools default unlimited ("bookkeeping, not
-   economy"), overridable per instance in the Encounter builder.
-7. **Scripted triggers consume the turn** (a summon or Half Past is that action).
-8. **Enemy statuses vs. players** roll at Neutral (80) − RES, per the worksheet's Dedan
-   examples, unless a move ever specifies otherwise.
-9. **Enemy charged crits** show on the GM console only — the doc calls visibility a
-   presentation choice; hiding them from players keeps enemy turns threatening. A dial.
-10. **Light Fingers** is inactive while the Bandit is down.
-11. **Cutpurse** draws from a GM-stocked zone/encounter drop table (drop decisions are
-    GM-side); an empty table means no bonus drop until you stock it.
-12. **Taunted** restricts single-target actions to the applier; AoE and untargeted
-    actions stay legal (the status names "target").
-13. **Asleep** counts from landing: 1st fill acts, every 2nd fill is consumed.
-14. **Manual waves**: if all spawned enemies die and only manual-trigger waves remain,
-    the fight holds open for your spawn or END ENCOUNTER — victory doesn't fire itself.
-15. **Duplicate classes** are legal via the intro (the engine doesn't restrict; the
-    four-test comp screen is yours).
+1. **All documented statuses are built**: Thorns (10% max HP on acting, 2 turns —
+   consumed turns are not acting), Famine (2/25 max HP per turn on its own clock),
+   Impure (rides the element-change machinery: weak to a random ring element, 2 turns,
+   one-instance and native-cancellation apply), Vilified (= Muted), Corrupted (Cob's
+   variant: competences AND items locked), and Defamed (guaranteed charged crits for 3
+   turns; everything produced — damage, healing, buffs — reflects onto the holder's
+   whole party at the fade; curing it early, e.g. Focus, prevents the reflection).
+2. **Enemy damage carries ±10% variance** (ruled), applied to every dpa-scaled hit and
+   scripted blast.
+3. **Inspiration/Expiration are 100% accuracy** (ruled — confirmed as built).
+4. **Enemy CP is unlimited** (ruled — confirmed as built; per-instance override remains).
+5. **Cutpurse steals from the encounter's enemy object pool** (ruled). Note: this
+   supersedes the build spec sentence "Cutpurse draws from the zone drop table, not the
+   pool" — implemented as ruled. Enemies can now carry items per instance (the ITEMS
+   field in the Encounter builder, next to slot/control/drop/overrides); carried items
+   enter the shared pool at spawn, where Ursa Shot steals mid-fight and Cutpurse takes
+   its bonus drop on a Bandit kill. Stocking enemies IS the steal table.
+
+### Interpretations inside those rulings, flagged
+
+- **Defamed's reflection** deals the accumulated damage to *each* living party member
+  (per the bestiary's "deals ~350-450 to each party member"), as elementless direct
+  damage; Sacred Mission still answers it. Buffs re-apply under normal one-instance rules.
+- **Famine does not tick on overworld transitions** — the spec's "Poisoned is the only
+  status that acts in the overworld" stands. Say the word if double-tick should travel.
+- **Impure re-rolling the weakness the target already has** fizzles (one-instance:
+  reapplying an existing state does nothing).
+
+## Standing rulings from build 1 (unchanged)
+
+1. **Speckter-mite**: moves data (MP 0.5 ×2 ≈ dpa per action) wins over the "~7 each" prose.
+2. **Tiburce**: uniform-random AI makes the drain 1/2, not the prose's ~1/3.
+3. **Closed Bracket** target: one enemy, per the Bracket ladder.
+4. **Scripted triggers consume the turn** (a summon or Half Past is that action).
+5. **Enemy statuses vs. players** roll at Neutral (80) − RES per the worksheet.
+6. **Enemy charged crits** show on the GM console only (a presentation dial).
+7. **Light Fingers** is inactive while the Bandit is down.
+8. **Taunted** restricts single-target actions to the applier; AoE stays legal.
+9. **Asleep** counts from landing: 1st fill acts, every 2nd is consumed.
+10. **Manual waves** hold the fight open — victory doesn't fire itself.
+11. **Duplicate classes** are legal via the intro.
+
+## The full bestiary is now transcribed
+
+`enemy-scripts.json` covers every zone: move effects (multi-status riders, CP drains,
+multi-hits, lifesteal, current-HP% strikes, DEF-ignoring hits, forced/random/best-vs-
+target attack elements, ally heals/buffs/Hasty grants), scripted triggers (thresholds,
+turn schedules, every-N-seconds cycles, telegraphs, summons with shell-game fakes,
+self-destructs, flee, form transitions, Cob's watch/judgment cycle, the survivor's
+Double Attack), Japhet's canonical form rotations, template passives (Source's
+per-action regen, the Batter's Purification and Sacred Mission mirrors, Add-On Alpha's
+Chain Mastery), and unit templates for the compound fights (Psalmanazar, Herodotus,
+Gnosticus, Sugar, Dummy, the Pastel-burnt body and heads) — all queueable in the
+Encounter builder.
+
+**The only things left GM-run, by design** (flagged in the file's meta):
+
+- **Carnival's four Games and the bidirectional prize-tempo system** — Game transitions
+  announce at 75/50/25% and every move resolves, but the per-Game move pools and the
+  "either side meets the condition → +50% gauge" economy are yours to run (pilot him).
+- **Pastel-burnt's assembly** — the ~18 s sequential head spawns and kill-heads-kills-body
+  win call are yours from the unit templates (manual waves + END ENCOUNTER).
+- Three data notes honored as written: Gilles de Rais's optional 2008 trait (dropped per
+  its own "drop if schema purity wins"), Enoch's below-60% Double Attack frequency
+  (conflicts with uniform-random AI — pilot him for the canon cadence), Ballman's
+  set-piece minigame (a GM call per canon).
 
 ## Known gaps (next builds)
 
-- **Endgame statuses** (Thorns, Famine, Impure, Vilified, Defamed) are not yet coded —
-  Zone 1 needs none of them; they ride existing machinery when Zone 3+/Room content is next.
-- **Zone 2+ enemy specials** beyond plain damage/status/drain resolve via the generic
-  machinery where the fx strings parse; anything untranscribed surfaces to the GM as a
-  prompt ("resolve by hand") rather than being half-built. Transcribing Zones 2–4 into
-  `enemy-scripts.json` is data work, not code work.
 - **Tiled import** for image backdrops: image rooms work (`backdrop: "image"`), the
   importer doesn't exist yet.
 - **Sprite-sheet sidecars**: the renderer assumes single-character 3×4 sheets (which all

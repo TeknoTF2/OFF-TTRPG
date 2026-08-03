@@ -52,14 +52,15 @@ export function playerRaw(p, { baseValue = 0, atkPct = 0, espPct = 0, movePower 
 
 // Enemy damage rides dmg_per_action × MovePower (enemy ATK/ESP were deleted with
 // enemy AGI; the bestiary's dpa is the calibrated output). ATK stat changes apply
-// as percentages of that output.
-export function enemyRaw(e, movePower) {
-  return e.dpa * (movePower ?? 1) * pctMult(e, 'ATK');
+// as percentages of that output. GM ruling: enemy damage carries a basic ±10%
+// variance in either direction.
+export function enemyRaw(e, movePower, rng) {
+  return e.dpa * (movePower ?? 1) * pctMult(e, 'ATK') * rollVariance(rng ? 10 : 0, rng);
 }
 
-export function finalDamage(raw, attackEl, target, { crit = false, ignoresElement = false } = {}) {
+export function finalDamage(raw, attackEl, target, { crit = false, ignoresElement = false, ignoresDef = false } = {}) {
   const mult = ignoresElement ? 1 : elementMult(attackEl, currentElement(target));
-  const def = effectiveDef(target);
+  const def = ignoresDef ? 0 : effectiveDef(target);
   let dmg = raw * mult * (1 - def / 100);
   if (crit) dmg *= 2;
   return Math.max(0, Math.round(dmg));

@@ -18,7 +18,8 @@
 
 import {
   elementMult, TIER_BASE, REVIVE_GAUGE, POISON_COMBAT_FRAC,
-  CURE_AUTO_TURN, ENEMY_SLOTS,
+  CURE_AUTO_TURN, ENEMY_SLOTS, RING,
+  FIXED_TURN_STATUSES, THORNS_FRAC, FAMINE_FRAC, ringNext, ringPrev,
 } from '../../shared/constants.js';
 import {
   statChangeAmount, pctMult, effectiveDef, currentElement, hasStatus,
@@ -46,7 +47,7 @@ export class Battle {
     this.partySlots = this.randomizePartySlots();
     this.revealed = new Set();        // enemy instance ids revealed party-wide, lasts the encounter
     this.kills = {};                  // instanceId -> killerId (for Cutpurse)
-    this.pendingSecond = null;        // Hasty second action holder id
+    this.elapsed = 0;                 // battle seconds, for every-N-seconds scripted cycles
     // Battle begins with both sides at gauge zero; crits roll as gauges start filling.
     for (const m of this.party()) {
       m.gauge = 0; m.holding = false; m.defending = false; m.hastySecond = false;
@@ -105,9 +106,27 @@ export class Battle {
   }
 
   rollCrit(c) {
+    // Defamed — the crit gift: guaranteed charged crits while it runs.
+    if (hasStatus(c, 'Defamed')) { c.critCharged = true; return; }
     // Negative Space: enemies Blinded by Omega cannot roll crits.
     if (c.kind === 'enemy' && this.blindedByOmega(c)) { c.critCharged = false; return; }
     c.critCharged = this.rng() * 100 < this.effLck(c);
+  }
+
+  // Template-level scripted passives (Source's per-action self-heal, boss
+  // Purification / Sacred Mission mirrors, Chain Mastery on Add-On Alpha).
+  templatePassives(e) {
+    return (this.data.scripts.passives || {})[e.template] || {};
+  }
+
+  // Defamed bookkeeping: everything the afflicted produces is recorded, and
+  // reflects onto their whole party when the status fades uncured.
+  trackDefamed(user, field, value) {
+    const s = user && user.statuses && user.statuses.find(x => x.name === 'Defamed');
+    if (!s) return;
+    s.ledger = s.ledger || { dmg: 0, heal: 0, buffs: [] };
+    if (field === 'buffs') s.ledger.buffs.push(value);
+    else s.ledger[field] += value;
   }
 
   blindedByOmega(c) {
@@ -156,6 +175,19 @@ export class Battle {
       firedTriggers: [], sprite: tmpl.sprite || null, portrait: tmpl.portrait || null,
     };
     if (inst.slot == null) inst.slot = this.freeEnemySlot();
+    // Compound/phase fights: no top-level gauge_s means take the first phase's.
+    if (inst.gaugeS == null && tmpl.gauge_phases) inst.gaugeS = Object.values(tmpl.gauge_phases)[0];
+    if (inst.gaugeS == null) inst.gaugeS = 5.0;
+    // Forms & rotations (Japhet): start in the first scripted form.
+    const forms = (this.data.scripts.rotations || {})[tmplName];
+    if (forms) { inst.form = Object.keys(forms)[0]; inst.rotIdx = 0; }
+    if (q.fake) inst.fake = true;
+    inst.usedMoves = [];
+    inst.timers = {};
+    // GM ruling: enemies can carry items — they enter the encounter's shared pool.
+    for (const [n, cnt] of Object.entries(q.items || {})) {
+      this.pool[n] = (this.pool[n] || 0) + cnt;
+    }
     this.rollCrit(inst);
     this.enemies.push(inst);
     return inst;
@@ -170,6 +202,7 @@ export class Battle {
   // ---------- the tick ----------
   tick(dt) {
     if (this.over || this.frozen || this.campaign.paused) return;
+    this.elapsed += dt;
     for (const c of [...this.livingParty(), ...this.livingEnemies()]) {
       if (c.holding) continue;
       const secs = this.gaugeSeconds(c);
@@ -230,9 +263,10 @@ export class Battle {
   runCureChecks(c) {
     for (const s of [...c.statuses]) {
       if (s.permanent) continue;
+      if (s.fixedTurns != null) continue;   // fixed-duration endgame statuses don't roll
       s.turnsAfflicted = s.turnsAfflicted ?? 0;
       if (s.turnsAfflicted >= CURE_AUTO_TURN - 1) { this.cureStatus(c, s.name, 'wore off'); continue; }
-      const chain = s.applierClass === 'Alpha' && this.passiveActive('Alpha', 'Chain Mastery');
+      const chain = (s.applierClass === 'Alpha' && this.passiveActive('Alpha', 'Chain Mastery')) || s.chain;
       const chance = cureChance(this.effRes(c, s.name), s.turnsAfflicted, chain);
       if (this.rng() * 100 < chance) this.cureStatus(c, s.name, 'shaken off');
       else s.turnsAfflicted++;
@@ -240,10 +274,14 @@ export class Battle {
   }
 
   poisonTick(c) {
-    if (!hasStatus(c, 'Poisoned')) return;
     const maxHp = c.kind === 'player' ? memberBase(this.data, c).hp : c.maxHp;
-    const dmg = Math.round(maxHp * POISON_COMBAT_FRAC);
-    this.applyDamage(c, dmg, { style: 'dmg', source: 'Poisoned' });
+    if (hasStatus(c, 'Poisoned')) {
+      this.applyDamage(c, Math.round(maxHp * POISON_COMBAT_FRAC), { style: 'dmg', source: 'Poisoned' });
+    }
+    // Famine: Poisoned at double tick, 2/25 max HP. A separate status on its own clock.
+    if (!this.dead(c) && hasStatus(c, 'Famine')) {
+      this.applyDamage(c, Math.round(maxHp * FAMINE_FRAC), { style: 'dmg', source: 'Famine' });
+    }
   }
 
   // ---------- turn spending ----------
@@ -261,11 +299,28 @@ export class Battle {
     }
     c.hastySecond = false;
     c.turnCount++;
+    // Thorns: lose 10% max HP each time you act (a consumed turn is not acting).
+    if (!consumed && hasStatus(c, 'Thorns') && !this.dead(c)) {
+      const maxHp = c.kind === 'player' ? memberBase(this.data, c).hp : c.maxHp;
+      this.applyDamage(c, Math.round(maxHp * THORNS_FRAC), { style: 'dmg', source: 'Thorns' });
+    }
     // Durations count the afflicted's own turns.
     for (const sc of [...c.statChanges]) {
       if (sc.fresh) { sc.fresh = false; continue; }
       sc.turnsLeft--;
       if (sc.turnsLeft <= 0) c.statChanges.splice(c.statChanges.indexOf(sc), 1);
+    }
+    // Fixed-duration statuses (Thorns, Defamed, Corrupted). They land from the
+    // other side of the field — outside the holder's own turn — so every spend
+    // counts, no freshness grace.
+    for (const s of [...c.statuses]) {
+      if (s.fixedTurns == null) continue;
+      s.fixedTurns--;
+      if (s.fixedTurns <= 0) {
+        c.statuses.splice(c.statuses.indexOf(s), 1);
+        if (s.name === 'Defamed') this.defamedFades(c, s);
+        else this.announce(`${this.dispName(c)} is no longer ${s.name}.`);
+      }
     }
     if (c.elementSet) {
       if (c.elementSet.fresh) c.elementSet.fresh = false;
@@ -277,6 +332,22 @@ export class Battle {
     c.gauge = 0; c.holding = false;
     this.rollCrit(c);
     this.checkEnd();
+  }
+
+  // Defamed fades uncured: everything produced during the window reflects onto
+  // the holder's whole party — damage as damage to each member, healing and
+  // buffs as healing and buffs to everyone. Curing it early (Focus) prevents this.
+  defamedFades(holder, s) {
+    const ledger = s.ledger || { dmg: 0, heal: 0, buffs: [] };
+    const party = holder.kind === 'player' ? this.livingParty() : this.livingEnemies();
+    this.announce(`The Defamation fades — everything ${this.dispName(holder)} produced comes back.`);
+    this.log({ ev: 'defamed-reflect', who: holder.id, ...{ dmg: ledger.dmg, heal: ledger.heal, buffs: ledger.buffs.length } });
+    for (const m of [...party]) {
+      if (ledger.dmg > 0) this.applyDamage(m, ledger.dmg, { style: 'crit', source: 'Defamed' });
+      if (this.dead(m)) continue;
+      if (ledger.heal > 0) this.heal(m, ledger.heal);
+      for (const b of ledger.buffs) this.applyStatChange(m, { ...b });
+    }
   }
 
   // ---------- applying damage / death ----------
@@ -296,6 +367,23 @@ export class Battle {
       this.float(target.id, `${dmg}`, style);
       if (target.hp === 0) this.downPlayer(target);
     } else {
+      // A Facade fake vanishes at the first touch — the wasted action is the point.
+      if (target.fake) {
+        target.dead = true; target.drop = { type: 'none' };
+        this.announce(`${target.name} scatters — it was a lie.`);
+        this.log({ ev: 'fake-vanish', who: target.id });
+        this.checkEnd();
+        return 0;
+      }
+      // Scripted Sacred Mission mirror (the Batter): first lethal blow leaves 1 HP.
+      if (this.templatePassives(target).sacredMission && !target.sacredUsed && target.hp - dmg <= 0) {
+        target.sacredUsed = true;
+        target.hp = 1;
+        this.float(target.id, `${dmg}`, style);
+        this.announce(`${target.name} refuses to fall.`);
+        this.log({ ev: 'enemy-sacred-mission', who: target.id });
+        return dmg;
+      }
       target.hp = Math.max(0, target.hp - dmg);
       this.float(target.id, `${dmg}`, style);
       if (target.hp === 0) this.killEnemy(target, source);
@@ -356,12 +444,15 @@ export class Battle {
       const d = e.drop || { type: 'none' };
       if (d.type === 'item' && d.name) { this.grantItem(d.name, 1); got.push(d.name); }
       else if (d.type === 'credits' && d.amount) { credits += d.amount; }
-      // Cutpurse: enemies defeated by the Bandit drop one additional item.
+      // Cutpurse: enemies defeated by the Bandit drop one additional item,
+      // stolen from the encounter's enemy object pool (GM ruling). Empty pool,
+      // empty fingers.
       const killer = this.find(this.kills[e.id]);
       if (killer && killer.kind === 'player' && killer.klass === 'Bandit' && killer.level >= 10) {
-        const table = this.encounter.cutpurseTable || [];
-        if (table.length) {
-          const bonus = table[Math.floor(this.rng() * table.length)];
+        const names = Object.keys(this.pool).filter(n => this.pool[n] > 0);
+        if (names.length) {
+          const bonus = names[Math.floor(this.rng() * names.length)];
+          this.pool[bonus]--;
           this.grantItem(bonus, 1); got.push(`${bonus} (Cutpurse)`);
         }
       }
@@ -408,13 +499,26 @@ export class Battle {
       if (chance == null) { this.float(target.id, 'IMMUNE', 'miss'); return false; }
       if (this.rng() * 100 >= chance) { this.float(target.id, 'RESISTED', 'miss'); return false; }
     }
+    // Impure rides the element-change machinery: weak to a random ring element,
+    // 2 turns; one-instance and native-cancellation rules apply. No status record.
+    if (statusName === 'Impure') {
+      const weakTo = RING[Math.floor(this.rng() * 4)];
+      const newEl = ringNext(weakTo);
+      if (newEl === currentElement(target)) return false;   // rolled the weakness it already has — one instance, nothing happens
+      const ok = this.applyElementSet(target, newEl, null, { announceAs: 'Impure' });
+      if (ok) this.announce(`${this.dispName(target)} is Impure — weak to ${weakTo}!`);
+      return ok;
+    }
     const rec = {
       name: statusName,
       applierId: applier ? applier.id : null,
       applierClass: applier && applier.kind === 'player' ? applier.klass : null,
       turnsAfflicted: 0, permanent,
+      chain: applier && applier.kind === 'enemy' && this.templatePassives(applier).chainMastery ? true : undefined,
     };
+    if (FIXED_TURN_STATUSES[statusName] != null) rec.fixedTurns = FIXED_TURN_STATUSES[statusName];
     target.statuses.push(rec);
+    if (statusName === 'Defamed') { rec.ledger = { dmg: 0, heal: 0, buffs: [] }; target.critCharged = true; }
     // Negative Space: a charged crit held by an enemy is lost the moment Blinded lands.
     if (statusName === 'Blinded' && target.kind === 'enemy' &&
         rec.applierClass === 'Omega' && this.passiveActive('Omega', 'Negative Space')) {
@@ -470,7 +574,7 @@ export class Battle {
   }
 
   // One element change per target; a change to the native element cancels instead.
-  applyElementSet(target, element, applier) {
+  applyElementSet(target, element, applier, { announceAs = null } = {}) {
     // Sweet Madness: the Burnt's own element can never be changed, including by itself.
     if (target.kind === 'player' && target.klass === 'Burnt' && this.passiveActive('Burnt', 'Sweet Madness')) {
       this.float(target.id, 'IMMUNE', 'miss');
@@ -591,13 +695,14 @@ export class Battle {
         attackEl = fx.attack_element || currentElement(user);
         if (Array.isArray(attackEl)) attackEl = this.bestElement(attackEl, target); // Perfect Symbol
       } else {
-        raw = enemyRaw(user, 1.0);
+        raw = enemyRaw(user, 1.0, this.rng);
         attackEl = currentElement(user);
       }
       raw = this.offensiveModifiers(user, target, raw);
       const crit = h === 0 && user.critCharged && !this.critBlocked(user, target);
       const dmg = finalDamage(raw, attackEl, this.withBase(target), { crit });
       this.applyDamage(target, dmg, { style: crit ? 'crit' : 'dmg', source: user.id });
+      this.trackDefamed(user, 'dmg', dmg);
       this.log({ ev: 'attack', who: user.id, target: target.id, dmg, crit, madness });
       this.announce(`${this.dispName(user)} attacks ${this.dispName(target)} for ${dmg}${crit ? ' — CRITICAL!' : '!'}`);
     }
@@ -631,7 +736,7 @@ export class Battle {
   }
 
   doCompetence(p, compName, targetId, chosenElement, { taunt = null, furious = false } = {}) {
-    if (hasStatus(p, 'Muted') && !furious) return { ok: false, refuse: true };
+    if ((hasStatus(p, 'Muted') || hasStatus(p, 'Vilified') || hasStatus(p, 'Corrupted')) && !furious) return { ok: false, refuse: true };
     const kit = this.data.classKits.classes[p.klass];
     const comp = kit.competences.find(c => c.name === compName);
     if (!comp || comp.level > p.level) return { ok: false, refuse: true };
@@ -686,7 +791,7 @@ export class Battle {
         // Non-damaging: cannot miss; a charged crit spent here is simply wasted.
         if (rider.kind === 'heal') {
           const amt = Math.round(playerRaw(pBase, comp, this.rng));
-          this.heal(target, amt);
+          this.trackDefamed(p, 'heal', this.heal(target, amt));
         }
         this.applyCompEffects(p, target, rider, chosenElement);
         continue;
@@ -719,6 +824,7 @@ export class Battle {
       const crit = p.critCharged && !this.critBlocked(p, target);
       const dmg = finalDamage(raw, attackEl, this.withBase(target), { crit, ignoresElement: !!sp.ignoresElement });
       this.applyDamage(target, dmg, { style: crit ? 'crit' : 'dmg', source: p.id });
+      this.trackDefamed(p, 'dmg', dmg);
       this.announce(`${compName} hits ${this.dispName(target)} for ${dmg}${crit ? ' — CRITICAL!' : '!'}`);
       this.log({ ev: 'hit', who: p.id, target: target.id, action: compName, dmg, crit });
       // Damage resolves before the element change; riders land only on a connected hit.
@@ -732,7 +838,10 @@ export class Battle {
     for (const e of rider.effects || []) {
       if (this.dead(target) && e.type !== 'cureAllStatuses') continue;
       if (e.type === 'status') this.tryApplyStatus(target, e.status, p);
-      else if (e.type === 'statChange') this.applyStatChange(target, e, { tag: (rider.tags || [])[0] || null });
+      else if (e.type === 'statChange') {
+        const res = this.applyStatChange(target, e, { tag: (rider.tags || [])[0] || null });
+        if (res === 'applied' && e.dir === 'up' && target.kind === p.kind) this.trackDefamed(p, 'buffs', { stat: e.stat, dir: e.dir, amount: e.amount, turns: e.turns });
+      }
       else if (e.type === 'elementSet') this.applyElementSet(target, e.element === 'choose' ? chosenElement : e.element, p);
       else if (e.type === 'cureAllStatuses') this.cureAllStatuses(target, p);
       else if (e.type === 'steal') this.steal(p);
@@ -782,6 +891,7 @@ export class Battle {
 
   // ---------- items ----------
   doItem(p, itemName, targetId, { taunt = null } = {}) {
+    if (hasStatus(p, 'Corrupted')) return { ok: false, refuse: true };   // Cob's variant also locks items
     const inv = this.campaign.inventory;
     if (!inv[itemName] || inv[itemName] <= 0) return { ok: false, refuse: true };
     const item = this.data.itemsByName[itemName];
@@ -854,11 +964,12 @@ export class Battle {
           const b = memberBase(this.data, user);
           raw = fx.base + b.atk * pctMult(user, 'ATK') + b.esp;
         } else {
-          raw = fx.base + user.dpa * pctMult(user, 'ATK');
+          raw = fx.base + enemyRaw(user, 1.0, this.rng);
         }
         const crit = user.critCharged && !this.critBlocked(user, target);
         const dmg = finalDamage(raw, null, this.withBase(target), { crit });
         this.applyDamage(target, dmg, { style: crit ? 'crit' : 'dmg', source: user.id });
+        this.trackDefamed(user, 'dmg', dmg);
         this.announce(`${item.name} deals ${dmg} to ${this.dispName(target)}${crit ? ' — CRITICAL!' : '!'}`);
         return { ok: true };
       }
@@ -868,52 +979,159 @@ export class Battle {
   }
 
   // ---------- enemy turns ----------
+  allTriggers(e) {
+    return this.data.scripts.triggers[e.template] || [];
+  }
+
   pendingTriggers(e) {
-    const list = this.data.scripts.triggers[e.template] || [];
-    return list.filter(t => !e.firedTriggers.includes(t.id) && this.triggerReady(e, t));
+    return this.allTriggers(e).filter(t => !this.triggerSpent(e, t) && this.triggerReady(e, t));
+  }
+
+  triggerSpent(e, t) {
+    if (t.when && (t.when.everySeconds != null || t.when.watchAgeGte != null)) return false;   // repeating cycles never spend
+    return e.firedTriggers.includes(t.id);
   }
 
   triggerReady(e, t) {
     const w = t.when || {};
     const pct = (e.hp / e.maxHp) * 100;
+    if (w.everySeconds != null) {
+      const next = e.timers[t.id] ?? w.everySeconds;
+      return this.elapsed >= next;
+    }
+    if (w.allyDied && this.enemies.some(x => x !== e && x.dead && !x.fled)) return true;
+    if (w.watchAgeGte != null) return !!e.watch && e.turnCount - e.watch.setAtTurn >= w.watchAgeGte - 1;
     if (w.hpPctLte != null && pct <= w.hpPctLte) return true;
     if (w.turn != null && e.turnCount + 1 === w.turn) return true;
     if (w.orTurn != null && e.turnCount + 1 >= w.orTurn) return true;
     return false;
   }
 
+  // Telegraphed scripted moves announce one gauge ahead of firing (AI side).
+  telegraphPending(e, t) {
+    if (!t.telegraph) return false;
+    if (e.telegraphed && e.telegraphed.includes(t.id)) return false;
+    (e.telegraphed = e.telegraphed || []).push(t.id);
+    this.announce(t.telegraphText || `${e.name}'s gauge glows — ${t.label}.`);
+    this.log({ ev: 'telegraph', who: e.id, id: t.id });
+    return true;
+  }
+
   fireTrigger(e, trigger) {
-    e.firedTriggers.push(trigger.id);
+    if (trigger.when && trigger.when.everySeconds != null) {
+      e.timers[trigger.id] = (e.timers[trigger.id] ?? trigger.when.everySeconds) + trigger.when.everySeconds;
+    } else {
+      e.firedTriggers.push(trigger.id);
+    }
     const a = trigger.action;
     this.log({ ev: 'trigger', who: e.id, id: trigger.id });
+    if (a.announce) this.announce(a.announce);
+    if (a.addMove) {
+      if (!e.moves.some(m => m.n === a.addMove.n)) e.moves.push({ ...a.addMove });
+    }
+    if (a.partyStatus) {
+      this.announce(`${e.name}: ${trigger.label}`);
+      for (const t of this.livingParty()) this.tryApplyStatus(t, a.partyStatus.status, e);
+    }
     if (a.summon) {
-      for (let i = 0; i < a.summon.count; i++) {
-        this.spawnInstance({ template: a.summon.name, control: 'ai', drop: { type: 'none' } }, e.wave);
+      const total = a.summon.count;
+      const real = a.summon.realCount ?? total;
+      const picks = [];
+      for (let i = 0; i < total; i++) picks.push(i >= real);
+      // shuffle which spawns are fakes so slot order tells nothing
+      for (let i = picks.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [picks[i], picks[j]] = [picks[j], picks[i]]; }
+      for (let i = 0; i < total; i++) {
+        this.spawnInstance({ template: a.summon.name, control: 'ai', drop: { type: 'none' }, fake: picks[i] }, e.wave);
       }
-      this.announce(`${e.name} summons ${a.summon.count} × ${a.summon.name}!`);
+      this.announce(`${e.name} summons ${total} × ${a.summon.name}!`);
     }
     if (a.selfStatus) {
       this.tryApplyStatus(e, a.selfStatus.status, null, { permanent: !!a.selfStatus.permanent, force: true });
       this.announce(`${e.name}: ${trigger.label}`);
     }
+    if (a.statChanges) {
+      for (const sc of a.statChanges) this.applyStatChange(e, { ...sc });
+      this.announce(`${e.name}: ${trigger.label}`);
+    }
+    if (a.selfHealBonus) {
+      e.selfHealBonus = (e.selfHealBonus || 0) + a.selfHealBonus;
+      this.announce(`${e.name}: ${trigger.label}`);
+    }
+    if (a.setForm) {
+      e.form = a.setForm.form;
+      if (a.setForm.gauge_s) e.gaugeS = a.setForm.gauge_s;
+      e.rotIdx = 0;
+      this.announce(`${e.name} — ${trigger.label}`);
+      this.log({ ev: 'form', who: e.id, form: e.form });
+    }
+    if (a.castMove) {
+      const move = e.moves.find(m => m.n === a.castMove);
+      if (move) {
+        const targets = this.pickEnemyTargets(e, move, a.targetId || null);
+        this.resolveEnemyMove(e, move, targets);
+      }
+    }
+    if (a.mark) {
+      const pool = this.livingParty();
+      if (pool.length) {
+        const t = pool[Math.floor(this.rng() * pool.length)];
+        e.watch = { targetId: t.id, setAtTurn: e.turnCount };
+        this.announce(`${e.name} watches ${t.name} with great interest.`);
+        this.log({ ev: 'watch', who: e.id, target: t.id });
+      }
+    }
+    if (a.resolveWatch && e.watch) {
+      const t = this.find(e.watch.targetId);
+      e.watch = null;
+      if (t && !this.dead(t)) {
+        if (this.rng() < 0.5) {
+          const amt = Math.round(t.hp * 0.75);
+          this.announce(`${e.name} grants a boon.`);
+          this.heal(t, amt);
+        } else {
+          this.announce(`${e.name}: IONOSPHERE.`);
+          this.applyDamage(t, 9999, { style: 'crit', source: e.id });   // unconditional; Sacred Mission still answers
+        }
+      }
+    }
+    if (a.addMoveEffect) {
+      e.moveFxOverlay = e.moveFxOverlay || {};
+      e.moveFxOverlay[a.addMoveEffect.move] = { ...(e.moveFxOverlay[a.addMoveEffect.move] || {}), ...a.addMoveEffect.patch };
+      this.announce(`${e.name}: ${trigger.label}`);
+    }
     if (a.blast) {
       this.announce(`${e.name}: ${trigger.label}`);
       for (const t of this.livingParty()) {
-        const dmg = finalDamage(a.blast.damage, currentElement(e), this.withBase(t), {});
+        const raw = a.blast.damage * rollVariance(10, this.rng);
+        const dmg = finalDamage(raw, currentElement(e), this.withBase(t), {});
         this.applyDamage(t, dmg, { style: 'dmg', source: e.id });
       }
+    }
+    if (a.forfeitDrop) e.drop = { type: 'none' };
+    if (a.flee && !e.dead) {
+      e.dead = true; e.fled = true; e.drop = { type: 'none' };
+      this.announce(`${e.name} slips away!`);
+      this.log({ ev: 'flee', who: e.id });
+      this.checkEnd();
     }
     if (a.die && !e.dead) this.killEnemy(e, null);
     if (!e.dead) this.spendTurn(e);
   }
 
+  moveFx(e, move) {
+    const base = (this.data.scripts.moveEffects[e.template] || {})[move.n] || {};
+    const overlay = (e.moveFxOverlay || {})[move.n] || {};
+    return { ...base, ...overlay };
+  }
+
   legalMoves(e) {
-    const fxTable = this.data.scripts.moveEffects[e.template] || {};
     return e.moves.filter(m => {
-      const fx = fxTable[m.n] || {};
+      const fx = this.moveFx(e, m);
       if (fx.scripted) return false;
-      if (m.mp === 0 && m.acc === null && !fx.status && !fx.drainCp && !fx.statChange && (m.fx || '').includes('scripted')) return false;
       if (fx.cpCost && e.cp != null && e.cp < fx.cpCost) return false;
+      if (fx.availableBelowHpPct != null && (e.hp / e.maxHp) * 100 > fx.availableBelowHpPct) return false;
+      if (fx.formOnly && e.form && !fx.formOnly.includes(e.form)) return false;
+      if (fx.oncePerFight && e.usedMoves.includes(m.n)) return false;
       return true;
     });
   }
@@ -921,10 +1139,24 @@ export class Battle {
   aiAct(e) {
     // Scripted behaviors auto-fire for AI-controlled instances only.
     const pending = this.pendingTriggers(e);
-    if (pending.length) { this.fireTrigger(e, pending[0]); return; }
+    if (pending.length) {
+      const t = pending[0];
+      // A telegraphed trigger announces this turn and fires the next.
+      if (this.telegraphPending(e, t)) { /* fall through to a normal action */ }
+      else { this.fireTrigger(e, t); return; }
+    }
     const moves = this.legalMoves(e);
     if (!moves.length) { this.spendTurn(e); return; }
-    const move = moves[Math.floor(this.rng() * moves.length)];
+    // Canonical rotations (Japhet) are stage directions: the AI follows the cycle.
+    const rotations = (this.data.scripts.rotations || {})[e.template];
+    let move;
+    if (rotations && e.form && rotations[e.form] && rotations[e.form].length) {
+      const cycle = rotations[e.form];
+      move = e.moves.find(m => m.n === cycle[e.rotIdx % cycle.length]) || moves[0];
+      e.rotIdx = (e.rotIdx + 1) % cycle.length;
+    } else {
+      move = moves[Math.floor(this.rng() * moves.length)];
+    }
     const targets = this.pickEnemyTargets(e, move, null);
     this.resolveEnemyMove(e, move, targets);
     if (!e.dead) this.spendTurn(e);
@@ -940,8 +1172,10 @@ export class Battle {
       return { ok: true };
     }
     if (action.kind === 'trigger') {
-      const t = (this.data.scripts.triggers[e.template] || []).find(x => x.id === action.triggerId);
-      if (!t || e.firedTriggers.includes(t.id)) return { ok: false, refuse: true };
+      // The GM's hand is never gated by the trigger's condition — a stage
+      // direction is theirs to call early, late, or never.
+      const t = this.allTriggers(e).find(x => x.id === action.triggerId);
+      if (!t || this.triggerSpent(e, t)) return { ok: false, refuse: true };
       this.fireTrigger(e, t);
       return { ok: true };
     }
@@ -959,8 +1193,6 @@ export class Battle {
     if (action.kind === 'move') {
       const move = e.moves.find(m => m.n === action.move);
       if (!move) return { ok: false, refuse: true };
-      const fx = (this.data.scripts.moveEffects[e.template] || {})[move.n] || {};
-      if (fx.scripted) return { ok: false, refuse: true };  // scripted lines fire via prompts
       const targets = this.pickEnemyTargets(e, move, action.targetId);
       if (!targets.length) return { ok: false, refuse: true };
       this.resolveEnemyMove(e, move, targets);
@@ -973,7 +1205,17 @@ export class Battle {
   pickEnemyTargets(e, move, chosenId) {
     if (move.t === 'self') return [e];
     if (move.t === 'all') return this.livingParty();
-    // one target
+    if (move.t === 'allies') return this.livingEnemies();
+    if (move.t === 'ally') {
+      if (chosenId) {
+        const t = this.find(chosenId);
+        return t && !this.dead(t) && t.kind === 'enemy' ? [t] : [];
+      }
+      const others = this.livingEnemies().filter(x => x !== e && !x.fake);
+      const pool = others.length ? others : this.livingEnemies();
+      return pool.length ? [pool[Math.floor(this.rng() * pool.length)]] : [];
+    }
+    // one player target
     if (chosenId) {
       const t = this.find(chosenId);
       return t && !this.dead(t) && t.kind === 'player' ? [t] : [];
@@ -983,31 +1225,78 @@ export class Battle {
   }
 
   resolveEnemyMove(e, move, targets) {
-    const fxTable = this.data.scripts.moveEffects[e.template] || {};
-    const fx = fxTable[move.n] || {};
+    const fx = this.moveFx(e, move);
     if (fx.cpCost && e.cp != null) e.cp = Math.max(0, e.cp - fx.cpCost);
+    if (fx.oncePerFight) e.usedMoves.push(move.n);
     this.announce(`${e.name} uses ${move.n}!`);
     this.log({ ev: 'enemy-move', who: e.id, move: move.n, targets: targets.map(t => t.id) });
+
+    // Attack element resolution.
+    let attackEl = currentElement(e);
+    if (fx.forceElement) attackEl = fx.forceElement;
+    if (fx.randomElement) attackEl = RING[Math.floor(this.rng() * 4)];
+    if (fx.attackElementOwnWeakness) attackEl = ringPrev(currentElement(e));   // the element that beats him
+
+    // Self-directed verbs.
+    if (fx.selfDamage) this.applyDamage(e, Math.round(fx.selfDamage * rollVariance(10, this.rng)), { style: 'dmg', source: e.id });
+    if (fx.selfHeal) this.heal(e, fx.selfHeal);
+    if (fx.selfHealPctMax) this.heal(e, Math.round(e.maxHp * fx.selfHealPctMax / 100));
+    if (fx.selfRandomElement) {
+      e.elementSet = null;
+      this.applyElementSet(e, RING.filter(x => x !== e.element)[Math.floor(this.rng() * 3)], null);
+      if (e.elementSet) e.elementSet.turnsLeft = 999;   // his own instability, rerolled by the move, not the clock
+    }
+
     const hits = fx.hits || 1;
     for (const target of targets) {
       for (let h = 0; h < hits; h++) {
-        if (this.dead(target)) break;
+        if (this.dead(target) && !target.fake) break;
         if (!accuracyRoll(move.acc, e, this.rng)) {
           this.float(target.id, 'MISS', 'miss');
           this.log({ ev: 'miss', who: e.id, target: target.id, action: move.n });
           continue;
         }
+        // Ally-directed verbs (enemy supports its own side; these cannot miss by data).
+        const isSupport = fx.healAlly || fx.allyStatChange || fx.allyStatus || fx.allyCureAll || fx.allyStripDown;
+        if (target.kind === 'enemy' && isSupport) {
+          if (fx.healAlly) {
+            this.heal(target, fx.healAlly.amount || fx.healAlly);
+            if (fx.healAlly.cureStatus) this.cureStatus(target, fx.healAlly.cureStatus, 'cured');
+          }
+          if (fx.allyStatChange) this.applyStatChange(target, { ...fx.allyStatChange });
+          if (fx.allyStatus) this.tryApplyStatus(target, fx.allyStatus, e, { force: true });
+          if (fx.allyCureAll) this.cureAllStatuses(target, null);
+          if (fx.allyStripDown) {
+            const down = target.statChanges.find(sc => sc.dir === 'down');
+            if (down) {
+              target.statChanges.splice(target.statChanges.indexOf(down), 1);
+              this.announce(`${e.name} strips ${down.stat} Down from ${target.name}.`);
+            }
+          }
+          continue;
+        }
         if (move.mp > 0) {
-          // Per-hit output is dpa × the move's MP (multi-hit moves roll each hit separately).
-          const raw = enemyRaw(e, move.mp);
+          // Per-hit output is dpa × MP with the ruled ±10% variance.
+          let raw = enemyRaw(e, move.mp, this.rng);
+          if (fx.plusCurrentHpPct) raw += target.hp * fx.plusCurrentHpPct / 100;
+          raw = this.enemyOffensiveModifiers(e, target, raw);
+          let el = attackEl;
+          if (fx.attackElementBestVsTarget) el = this.bestElement([...RING], target);   // element chess, played back
           const crit = h === 0 && e.critCharged && !this.critBlocked(e, target);
-          const dmg = finalDamage(raw, currentElement(e), this.withBase(target), { crit });
+          const dmg = finalDamage(raw, el, this.withBase(target), { crit, ignoresDef: !!fx.ignoresDef });
           this.applyDamage(target, dmg, { style: crit ? 'crit' : 'dmg', source: e.id });
+          this.trackDefamed(e, 'dmg', dmg);
+          if (fx.lifesteal) this.heal(e, dmg);
           this.log({ ev: 'hit', who: e.id, target: target.id, action: move.n, dmg, crit });
         }
         if (this.dead(target)) continue;
-        if (fx.status) this.tryApplyStatus(target, fx.status, e);
-        if (fx.statChange) this.applyStatChange(target, fx.statChange);
+        const statuses = fx.statuses || (fx.status ? [fx.status] : []);
+        for (const st of statuses) this.tryApplyStatus(target, st, e);
+        if (fx.statChange) this.applyStatChange(target, { ...fx.statChange });
+        if (fx.setElementRandom) {
+          const el = RING.filter(x => x !== target.element)[Math.floor(this.rng() * 3)];
+          this.applyElementSet(target, el, e);
+        }
         if (fx.drainCp) {
           const [lo, hi] = fx.drainCp;
           const n = lo + Math.floor(this.rng() * (hi - lo + 1));
@@ -1016,11 +1305,32 @@ export class Battle {
           this.announce(`${e.name} drains ${n} CP from ${this.dispName(target)}!`);
           this.log({ ev: 'drain', who: e.id, target: target.id, cp: n });
         }
-        if (!fx.status && !fx.statChange && !fx.drainCp && move.mp === 0 && move.fx) {
+        if (Object.keys(fx).length === 0 && move.mp === 0 && move.fx) {
           // Un-transcribed special: surface it to the GM rather than half-building it.
           this.emit({ kind: 'gm-note', text: `${e.name} · ${move.n}: "${move.fx}" — resolve by hand (not in the effects table).` });
         }
       }
     }
+    if (fx.summon) {
+      const total = fx.summon.count;
+      const real = fx.summon.realCount ?? total;
+      const picks = [];
+      for (let i = 0; i < total; i++) picks.push(i >= real);
+      for (let i = picks.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [picks[i], picks[j]] = [picks[j], picks[i]]; }
+      for (let i = 0; i < total; i++) this.spawnInstance({ template: fx.summon.name, control: 'ai', drop: { type: 'none' }, fake: picks[i] }, e.wave);
+      this.announce(`${e.name} conjures ${total} × ${fx.summon.name}${real < total ? ' — but which is real?' : ''}!`);
+    }
+    // Source's cadence: a self-heal rides every action the template takes.
+    const passives = this.templatePassives(e);
+    if (passives.selfHealPerAction) this.heal(e, passives.selfHealPerAction + (e.selfHealBonus || 0));
+  }
+
+  // Scripted Purification mirror: +25% against targets at or below 30% HP.
+  enemyOffensiveModifiers(e, target, raw) {
+    if (this.templatePassives(e).purification) {
+      const maxHp = target.kind === 'player' ? memberBase(this.data, target).hp : target.maxHp;
+      if (target.hp / maxHp <= 0.3) raw *= 1.25;
+    }
+    return raw;
   }
 }

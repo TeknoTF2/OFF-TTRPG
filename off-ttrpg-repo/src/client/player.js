@@ -195,11 +195,12 @@ function renderStack(view) {
   stack.classList.toggle('crit', !!(m && m.critCharged));
   const furious = m && m.statuses.some(s => s.name === 'Furious');
   const mad = m && m.statuses.some(s => s.name === 'Madness');
-  const muted = m && m.statuses.some(s => s.name === 'Muted');
+  const muted = m && m.statuses.some(s => ['Muted', 'Vilified', 'Corrupted'].includes(s.name));
+  const itemLocked = m && m.statuses.some(s => s.name === 'Corrupted');
   $('btnAttack').disabled = !myTurn || mad;
   $('btnComp').disabled = !myTurn || mad || muted || furious;
   $('btnDefend').disabled = !myTurn || mad || furious;
-  $('btnObj').disabled = !myTurn || mad || furious;
+  $('btnObj').disabled = !myTurn || mad || furious || itemLocked;
   if (furious && myTurn) announce(`${m.name} is FURIOUS — pick a target.`);
   if (furious && myTurn && !armed) armed = { kind: 'attack' };   // any click = the Furious act
   if (!myTurn) { armed = null; $('subs').classList.remove('open'); $('inv').classList.remove('armed'); }

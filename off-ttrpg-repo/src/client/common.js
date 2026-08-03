@@ -170,7 +170,7 @@ export function el(tag, attrs = {}, ...children) {
 }
 
 export function statusChip(s) {
-  const abbr = { Poisoned: 'PSN', Blinded: 'BLI', Muted: 'MUT', Palsied: 'PAL', Asleep: 'SLP', Furious: 'FUR', Madness: 'MAD', Hasty: 'HST', Taunted: 'TNT' };
+  const abbr = { Poisoned: 'PSN', Blinded: 'BLI', Muted: 'MUT', Palsied: 'PAL', Asleep: 'SLP', Furious: 'FUR', Madness: 'MAD', Hasty: 'HST', Taunted: 'TNT', Thorns: 'THO', Famine: 'FAM', Impure: 'IMP', Vilified: 'VIL', Corrupted: 'COR', Defamed: 'DFM' };
   return el('span', { class: 'icn', title: `${s.name} — turn ${s.turns} afflicted` }, `${abbr[s.name] || s.name.slice(0, 3).toUpperCase()}·t${s.turns}`);
 }
 
