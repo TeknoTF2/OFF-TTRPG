@@ -1,0 +1,140 @@
+{
+  "_meta": {
+    "purpose": "Structured effect semantics for every player competence, transcribed from docs/off-ttrpg-system.docx Part 4 tables. The docx remains the authority on effect semantics; this file is the executable transcription — nothing here is invented.",
+    "vocabulary": {
+      "kind": "damage | heal | revive | support | status | elementSet | reveal",
+      "effects[].type": "status (rolls the target's tier) | statChange (never rolls) | elementSet | cureAllStatuses | steal",
+      "statChange": "ATK/AGI amounts are percentages, DEF amounts are flat points, per the system doc",
+      "special": "per-competence resolution modifiers, each named after the doc sentence that creates it"
+    },
+    "flags": [
+      "Closed Bracket carries target:null in off-class-kits.json; the Bracket ladder is single-target throughout the doc, so it is set to 'one enemy' here — flagged for GM confirmation.",
+      "Save Fourth Base and Multiple Perspective revive percentages are of max HP, per the doc ('Revive one ally at 50% HP')."
+    ]
+  },
+  "Purifier": {
+    "Wide Angle": { "kind": "reveal" },
+    "Powerful Homerun": { "kind": "damage" },
+    "Save First Base": { "kind": "heal" },
+    "Run with Courage": { "kind": "damage", "forcedElement": true },
+    "Furious Homerun": { "kind": "damage" },
+    "Run with Grace": { "kind": "damage", "forcedElement": true },
+    "Save Second Base": { "kind": "heal" },
+    "Run with Dementia": { "kind": "damage", "forcedElement": true },
+    "Special Homerun": { "kind": "damage" },
+    "Run with Faith": { "kind": "damage", "forcedElement": true },
+    "Save Third Base": { "kind": "heal" },
+    "Save Fourth Base": { "kind": "revive", "revive": { "hpPct": 50 } },
+    "Ultimate Homerun": { "kind": "damage" }
+  },
+  "Alpha": {
+    "Saturated String": { "kind": "damage" },
+    "Open Bracket": { "kind": "status", "effects": [{ "type": "status", "status": "Poisoned" }] },
+    "Converted String": { "kind": "damage", "special": { "bonusPctIfTargetHasStatus": 25 } },
+    "Closed Bracket": {
+      "kind": "status", "targetOverride": "one enemy",
+      "effects": [
+        { "type": "status", "status": "Blinded" },
+        { "type": "statChange", "stat": "ATK", "dir": "down", "amount": 25, "turns": 2 }
+      ]
+    },
+    "Long String": { "kind": "damage" },
+    "Broken Bracket": { "kind": "status", "effects": [{ "type": "status", "status": "Muted" }] },
+    "Complete String": { "kind": "damage" },
+    "Impossible Bracket": { "kind": "status", "effects": [{ "type": "status", "status": "Palsied" }] },
+    "Absolute String": { "kind": "damage", "special": { "bonusMultPerStatus": 0.5, "baseTargetMult": 3.8 } }
+  },
+  "Omega": {
+    "Optimized Blur": {
+      "kind": "damage",
+      "effects": [{ "type": "statChange", "stat": "AGI", "dir": "down", "amount": 15, "turns": 2 }]
+    },
+    "Focus": {
+      "kind": "support", "targetOverride": "one ally",
+      "effects": [
+        { "type": "cureAllStatuses" },
+        { "type": "statChange", "stat": "DEF", "dir": "up", "amount": 15, "turns": 2 }
+      ]
+    },
+    "Photographic Blur": { "kind": "damage", "effects": [{ "type": "status", "status": "Blinded" }] },
+    "Depth of Field": {
+      "kind": "support",
+      "effects": [
+        { "type": "statChange", "stat": "DEF", "dir": "up", "amount": 15, "turns": 2 },
+        { "type": "statChange", "stat": "AGI", "dir": "up", "amount": 15, "turns": 2 }
+      ]
+    },
+    "Gaussian Blur": {
+      "kind": "support",
+      "effects": [{ "type": "statChange", "stat": "DEF", "dir": "down", "amount": 20, "turns": 2 }]
+    },
+    "Long Exposure": { "kind": "damage", "special": { "doubleIfTargetBlinded": true } },
+    "Multiple Perspective": {
+      "kind": "revive", "revive": { "hpPct": 60 },
+      "effects": [{ "type": "cureAllStatuses" }]
+    },
+    "Radial Blur": {
+      "kind": "damage",
+      "effects": [
+        { "type": "statChange", "stat": "DEF", "dir": "down", "amount": 20, "turns": 3 },
+        { "type": "statChange", "stat": "AGI", "dir": "down", "amount": 25, "turns": 3 }
+      ]
+    }
+  },
+  "Epsilon": {
+    "Petite Tragedy": { "kind": "damage", "tags": ["tragedy"] },
+    "Comic Drama": {
+      "kind": "support", "tags": ["drama"],
+      "effects": [{ "type": "statChange", "stat": "ATK", "dir": "up", "amount": 15, "turns": 2 }]
+    },
+    "Grand Tragedy": { "kind": "damage", "tags": ["tragedy"] },
+    "Baroque Drama": {
+      "kind": "support", "tags": ["drama"],
+      "effects": [{ "type": "statChange", "stat": "DEF", "dir": "up", "amount": 15, "turns": 2 }]
+    },
+    "Absolute Tragedy": { "kind": "damage", "tags": ["tragedy"] },
+    "Unrevokable Drama": {
+      "kind": "support", "tags": ["drama"],
+      "effects": [{ "type": "statChange", "stat": "AGI", "dir": "up", "amount": 15, "turns": 3 }]
+    },
+    "Total Drama": {
+      "kind": "support", "tags": ["drama"],
+      "effects": [
+        { "type": "statChange", "stat": "ATK", "dir": "up", "amount": 20, "turns": 3 },
+        { "type": "statChange", "stat": "DEF", "dir": "up", "amount": 15, "turns": 3 },
+        { "type": "statChange", "stat": "AGI", "dir": "up", "amount": 15, "turns": 3 }
+      ]
+    },
+    "Final Tragedy": { "kind": "damage", "tags": ["tragedy"] }
+  },
+  "Bandit": {
+    "Orion's Mark": { "kind": "damage" },
+    "Ursa Shot": { "kind": "damage", "effects": [{ "type": "steal" }] },
+    "Draco's Mark": { "kind": "damage" },
+    "Lyra Shot": { "kind": "damage" },
+    "Corvus Mark": { "kind": "damage" },
+    "Vela Shot": { "kind": "damage" },
+    "Perseus Mark": { "kind": "damage", "special": { "ignoresElement": true } },
+    "Hydra Shot": { "kind": "damage" }
+  },
+  "Burnt": {
+    "Marzipan Rush": { "kind": "heal", "effects": [{ "type": "elementSet", "element": "Plastic" }] },
+    "Marzipan Crash": { "kind": "damage", "forcedElement": true, "effects": [{ "type": "elementSet", "element": "Plastic" }] },
+    "Torte Rush": { "kind": "heal", "effects": [{ "type": "elementSet", "element": "Meat" }] },
+    "Torte Crash": { "kind": "damage", "forcedElement": true, "effects": [{ "type": "elementSet", "element": "Meat" }] },
+    "Praline Rush": { "kind": "heal", "effects": [{ "type": "elementSet", "element": "Metal" }] },
+    "Praline Crash": { "kind": "damage", "forcedElement": true, "effects": [{ "type": "elementSet", "element": "Metal" }] },
+    "Meringue Rush": { "kind": "heal", "effects": [{ "type": "elementSet", "element": "Smoke" }] },
+    "Meringue Crash": { "kind": "damage", "forcedElement": true, "effects": [{ "type": "elementSet", "element": "Smoke" }] },
+    "Nougat Crash": {
+      "kind": "damage",
+      "effects": [{ "type": "statChange", "stat": "ATK", "dir": "down", "amount": 20, "turns": 3 }]
+    },
+    "Ganache Crash": {
+      "kind": "damage",
+      "effects": [{ "type": "statChange", "stat": "ATK", "dir": "down", "amount": 30, "turns": 3 }]
+    },
+    "Sablé Rush": { "kind": "elementSet", "effects": [{ "type": "elementSet", "element": "choose" }] },
+    "Petit Four Crash": { "kind": "elementSet", "effects": [{ "type": "elementSet", "element": "choose" }] }
+  }
+}

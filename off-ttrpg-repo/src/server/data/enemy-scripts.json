@@ -1,0 +1,1208 @@
+{
+  "_meta": {
+    "purpose": "Structured move effects, scripted behaviors, template passives, rotations, and compound-fight unit templates for the WHOLE bestiary, transcribed from off-campaign-bestiary.json fx/special strings and docs/off-restat-worksheet.md. Scripted triggers auto-fire for AI-controlled instances only; for GM-piloted instances they surface as prompts and never act uninvoked. The GM's hand is never gated: any trigger fires from the console regardless of condition. Anything not expressible here surfaces to the GM as a resolve-by-hand prompt — never half-built.",
+    "vocabulary": {
+      "moveEffects": "status | statuses[] | statChange | drainCp[lo,hi] | hits | cpCost | lifesteal | selfDamage | selfHeal | selfHealPctMax | selfRandomElement | healAlly{amount,cureStatus} | allyStatChange | allyStatus | allyCureAll | allyStripDown | plusCurrentHpPct | ignoresDef | forceElement | randomElement | attackElementOwnWeakness | attackElementBestVsTarget | setElementRandom | summon{name,count,realCount} | availableBelowHpPct | formOnly[] | oncePerFight | scripted",
+      "triggers.when": "turn | hpPctLte | orTurn | everySeconds (repeating) | allyDied | watchAgeGte (repeating while a watch mark exists)",
+      "triggers.action": "summon | selfStatus | statChanges[] | selfHealBonus | setForm | castMove | blast | partyStatus | mark | resolveWatch | addMove | addMoveEffect | announce | flee | forfeitDrop | die",
+      "passives": "selfHealPerAction | purification | sacredMission | chainMastery"
+    },
+    "flags": [
+      "Gilles de Rais's optional 2008 martial-check trait is dropped, per its own data note ('drop if schema purity wins').",
+      "Enoch's Double Attack 'frequency rises below 60%' conflicts with the uniform-random AI rule; uniform stands — pilot him below 60% if you want the canon cadence.",
+      "Critic-burnt's HELP self-buffs 'ESP/DEF/AGI'; ESP is not a stat-change type in the system, so the buffs land as ATK/DEF/AGI Up.",
+      "Pastel-burnt's sequential head spawns (~every 18s) and kill-heads-kills-body win condition are GM-assembled from the unit templates below (waves + manual spawns + Players-panel edits); the timing hand is yours.",
+      "Carnival's four Games and the bidirectional prize-tempo system are GM-run: the moves below all resolve, Game transitions announce at 75/50/25%, but phase move-pools and prize gauge-fills are your calls (pilot him).",
+      "Ballman's set-piece minigame is a GM call per canon; straight-fodder stats work as data."
+    ]
+  },
+  "moveEffects": {
+    "Common Spectre": {},
+    "Magnolia": {
+      "Chronic Migraine": {
+        "status": "Blinded"
+      }
+    },
+    "Speckter-mite": {
+      "Painful Quandary": {
+        "hits": 2
+      }
+    },
+    "January": {},
+    "Fat Spectre": {
+      "Summon": {
+        "scripted": true
+      }
+    },
+    "Ah, ah!": {
+      "Chronic Migraine": {
+        "status": "Blinded"
+      }
+    },
+    "One-eyed Spectre": {
+      "Swing": {
+        "cpCost": 5
+      }
+    },
+    "Rupture-burnt": {
+      "Clock Out": {
+        "scripted": true
+      }
+    },
+    "Burnt (enemy)": {},
+    "Tiburce": {
+      "Partie Quarree": {
+        "drainCp": [
+          8,
+          12
+        ]
+      }
+    },
+    "Troquantary": {
+      "Heaven's Smile": {
+        "statChange": {
+          "stat": "DEF",
+          "dir": "down",
+          "amount": 15,
+          "turns": 2
+        }
+      }
+    },
+    "Arpagon": {},
+    "笑": {
+      "Chronic Migraine": {
+        "status": "Blinded"
+      },
+      "Partie Quarree": {
+        "drainCp": [
+          10,
+          10
+        ]
+      }
+    },
+    "Dedan": {
+      "Hour Hand": {
+        "status": "Asleep"
+      },
+      "Sweep Hand": {
+        "status": "Furious"
+      },
+      "Half Past": {
+        "scripted": true
+      },
+      "Summon": {
+        "scripted": true
+      }
+    },
+    "Upside-down Spectre": {
+      "Heavy Silence": {
+        "status": "Muted"
+      }
+    },
+    "Gilles de Rais": {},
+    "Massu": {
+      "Heavy Silence": {
+        "status": "Muted"
+      },
+      "Partie Quarree": {
+        "drainCp": [
+          10,
+          14
+        ]
+      }
+    },
+    "Speckter-mite Swarm": {
+      "Hesitant Inquiry": {
+        "hits": 3
+      }
+    },
+    "Fission Specter": {
+      "Shortened Fuse": {
+        "selfDamage": 20
+      },
+      "Extended Fuse": {
+        "healAlly": {
+          "amount": 25
+        }
+      },
+      "Self-Destruct": {
+        "scripted": true
+      }
+    },
+    "Whale": {
+      "Murmur of the Flies": {
+        "status": "Muted"
+      }
+    },
+    "Valzong-burnt": {
+      "Murmur of the Flies": {
+        "status": "Muted"
+      }
+    },
+    "Fortuna": {
+      "Flee": {
+        "scripted": true
+      }
+    },
+    "Porter Spectre": {
+      "Split": {
+        "scripted": true
+      }
+    },
+    "Junior Spectre": {
+      "Self-Destruct": {
+        "scripted": true
+      }
+    },
+    "Japhet": {
+      "Alto": {
+        "status": "Muted"
+      },
+      "Head-Voice": {
+        "formOnly": [
+          "Firebird"
+        ]
+      },
+      "Tenor": {
+        "status": "Poisoned",
+        "formOnly": [
+          "Firebird"
+        ]
+      },
+      "Summon": {
+        "scripted": true
+      }
+    },
+    "Blind Spectre": {},
+    "Mute Spectre": {
+      "Heavy Silence": {
+        "status": "Muted"
+      }
+    },
+    "Cavalry-burnt": {
+      "Inhuman Decadence": {
+        "statuses": [
+          "Furious",
+          "Poisoned"
+        ]
+      }
+    },
+    "Crown of the Dead": {
+      "Aspirating Suzerain": {
+        "healAlly": {
+          "amount": 55,
+          "cureStatus": "Poisoned"
+        }
+      }
+    },
+    "Elsen?": {
+      "Aspirating Suzerain": {
+        "healAlly": {
+          "amount": 55
+        }
+      }
+    },
+    "Von Gacy": {
+      "Swan Dive": {
+        "status": "Palsied"
+      }
+    },
+    "Critic-burnt": {
+      "HELP": {
+        "scripted": true
+      }
+    },
+    "Pastel-burnt": {
+      "Inhuman Decadence": {
+        "statuses": [
+          "Furious",
+          "Poisoned"
+        ]
+      }
+    },
+    "Enoch": {
+      "Double Attack": {
+        "hits": 2
+      },
+      "Dramatic Crescendo": {
+        "drainCp": [
+          15,
+          15
+        ]
+      },
+      "Dramatic Irony": {
+        "status": "Furious"
+      },
+      "Law of Causation": {
+        "status": "Poisoned"
+      },
+      "Trigger Element": {
+        "setElementRandom": true
+      },
+      "Climax": {
+        "scripted": true
+      }
+    },
+    "Bear": {
+      "Magical Amnesia": {
+        "status": "Blinded"
+      }
+    },
+    "Abstract Spectre": {
+      "Immediate Forfeiture": {
+        "status": "Madness"
+      }
+    },
+    "Ballman": {},
+    "Infernal Spectre": {
+      "Love Game": {
+        "status": "Furious"
+      }
+    },
+    "Obese Spectre": {
+      "Dance of the Nails": {
+        "status": "Asleep"
+      }
+    },
+    "Delta (royal)": {},
+    "Sigma (royal)": {
+      "Major Chord": {
+        "allyStatChange": {
+          "stat": "ATK",
+          "dir": "up",
+          "amount": 25,
+          "turns": 3
+        }
+      },
+      "Minor Chord": {
+        "allyStatChange": {
+          "stat": "DEF",
+          "dir": "up",
+          "amount": 20,
+          "turns": 3
+        }
+      }
+    },
+    "Ipsilon (royal)": {
+      "Treble Clef": {
+        "healAlly": {
+          "amount": 90
+        }
+      },
+      "Alto Clef": {}
+    },
+    "The Queen": {
+      "Castling King": {
+        "status": "Furious"
+      },
+      "Castling Queen": {
+        "status": "Poisoned"
+      },
+      "Scholar's Mate": {
+        "status": "Asleep"
+      },
+      "White Fianchetto": {
+        "status": "Blinded"
+      },
+      "Fool's Mate": {
+        "drainCp": [
+          8,
+          8
+        ]
+      }
+    },
+    "The Judge": {
+      "Aneurysm Rupture": {
+        "availableBelowHpPct": 30
+      },
+      "Unknown Sclerosis": {
+        "status": "Muted"
+      },
+      "Atypical Sclerosis": {
+        "status": "Blinded"
+      },
+      "Purulent Sclerosis": {
+        "status": "Poisoned"
+      },
+      "Staggering Sclerosis": {
+        "status": "Palsied"
+      }
+    },
+    "Secretary (Zone 1)": {
+      "Logical Value": {
+        "lifesteal": true,
+        "statuses": [
+          "Furious",
+          "Muted",
+          "Poisoned"
+        ]
+      },
+      "Natural Logarithm": {
+        "randomElement": true
+      }
+    },
+    "Secretary (Zone 2)": {
+      "Oblique Asymptote": {
+        "lifesteal": true,
+        "status": "Poisoned"
+      }
+    },
+    "Secretary (Zone 3)": {
+      "Division by Zero": {
+        "statuses": [
+          "Poisoned",
+          "Asleep"
+        ]
+      }
+    },
+    "Source": {
+      "Flourish": {
+        "scripted": true
+      },
+      "Return to Nature": {
+        "status": "Thorns"
+      },
+      "Famine": {
+        "status": "Famine"
+      },
+      "Verdant Bonds": {
+        "scripted": true
+      }
+    },
+    "Maldicion": {
+      "Entropic Piety": {
+        "selfRandomElement": true
+      },
+      "Unstable Purity": {
+        "status": "Impure"
+      },
+      "Clamor Claws": {
+        "attackElementOwnWeakness": true
+      }
+    },
+    "Psalmanazar & Herodotus": {
+      "Fib": {
+        "plusCurrentHpPct": 7
+      },
+      "Deceptive Inquiry": {
+        "plusCurrentHpPct": 15
+      },
+      "Subterfuge": {
+        "status": "Defamed"
+      },
+      "Vilify": {
+        "status": "Vilified"
+      },
+      "Facade": {
+        "summon": {
+          "name": "Gnosticus",
+          "count": 3,
+          "realCount": 1
+        }
+      },
+      "Red Herring": {
+        "plusCurrentHpPct": 7
+      }
+    },
+    "Psalmanazar": {
+      "Fib": {
+        "plusCurrentHpPct": 7
+      },
+      "Deceptive Inquiry": {
+        "plusCurrentHpPct": 15
+      },
+      "Subterfuge": {
+        "status": "Defamed"
+      }
+    },
+    "Herodotus": {
+      "Vilify": {
+        "status": "Vilified"
+      },
+      "Facade": {
+        "summon": {
+          "name": "Gnosticus",
+          "count": 3,
+          "realCount": 1
+        }
+      }
+    },
+    "Gnosticus": {
+      "Red Herring": {
+        "plusCurrentHpPct": 7
+      }
+    },
+    "Justus": {
+      "Requisite Bracket": {
+        "status": "Blinded"
+      },
+      "Photographic Blur": {
+        "ignoresDef": true
+      },
+      "Irrevocable Drama": {
+        "scripted": true
+      }
+    },
+    "Sugar": {
+      "Quatre-Quarts": {
+        "status": "Madness"
+      },
+      "Caramel Dur": {
+        "status": "Palsied"
+      },
+      "Mille-Feuilles": {
+        "status": "Furious",
+        "statChange": {
+          "stat": "ATK",
+          "dir": "down",
+          "amount": 25,
+          "turns": 3
+        }
+      },
+      "Dame Blanche": {
+        "status": "Madness"
+      },
+      "Parfait au Chocolat": {}
+    },
+    "Dummy": {
+      "Sick Mask": {
+        "healAlly": {
+          "amount": 130
+        }
+      },
+      "Empathetic Mask": {
+        "allyStatChange": {
+          "stat": "DEF",
+          "dir": "up",
+          "amount": 20,
+          "turns": 3
+        }
+      },
+      "Blind Mask": {
+        "allyStatus": "Hasty"
+      }
+    },
+    "Carnival": {
+      "Flourish": {
+        "selfHealPctMax": 10
+      },
+      "Swan Dive": {
+        "status": "Palsied"
+      },
+      "Clamor Claws": {
+        "attackElementOwnWeakness": true
+      },
+      "Unstable Purity": {
+        "status": "Impure"
+      },
+      "Red Herring": {
+        "plusCurrentHpPct": 7
+      },
+      "Hoax": {
+        "ignoresDef": true
+      },
+      "Requisite Bracket": {
+        "status": "Blinded"
+      },
+      "Ultimate Homerun": {
+        "status": "Madness"
+      }
+    },
+    "Cob": {
+      "Watch with Great Interest": {
+        "scripted": true
+      },
+      "Grant a Boon": {
+        "scripted": true
+      },
+      "Ionosphere": {
+        "scripted": true
+      },
+      "Rearrangement of Solid Objects": {
+        "plusCurrentHpPct": 40
+      },
+      "Conjugate Auroras": {
+        "selfHeal": 1160
+      },
+      "Advent of the Corrupted Era": {
+        "scripted": true
+      }
+    },
+    "The Batter": {
+      "Furious Homerun": {
+        "forceElement": "Sugar"
+      },
+      "Special Homerun": {
+        "forceElement": "Sugar"
+      },
+      "Ultimate Homerun": {
+        "forceElement": "Sugar",
+        "scripted": true
+      },
+      "Elemental Run": {
+        "attackElementBestVsTarget": true
+      },
+      "Save Second Base": {
+        "healAlly": {
+          "amount": 150
+        }
+      },
+      "Wide Angle": {}
+    },
+    "Alpha (Add-On)": {
+      "Open Bracket": {
+        "status": "Poisoned"
+      },
+      "Closed Bracket": {
+        "status": "Blinded",
+        "statChange": {
+          "stat": "ATK",
+          "dir": "down",
+          "amount": 25,
+          "turns": 2
+        }
+      },
+      "Broken Bracket": {
+        "status": "Muted"
+      },
+      "Impossible Bracket": {
+        "status": "Palsied",
+        "oncePerFight": true
+      }
+    },
+    "Omega (Add-On)": {
+      "Optimized Blur": {
+        "statChange": {
+          "stat": "AGI",
+          "dir": "down",
+          "amount": 15,
+          "turns": 2
+        }
+      },
+      "Photographic Blur": {
+        "status": "Blinded"
+      },
+      "Gaussian Blur": {
+        "statChange": {
+          "stat": "DEF",
+          "dir": "down",
+          "amount": 20,
+          "turns": 2
+        }
+      },
+      "Focus": {
+        "allyCureAll": true,
+        "allyStripDown": true
+      }
+    },
+    "Epsilon (Add-On)": {
+      "Comic Drama": {
+        "allyStatChange": {
+          "stat": "ATK",
+          "dir": "up",
+          "amount": 15,
+          "turns": 2
+        }
+      },
+      "Baroque Drama": {
+        "allyStatChange": {
+          "stat": "DEF",
+          "dir": "up",
+          "amount": 15,
+          "turns": 2
+        }
+      }
+    },
+    "BAD BATTER": {
+      "Sanctify": {
+        "forceElement": "Sugar"
+      },
+      "Silence": {
+        "status": "Muted"
+      },
+      "Ultimate Homerun": {
+        "forceElement": "Sugar"
+      },
+      "Purification": {
+        "scripted": true
+      }
+    }
+  },
+  "triggers": {
+    "Fat Spectre": [
+      {
+        "id": "summon-t1",
+        "when": {
+          "turn": 1
+        },
+        "action": {
+          "summon": {
+            "name": "Ah, ah!",
+            "count": 1
+          }
+        },
+        "label": "Summon Ah, ah!"
+      },
+      {
+        "id": "summon-t2",
+        "when": {
+          "turn": 2
+        },
+        "action": {
+          "summon": {
+            "name": "Ah, ah!",
+            "count": 1
+          }
+        },
+        "label": "Summon Ah, ah!"
+      },
+      {
+        "id": "summon-t4",
+        "when": {
+          "turn": 4
+        },
+        "action": {
+          "summon": {
+            "name": "Ah, ah!",
+            "count": 1
+          }
+        },
+        "label": "Summon Ah, ah!"
+      }
+    ],
+    "Rupture-burnt": [
+      {
+        "id": "clock-out",
+        "when": {
+          "hpPctLte": 30,
+          "orTurn": 4
+        },
+        "action": {
+          "blast": {
+            "damage": 22
+          },
+          "die": true
+        },
+        "label": "Clock Out — ~22 Meat to all, then dies"
+      }
+    ],
+    "Dedan": [
+      {
+        "id": "summon-55",
+        "when": {
+          "hpPctLte": 55
+        },
+        "action": {
+          "summon": {
+            "name": "笑",
+            "count": 2
+          }
+        },
+        "label": "Summon 2 × 笑"
+      },
+      {
+        "id": "summon-45",
+        "when": {
+          "hpPctLte": 45
+        },
+        "action": {
+          "summon": {
+            "name": "笑",
+            "count": 2
+          }
+        },
+        "label": "Summon 2 × 笑"
+      },
+      {
+        "id": "half-past",
+        "when": {
+          "hpPctLte": 40
+        },
+        "action": {
+          "selfStatus": {
+            "status": "Hasty",
+            "permanent": true
+          }
+        },
+        "label": "Half Past — Hasty until death, no cure check"
+      },
+      {
+        "id": "summon-15",
+        "when": {
+          "hpPctLte": 15
+        },
+        "action": {
+          "summon": {
+            "name": "笑",
+            "count": 3
+          }
+        },
+        "label": "Summon 3 × 笑"
+      }
+    ],
+    "Fission Specter": [
+      {
+        "id": "self-destruct",
+        "when": {
+          "hpPctLte": 25,
+          "orTurn": 3
+        },
+        "action": {
+          "blast": {
+            "damage": 30
+          },
+          "die": true
+        },
+        "label": "Self-Destruct — ~30 Smoke to all, then dies"
+      }
+    ],
+    "Fortuna": [
+      {
+        "id": "flee",
+        "when": {
+          "turn": 2
+        },
+        "action": {
+          "flee": true
+        },
+        "label": "Flees — the window closes"
+      }
+    ],
+    "Porter Spectre": [
+      {
+        "id": "split",
+        "when": {
+          "turn": 1
+        },
+        "action": {
+          "summon": {
+            "name": "Junior Spectre",
+            "count": 7
+          },
+          "forfeitDrop": true,
+          "die": true
+        },
+        "label": "Split — becomes 7 Junior Spectres, drop forfeited"
+      }
+    ],
+    "Junior Spectre": [
+      {
+        "id": "self-destruct",
+        "when": {
+          "turn": 2
+        },
+        "action": {
+          "blast": {
+            "damage": 18
+          },
+          "die": true
+        },
+        "label": "Self-Destruct — ~18 Meat to all, then dies"
+      }
+    ],
+    "Japhet": [
+      {
+        "id": "form-master",
+        "when": {
+          "hpPctLte": 55
+        },
+        "action": {
+          "setForm": {
+            "form": "Master",
+            "gauge_s": 2.6
+          },
+          "summon": {
+            "name": "Upside-down Spectre",
+            "count": 2
+          }
+        },
+        "label": "Form 2: Master — gauge quickens, 2 Upside-down Spectres arrive"
+      },
+      {
+        "id": "form-firebird",
+        "when": {
+          "hpPctLte": 20
+        },
+        "action": {
+          "setForm": {
+            "form": "Firebird",
+            "gauge_s": 2.2
+          },
+          "summon": {
+            "name": "Upside-down Spectre",
+            "count": 2
+          }
+        },
+        "label": "Form 3: Firebird — gauge quickens again, 2 more Spectres"
+      }
+    ],
+    "Critic-burnt": [
+      {
+        "id": "help-66",
+        "when": {
+          "hpPctLte": 66
+        },
+        "action": {
+          "statChanges": [
+            {
+              "stat": "ATK",
+              "dir": "up",
+              "amount": 20,
+              "turns": 3
+            },
+            {
+              "stat": "DEF",
+              "dir": "up",
+              "amount": 15,
+              "turns": 3
+            },
+            {
+              "stat": "AGI",
+              "dir": "up",
+              "amount": 15,
+              "turns": 3
+            }
+          ]
+        },
+        "label": "HELP — it screams and steels itself (story beat)"
+      },
+      {
+        "id": "help-33",
+        "when": {
+          "hpPctLte": 33
+        },
+        "action": {
+          "statChanges": [
+            {
+              "stat": "ATK",
+              "dir": "up",
+              "amount": 20,
+              "turns": 3
+            },
+            {
+              "stat": "DEF",
+              "dir": "up",
+              "amount": 15,
+              "turns": 3
+            },
+            {
+              "stat": "AGI",
+              "dir": "up",
+              "amount": 15,
+              "turns": 3
+            }
+          ]
+        },
+        "label": "HELP — again (story beat)"
+      }
+    ],
+    "Enoch": [
+      {
+        "id": "climax",
+        "when": {
+          "hpPctLte": 30
+        },
+        "telegraph": true,
+        "telegraphText": "Enoch draws himself up — the Climax is coming.",
+        "action": {
+          "castMove": "Climax"
+        },
+        "label": "Climax — all-party 1.8× Plastic, once"
+      }
+    ],
+    "The Judge": [
+      {
+        "id": "rupture-unlocked",
+        "when": {
+          "hpPctLte": 30
+        },
+        "action": {
+          "announce": "The Judge's gauge begins to glow."
+        },
+        "label": "Below 30% — Aneurysm Rupture is in his hand"
+      }
+    ],
+    "Source": [
+      {
+        "id": "verdant-bonds",
+        "when": {
+          "hpPctLte": 65
+        },
+        "action": {
+          "selfHealBonus": 55
+        },
+        "label": "Verdant Bonds — his every-turn healing gains +55"
+      }
+    ],
+    "Psalmanazar": [
+      {
+        "id": "survivor",
+        "when": {
+          "allyDied": true
+        },
+        "action": {
+          "addMove": {
+            "n": "Double Attack",
+            "t": "one",
+            "mp": 0.9,
+            "acc": 93
+          },
+          "addMoveEffect": {
+            "move": "Double Attack",
+            "patch": {
+              "hits": 2
+            }
+          }
+        },
+        "label": "The survivor gains Double Attack"
+      }
+    ],
+    "Herodotus": [
+      {
+        "id": "survivor",
+        "when": {
+          "allyDied": true
+        },
+        "action": {
+          "addMove": {
+            "n": "Double Attack",
+            "t": "one",
+            "mp": 0.9,
+            "acc": 93
+          },
+          "addMoveEffect": {
+            "move": "Double Attack",
+            "patch": {
+              "hits": 2
+            }
+          }
+        },
+        "label": "The survivor gains Double Attack"
+      }
+    ],
+    "Justus": [
+      {
+        "id": "irrevocable",
+        "when": {
+          "everySeconds": 45
+        },
+        "action": {
+          "selfStatus": {
+            "status": "Hasty",
+            "permanent": true
+          }
+        },
+        "label": "Irrevocable Drama — self-Hasty, unstrippable"
+      }
+    ],
+    "Carnival": [
+      {
+        "id": "game-cancer",
+        "when": {
+          "hpPctLte": 75
+        },
+        "action": {
+          "announce": "The Game changes: CANCER. (Maldicion's rules — condition: elemental attacks.)"
+        },
+        "label": "Game 2: Cancer"
+      },
+      {
+        "id": "game-pisces",
+        "when": {
+          "hpPctLte": 50
+        },
+        "action": {
+          "announce": "The Game changes: PISCES. (The liars' rules — condition: being hit.)"
+        },
+        "label": "Game 3: Pisces"
+      },
+      {
+        "id": "game-aquarius",
+        "when": {
+          "hpPctLte": 25
+        },
+        "action": {
+          "announce": "The Game changes: AQUARIUS. (Justus's rules — condition: any competence.)"
+        },
+        "label": "Game 4: Aquarius"
+      }
+    ],
+    "Cob": [
+      {
+        "id": "watch",
+        "when": {
+          "everySeconds": 25
+        },
+        "action": {
+          "mark": true
+        },
+        "label": "Watch with Great Interest — mark a random member"
+      },
+      {
+        "id": "judgment",
+        "when": {
+          "watchAgeGte": 1
+        },
+        "action": {
+          "resolveWatch": true
+        },
+        "label": "Resolve the watch — Boon or Ionosphere, 50/50"
+      },
+      {
+        "id": "advent",
+        "when": {
+          "hpPctLte": 50
+        },
+        "action": {
+          "partyStatus": {
+            "status": "Corrupted"
+          }
+        },
+        "label": "Advent of the Corrupted Era — whole party rolls Corrupted (competences AND items locked)"
+      }
+    ],
+    "The Batter": [
+      {
+        "id": "ultimate-cycle",
+        "when": {
+          "everySeconds": 40
+        },
+        "telegraph": true,
+        "telegraphText": "The Batter winds up — the swing that ends things.",
+        "action": {
+          "castMove": "Ultimate Homerun"
+        },
+        "label": "Ultimate Homerun — 3.8× Sugar, telegraphed"
+      }
+    ]
+  },
+  "rotations": {
+    "Japhet": {
+      "Parasite": [
+        "Warble",
+        "Warble",
+        "Alto"
+      ],
+      "Master": [
+        "Warble",
+        "Alto",
+        "Warble",
+        "Soprano"
+      ],
+      "Firebird": [
+        "Soprano",
+        "Alto",
+        "Head-Voice",
+        "Warble",
+        "Tenor"
+      ]
+    }
+  },
+  "passives": {
+    "Source": {
+      "selfHealPerAction": 60
+    },
+    "The Batter": {
+      "purification": true,
+      "sacredMission": true
+    },
+    "BAD BATTER": {
+      "purification": true
+    },
+    "Alpha (Add-On)": {
+      "chainMastery": true
+    }
+  },
+  "unitTemplates": {
+    "Psalmanazar": {
+      "base": "Psalmanazar & Herodotus",
+      "hp": 4600,
+      "gauge_s": 3.0,
+      "moves": [
+        "Fib",
+        "Deceptive Inquiry",
+        "Subterfuge"
+      ],
+      "element": "Smoke"
+    },
+    "Herodotus": {
+      "base": "Psalmanazar & Herodotus",
+      "hp": 4600,
+      "gauge_s": 3.0,
+      "moves": [
+        "Vilify",
+        "Facade"
+      ],
+      "element": "Smoke"
+    },
+    "Gnosticus": {
+      "base": "Psalmanazar & Herodotus",
+      "hp": 280,
+      "gauge_s": 3.5,
+      "moves": [
+        "Red Herring"
+      ],
+      "element": "Smoke"
+    },
+    "Sugar": {
+      "base": "Sugar (+4 Dummies)",
+      "hp": 11000,
+      "gauge_s": 1.8,
+      "moves": [
+        "Quatre-Quarts",
+        "Caramel Dur",
+        "Mille-Feuilles",
+        "Dame Blanche",
+        "Parfait au Chocolat"
+      ],
+      "element": "Sugar"
+    },
+    "Dummy": {
+      "base": "Sugar (+4 Dummies)",
+      "hp": 60,
+      "gauge_s": 1.6,
+      "dmg_per_action": 29,
+      "moves": [
+        "Dummy: Attack",
+        "Dummy: Sick Mask",
+        "Dummy: Empathetic Mask",
+        "Dummy: Blind Mask"
+      ],
+      "renameMoves": {
+        "Dummy: Attack": "Attack",
+        "Dummy: Sick Mask": "Sick Mask",
+        "Dummy: Empathetic Mask": "Empathetic Mask",
+        "Dummy: Blind Mask": "Blind Mask"
+      },
+      "element": "Sugar"
+    },
+    "Pastel-burnt Body": {
+      "base": "Pastel-burnt",
+      "hp": 999999,
+      "gauge_s": 2.8,
+      "moves": [
+        "Inhuman Decadence"
+      ],
+      "note": "display ??? — unkillable by design; the GM ends it when the heads are down",
+      "element": "Meat"
+    },
+    "Pastel-burnt Head One": {
+      "base": "Pastel-burnt",
+      "hp": 130,
+      "gauge_s": 3.2,
+      "moves": [
+        "Head Attack"
+      ],
+      "element": "Meat"
+    },
+    "Pastel-burnt Head Two": {
+      "base": "Pastel-burnt",
+      "hp": 260,
+      "gauge_s": 3.2,
+      "moves": [
+        "Head Attack"
+      ],
+      "element": "Meat"
+    }
+  }
+}

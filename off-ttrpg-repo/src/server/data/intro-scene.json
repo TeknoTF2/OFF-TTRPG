@@ -1,0 +1,99 @@
+{
+  "_meta": {
+    "purpose": "The intro ('the Birthday') as scene data for the scene machine, transcribed from cutscenes/Intro cutscene/intro_script_v3.docx. This is AUTHORED CONTENT — the GM's, editable without code. Where this file and the script document disagree on content, the script wins; the machinery is defined by off-lobby-intro.md.",
+    "beatTypes": "text | choice | input | ceremony-stats | ceremony-competences | scene | branch-text",
+    "note": "Hover micro-lines display as private text on the hovering player's screen only. A sparkle pulses on everyone else's screen when any player confirms a choice."
+  },
+  "id": "intro",
+  "name": "The Birthday (Intro)",
+  "beats": [
+    { "type": "text", "text": "Hello." },
+    { "type": "text", "text": "I am the Puppeteer." },
+    { "type": "text", "text": "I am your creator." },
+    { "type": "text", "text": "Today is a birthday. Yours, and your siblings'.", "pulse": true },
+    { "type": "text", "text": "Not quite yet, however. You are still incomplete." },
+    { "type": "text", "text": "A soul, floating in the Nothingness." },
+    { "type": "text", "text": "I shall allow you to participate in the creation process. It is your body, after all." },
+    {
+      "type": "choice", "key": "class", "title": "What do you wish to be?",
+      "options": ["Purifier", "Alpha", "Omega", "Epsilon", "Bandit", "Burnt"],
+      "portraits": true,
+      "hoverLines": {
+        "Purifier": "My most perfect creation. It harms, it heals, and it never hesitates.",
+        "Alpha": "My first creation. All it knows is how to break others.",
+        "Epsilon": "The middle child. Magnificent against many. I gave it many tools, but it needs its siblings.",
+        "Omega": "The youngest. Its ego is unmatched — it forces its world upon others.",
+        "Bandit": "Quick fingers, quicker feet. I never know what it will bring back. Perhaps a lucky soul could.",
+        "Burnt": "I was trying for something a bit sweeter..."
+      }
+    },
+    { "type": "text", "text": "Here is a question you cannot yet understand. Answer it anyway." },
+    { "type": "choice", "key": "gender", "title": "What is your gender?", "options": ["Boy", "Girl", "Neither"] },
+    { "type": "text", "text": "It is now my turn." },
+    { "type": "text", "text": "First, I shall grant you “Stats.”" },
+    {
+      "type": "ceremony-stats",
+      "lines": [
+        { "stat": "hp", "line": "Health points, the measure of your very survival." },
+        { "stat": "atk", "line": "Attack, the measure of your physical prowess." },
+        { "stat": "cp", "line": "Competence Points, the measure of your magical capacity." },
+        { "stat": "esp", "line": "Esprit, the measure of your magical prowess." },
+        { "stat": "def", "line": "Defense, the measure of your durability." },
+        { "stat": "agi", "line": "Agility, the measure of your speed." },
+        { "stat": "res", "line": "Resistance, the measure of your immunity." },
+        { "stat": "lck", "line": "Luck, I always forget about this one. It only measures the unseen." }
+      ]
+    },
+    { "type": "text", "text": "Next, I shall grant you “Power.”" },
+    { "type": "ceremony-competences" },
+    { "type": "text", "text": "Yes… Almost finished." },
+    { "type": "input", "key": "name", "title": "Grant yourself a name." },
+    { "type": "text", "text": "Grant yourself a Desire." },
+    {
+      "type": "choice", "key": "desire", "title": "A want is a small, selfish thing. Too small for me to choose for you.",
+      "options": ["To be loved", "To be needed", "To know everything", "To be strong", "To be forgiven"]
+    },
+    { "type": "text", "text": "Grant yourself a Fear." },
+    {
+      "type": "choice", "key": "fear", "title": "All living things carry one. You will not be an exception.",
+      "options": ["The dark", "Hands", "Being replaced", "Falling", "Being finished"]
+    },
+    { "type": "text", "text": "Grant yourself a Virtue." },
+    {
+      "type": "choice", "key": "virtue", "title": "This one, you must insist upon. It is the reflection of your very existence.",
+      "options": ["Mercy", "Obedience", "Wonder", "Stubbornness", "Greed"]
+    },
+    {
+      "type": "branch-text", "on": "virtue", "equals": "Mercy",
+      "textIf": ["A noble idea.", "But not one that is sustainable in a world such as this.", "Your virtue is instead Justice."],
+      "override": { "key": "virtue", "value": "Justice" },
+      "textElse": ["Good.", "Very good."]
+    },
+    { "type": "text", "text": "You have granted yourself much." },
+    { "type": "text", "text": "Allow me the final piece." },
+    { "type": "text", "text": "Purpose." },
+    { "type": "text", "text": "The most important piece of all." },
+    { "type": "scene", "scene": "queen-silhouette", "caption": "A distant silhouette of the Queen's seat of power. No figure visible." },
+    { "type": "text", "text": "There is a tyrannical Queen." },
+    { "type": "text", "text": "Her people have never seen her." },
+    { "type": "text", "text": "She is building a perfect world." },
+    { "type": "text", "text": "Upon the corpses of her subjects." },
+    { "type": "scene", "scene": "workers-loop", "caption": "Workers, heads down, repetitive animation loops. Above them, at the edge of frame, something large stands motionless. It is never mentioned." },
+    { "type": "text", "text": "They are afraid of the world." },
+    { "type": "text", "text": "They are afraid of themselves." },
+    { "type": "text", "text": "They will be afraid of you." },
+    { "type": "text", "text": "Regardless. You must help them." },
+    { "type": "text", "text": "How is yours to decide." },
+    { "type": "text", "text": "But whatever decision you make." },
+    { "type": "text", "text": "It will not be possible so long as the Queen and her Guardians still control this world." },
+    { "type": "text", "text": "Find the First Guardian." },
+    { "type": "text", "text": "And slay him." },
+    {
+      "type": "choice", "key": "finalFeeling", "title": "Finally — how do you feel about my creation?",
+      "options": ["Hope", "Love", "Fear", "Regret"],
+      "reactions": { "Hope": "We will see.", "Love": "As do I.", "Fear": "Sensible.", "Regret": "Already?" }
+    },
+    { "type": "text", "text": "Happy birthday." },
+    { "type": "text", "text": "[Player name].", "perPlayerName": true }
+  ]
+}

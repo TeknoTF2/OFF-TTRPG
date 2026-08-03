@@ -1,0 +1,14 @@
+{
+  "name": "off-ttrpg-deploy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Railway deploy wrapper — the app lives in off-ttrpg-repo/src",
+  "scripts": {
+    "postinstall": "npm --prefix off-ttrpg-repo/src install",
+    "start": "npm --prefix off-ttrpg-repo/src start",
+    "test": "npm --prefix off-ttrpg-repo/src test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
