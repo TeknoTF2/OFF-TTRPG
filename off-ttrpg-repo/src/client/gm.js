@@ -1,7 +1,7 @@
 // GM console. Organizes and suggests, never restricts: every list reachable,
 // every value editable, and nothing here ever says "you can't."
 
-import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, artEl, syncJukebox } from '/common.js';
+import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, artEl, syncJukebox, volumeSlider, rescanAssets } from '/common.js';
 import { drawRoomKit } from '/roomkit.js';
 
 const $ = id => document.getElementById(id);
@@ -56,6 +56,7 @@ for (const t of TABS) {
   $('tabs').appendChild(b);
 }
 $('pausebtn').onclick = () => gm('pause');
+$('pausebtn').parentElement.insertBefore(volumeSlider(), $('pausebtn'));
 $('lt-create').onclick = () => setLeftMode('create');
 $('lt-party').onclick = () => setLeftMode('party');
 function setLeftMode(m) {
@@ -732,16 +733,37 @@ function paletteSelect(cur, onchange) {
   return s;
 }
 
+const MUSIC_ZONES = ['Zone 1', 'Zone 2', 'Zone 3', 'The Room', 'Purified'];
+
+function musicLibrary() {
+  // heading -> files, honoring the GM's re-shelving (folders are layout, never restriction)
+  const zones = (App.view && App.view.musicZones) || {};
+  const tree = App.art ? App.art.tree.music : {};
+  const byHeading = {};
+  for (const [folder, files] of Object.entries(tree)) {
+    for (const f of files) {
+      const heading = zones[f] || folder;
+      (byHeading[heading] = byHeading[heading] || []).push(f);
+    }
+  }
+  const order = [...MUSIC_ZONES.filter(z => byHeading[z]), ...Object.keys(byHeading).filter(h => !MUSIC_ZONES.includes(h)).sort()];
+  return { byHeading, order };
+}
+
+function trackName(f) { return f.split('/').pop().replace(/\.[a-z0-9]+$/i, ''); }
+
 function musicSelect(cur, onchange) {
   const s = el('select', {});
   s.appendChild(el('option', { value: '' }, '(none)'));
-  const music = App.art ? App.art.tree.music : {};
-  for (const [zone, files] of Object.entries(music)) {
-    for (const f of files) {
-      const o = el('option', { value: f }, `${zone} / ${f.split('/').pop()}`);
+  const { byHeading, order } = musicLibrary();
+  for (const heading of order) {
+    const og = el('optgroup', { label: heading });
+    for (const f of byHeading[heading]) {
+      const o = el('option', { value: f }, trackName(f));
       if (cur === f) o.selected = true;
-      s.appendChild(o);
+      og.appendChild(o);
     }
+    s.appendChild(og);
   }
   s.onchange = () => onchange(s.value);
   return s;
@@ -1243,35 +1265,62 @@ function renderShopGate(p, view) {
 // ---- Jukebox / Stingers
 function renderJukebox(p, view) {
   p.appendChild(el('div', { class: 'ph' }, 'JUKEBOX'));
-  p.appendChild(el('div', { class: 'ps' }, 'ONE LIBRARY, ORGANIZED BY ZONE FOLDER — HEADINGS, NEVER LOCKS. ASSIGNMENTS AUTOPLAY ON ENTRY/LAUNCH.'));
-  p.appendChild(el('div', { class: 'edsec' },
-    el('h4', {}, 'NOW PLAYING'),
-    el('div', { style: 'font-family:var(--disp);text-transform:uppercase;font-size:20px' }, view.jukebox.track ? `${view.jukebox.playing ? '▶' : '❚❚'} ${view.jukebox.track.split('/').pop()}` : 'silence'),
-    (() => {
-      const bar = el('div', { style: 'display:flex;gap:8px;margin-top:8px' });
-      const stop = el('button', { class: 'qbtn' }, 'STOP');
-      stop.onclick = () => gm('jukebox-stop');
-      const skip = el('button', { class: 'qbtn' }, 'SKIP → NEXT IN QUEUE');
-      skip.onclick = () => gm('jukebox-skip');
-      bar.append(stop, skip);
-      return bar;
-    })(),
-    el('div', { style: 'font-size:10px;color:#777;margin-top:6px' }, `queue: ${(view.jukebox.queue || []).map(f => f.split('/').pop()).join(' → ') || 'empty'}`)));
-  const music = App.art ? App.art.tree.music : {};
-  for (const [zone, files] of Object.entries(music)) {
-    p.appendChild(el('div', { class: 'dsec' }, zone.toUpperCase()));
-    for (const f of files) {
-      const row = el('div', { class: 'trackrow' });
-      row.appendChild(el('span', { class: 'tn2' }, f.split('/').pop()));
+  p.appendChild(el('div', { class: 'ps' }, 'ONE LIBRARY. FOLDERS ARE LAYOUT — RE-SHELVE ANY TRACK INTO A ZONE HEADING WITH ITS ZONE BUTTON. ASSIGNMENTS AUTOPLAY AND LOOP; A QUEUE PLAYS THROUGH, THEN THE LAST TRACK LOOPS.'));
+
+  // now playing + queue
+  const now = el('div', { class: 'edsec' }, el('h4', {}, 'NOW PLAYING'));
+  now.appendChild(el('div', { style: 'font-family:var(--disp);text-transform:uppercase;font-size:24px;margin-bottom:6px' },
+    view.jukebox.track ? `${view.jukebox.playing ? '▶ ' : '❚❚ '}${trackName(view.jukebox.track)}` : 'SILENCE'));
+  const bar = el('div', { style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap' });
+  const stop = el('button', { class: 'qbtn' }, 'STOP');
+  stop.onclick = () => gm('jukebox-stop');
+  const skip = el('button', { class: 'qbtn' }, 'SKIP → NEXT IN QUEUE');
+  skip.onclick = () => gm('jukebox-skip');
+  bar.append(stop, skip, volumeSlider());
+  const rescan = el('button', { class: 'qbtn' }, 'RESCAN ASSET FOLDERS');
+  rescan.onclick = async () => { await rescanAssets(); announce('Hot folders re-scanned — new tracks and art are in.'); renderPanels(); };
+  bar.appendChild(rescan);
+  now.appendChild(bar);
+  const q = view.jukebox.queue || [];
+  now.appendChild(el('h4', { style: 'margin-top:12px' }, `QUEUE${q.length ? ` — ${q.length}` : ''}`));
+  if (!q.length) now.appendChild(el('div', { style: 'font-size:13px;color:#777' }, 'empty — the current track loops'));
+  q.forEach((f, i) => {
+    const row = el('div', { class: 'trackrow' }, el('span', { class: 'tn2' }, `${i + 1}. ${trackName(f)}`));
+    const x = el('button', { class: 'qx' }, '×');
+    x.onclick = () => gm('jukebox-queue-remove', { index: i });
+    row.appendChild(x);
+    now.appendChild(row);
+  });
+  if (q.length) {
+    const clear = el('button', { class: 'qbtn', style: 'margin-top:6px' }, 'CLEAR QUEUE');
+    clear.onclick = () => gm('jukebox-queue-clear');
+    now.appendChild(clear);
+  }
+  p.appendChild(now);
+
+  // the library, shelved by zone headings
+  const { byHeading, order } = musicLibrary();
+  for (const heading of order) {
+    p.appendChild(el('div', { class: 'dsec' }, heading.toUpperCase()));
+    for (const f of byHeading[heading]) {
+      const row = el('div', { class: 'trackrow' + (view.jukebox.track === f ? '' : '') });
+      row.appendChild(el('span', { class: 'tn2', style: view.jukebox.track === f ? 'color:var(--amber)' : '' }, trackName(f)));
       const play = el('button', { class: 'qbtn' }, 'PLAY');
       play.onclick = () => gm('jukebox-play', { file: f });
-      const q = el('button', { class: 'qbtn' }, 'QUEUE');
-      q.onclick = () => gm('jukebox-queue', { queue: [...(view.jukebox.queue || []), f] });
-      row.append(play, q);
+      const queueB = el('button', { class: 'qbtn' }, 'QUEUE');
+      queueB.onclick = () => gm('jukebox-queue-add', { file: f });
+      const cur = (view.musicZones || {})[f] || null;
+      const zoneB = el('button', { class: 'qbtn' + (cur ? ' mod' : '') }, cur ? `ZONE: ${cur}` : 'SHELVE → ZONE');
+      zoneB.onclick = () => {
+        const cycle = [null, ...MUSIC_ZONES];
+        const next = cycle[(cycle.indexOf(cur) + 1) % cycle.length];
+        gm('music-zone', { file: f, zone: next });
+      };
+      row.append(play, queueB, zoneB);
       p.appendChild(row);
     }
   }
-  if (!Object.keys(music).length) p.appendChild(el('div', { class: 'ps' }, 'DROP TRACKS INTO assets/music/<zone>/ — THEY APPEAR HERE ON REFRESH.'));
+  if (!order.length) p.appendChild(el('div', { class: 'ps' }, 'DROP TRACKS INTO assets/music/<folder>/ — THEY APPEAR HERE ON RESCAN.'));
 }
 
 function renderStingers(p, view) {
@@ -1296,9 +1345,16 @@ function renderCutscene(p, view) {
   for (const id of view.scenes || ['intro']) {
     const c = el('div', { class: 'card' }, el('div', { class: 'cn' }, id === 'intro' ? 'The Birthday (Intro)' : id), el('div', { class: 'cs' }, id === 'intro' ? 'interactive · choice gates · the sparkle protocol' : 'authored scene'));
     c.onclick = () => gm('scene-start', { id });
+    const musicRow = el('div', { class: 'statrow', style: 'margin-top:8px' }, el('span', { class: 'sl' }, 'MUSIC'));
+    const sel = musicSelect((view.sceneMusic || {})[id] || null, v => gm('scene-music', { id, file: v || null }));
+    sel.onclick = ev => ev.stopPropagation();
+    musicRow.onclick = ev => ev.stopPropagation();
+    musicRow.appendChild(sel);
+    c.appendChild(musicRow);
     cards.appendChild(c);
   }
   p.appendChild(cards);
+  p.appendChild(el('div', { class: 'ps', style: 'margin-top:10px' }, 'A SCENE\'S TRACK STARTS LOOPING THE MOMENT THE SCENE STARTS — SAME GRAMMAR AS ENCOUNTER AND ROOM MUSIC.'));
   p.appendChild(el('div', { class: 'ps', style: 'margin-top:14px' }, 'AUTHOR NEW SCENES AS JSON IN src/server/data/ (SEE intro-scene.json FOR THE BEAT VOCABULARY).'));
 }
 

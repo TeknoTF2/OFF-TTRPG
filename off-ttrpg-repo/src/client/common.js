@@ -121,22 +121,74 @@ export function spriteFrameEl(spritePath, h = 84) {
 }
 
 // ---------- audio
-let musicEl = null, currentTrack = null;
+// Volume is per client, never shared: each seat sets its own and it persists
+// in this browser only.
+let musicEl = null, currentTrack = null, queueLen = 0;
+export function getVolume() {
+  const v = parseFloat(localStorage.getItem('off-vol'));
+  return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.7;
+}
+export function setVolume(v) {
+  localStorage.setItem('off-vol', String(Math.min(1, Math.max(0, v))));
+  if (musicEl) musicEl.volume = getVolume();
+}
+
+function ensureMusicEl() {
+  if (musicEl) return musicEl;
+  musicEl = new Audio();
+  musicEl.volume = getVolume();
+  musicEl.addEventListener('ended', () => {
+    // The GM's client is the jukebox's timekeeper: when a track ends with a
+    // queue waiting, it advances everyone. Players just receive the new track.
+    if (App.seat === 'GM' && queueLen > 0) gm('jukebox-skip');
+    else if (currentTrack) { musicEl.currentTime = 0; musicEl.play().catch(() => {}); }
+  });
+  return musicEl;
+}
+
 export function syncJukebox(jb) {
   if (!jb || !jb.playing || !jb.track) {
     if (musicEl) { musicEl.pause(); currentTrack = null; }
     return;
   }
+  queueLen = (jb.queue || []).length;
+  ensureMusicEl();
+  // 'ended' handles everything: the GM's client advances the queue when one is
+  // waiting; otherwise the track restarts — looping by default, playing through
+  // a queue when there is one.
+  musicEl.loop = false;
   if (jb.track === currentTrack) return;
   currentTrack = jb.track;
-  if (!musicEl) { musicEl = new Audio(); musicEl.loop = true; }
-  musicEl.src = `/assets/${jb.track}`;
+  musicEl.src = `/assets/${encodeURIComponent(jb.track).replace(/%2F/g, '/')}`;
+  musicEl.volume = getVolume();
   musicEl.play().catch(() => {});   // missing track plays silence — never blocks
 }
 
 export function playStinger(file) {
-  const a = new Audio(`/assets/${file}`);
+  const a = new Audio(`/assets/${encodeURIComponent(file).replace(/%2F/g, '/')}`);
+  a.volume = getVolume();
   a.play().catch(() => {});
+}
+
+// A small volume slider, mountable in any top bar.
+export function volumeSlider() {
+  const wrap = el('span', { style: 'display:inline-flex;align-items:center;gap:6px;padding:0 10px' },
+    el('span', { style: 'font-size:14px;color:#bbb' }, '♪'));
+  const input = el('input', {
+    type: 'range', min: '0', max: '100', value: String(Math.round(getVolume() * 100)),
+    style: 'width:90px;accent-color:var(--amber);cursor:pointer',
+    title: 'your music volume (only yours)',
+  });
+  input.oninput = () => setVolume(input.value / 100);
+  wrap.appendChild(input);
+  return wrap;
+}
+
+// Re-scan the hot folders without a page reload: new art and tracks appear,
+// name-matched, nothing manual.
+export async function rescanAssets() {
+  App.art = await (await fetch('/api/art')).json();
+  return App.art;
 }
 
 // ---------- effects (components of scenes)
