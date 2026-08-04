@@ -62,6 +62,33 @@ function campaign() {
   return c;
 }
 function emit(ev) { eventQueue.push(ev); }
+
+// Combat sounds resolve to whatever stinger file matches by name (hot folder:
+// missing files just stay silent). Multi-candidate sounds pick uniformly, and
+// the pick happens here so every client hears the same file.
+const FX_SOUNDS = {
+  strike: ['strike01', 'strike02', 'strike05'],
+  zap: ['attack2', 'bolt03'],
+  heal: ['revive3'],
+  item: ['item1'],
+};
+function fxStinger(sound) {
+  const cands = FX_SOUNDS[sound] || [];
+  const files = assetTree().stingers;
+  const hits = [];
+  for (const cand of cands) {
+    const f = files.find(f2 => path.basename(f2).toLowerCase().replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-9]/g, '').endsWith(cand));
+    if (f) hits.push(f);
+  }
+  return hits.length ? hits[Math.floor(Math.random() * hits.length)] : null;
+}
+function emitBattleFx(ev) {
+  emit(ev);
+  if (ev.kind === 'combat-fx' && ev.sound) {
+    const f = fxStinger(ev.sound);
+    if (f) emit({ kind: 'stinger', file: f });
+  }
+}
 function touch() { store.markDirty(); stateDirtyView = true; }
 
 function logCombat(entry) {
@@ -328,7 +355,9 @@ function launchEncounter(def) {
   startCombatLog(enc.name || 'encounter');
   // Only members actually at the table launch into the fight; the GM can send
   // an absent character in from the PLAYERS tab (they arrive gauge-empty).
-  battle = new Battle(data, c, enc, { emit, log: logCombat, present: [...seats.keys()].filter(s => s !== 'GM') });
+  // Nobody connected at all (GM prepping/testing solo) → the full un-benched party.
+  const present = [...seats.keys()].filter(s => s !== 'GM');
+  battle = new Battle(data, c, enc, { emit: emitBattleFx, log: logCombat, present: present.length ? present : null });
   c.mode = 'battle';
   if (enc.music) { c.jukebox.track = enc.music; c.jukebox.playing = true; }
   touch();
@@ -422,6 +451,8 @@ function outOfCombatItem(userSeat, itemName, targetSeat) {
   }
   if (used) {
     c.inventory[itemName]--;
+    const itemSting = fxStinger('item');
+    if (itemSting) emit({ kind: 'stinger', file: itemSting });
     emit({ kind: 'announce', text: `${c.party.find(m => m.id === userSeat)?.name || userSeat} uses ${itemName}.` });
     touch();
   }

@@ -676,7 +676,13 @@ export class Battle {
     }
   }
 
+  // One event per action drives every client's sound + animation.
+  combatFx(style, sound, actor, targets) {
+    this.emit({ kind: 'combat-fx', style, sound, actorId: actor.id, targets: targets.map(t => t.id) });
+  }
+
   resolveBasicAttack(user, target, { madness = false } = {}) {
+    this.combatFx('melee', 'strike', user, [target]);
     // A normal Attack: BaseValue 0, Atk% 100, Esp% 0, MovePower 1.0, Var 10%.
     const fx = user.kind === 'player' ? gearEffects(this.data, user) : null;
     const hits = fx?.hits || 1;
@@ -785,6 +791,18 @@ export class Battle {
     p.cp -= cost;   // the competence is spent whether or not it connects
     this.log({ ev: 'competence', who: p.id, name: compName, cp: cost, targets: targets.map(t => t.id) });
     this.announce(`${p.name} uses ${compName}!`);
+
+    // FX grammar: physical damage rushes in (strike), esp-weighted damage and
+    // hostile riders mark the target (zap), friendly work is a green visit (heal).
+    {
+      const friendly = targets.length && targets[0].kind === 'player';
+      const damaging = rider.kind === 'damage' || comp.movePower != null;
+      if (damaging && !friendly) {
+        const physical = (comp.atkPct || 0) >= (comp.espPct || 0);
+        this.combatFx(physical ? 'melee' : 'ranged', physical ? 'strike' : 'zap', p, targets);
+      } else if (friendly) this.combatFx('heal', 'heal', p, targets);
+      else this.combatFx('ranged', 'zap', p, targets);
+    }
 
     const pBase = { ...p, base: memberBase(this.data, p) };
 
@@ -907,6 +925,7 @@ export class Battle {
     if (item.effect.outOfCombatOnly) return { ok: false, refuse: true };
     const res = this.applyItemEffect(p, item, targetId, { taunt });
     if (!res.ok) return res;
+    this.combatFx('item', 'item', p, targetId && this.find(targetId) ? [this.find(targetId)] : [p]);
     // Light Fingers: whenever any party member uses an Object, 5% chance it is not consumed.
     const bandit = this.memberByClass('Bandit');
     const saved = bandit && !bandit.down && bandit.level >= 2 && this.rng() < 0.05;
@@ -1193,6 +1212,7 @@ export class Battle {
       if (!item) return { ok: false, refuse: true };
       const res = this.applyItemEffect(e, item, action.targetId, { byEnemy: e });
       if (!res.ok) return res;
+      this.combatFx('item', 'item', e, action.targetId && this.find(action.targetId) ? [this.find(action.targetId)] : [e]);
       this.pool[action.item]--;
       this.log({ ev: 'enemy-item', who: e.id, item: action.item, target: action.targetId });
       this.spendTurn(e);
@@ -1238,6 +1258,17 @@ export class Battle {
     if (fx.oncePerFight) e.usedMoves.push(move.n);
     this.announce(`${e.name} uses ${move.n}!`);
     this.log({ ev: 'enemy-move', who: e.id, move: move.n, targets: targets.map(t => t.id) });
+    {
+      // Same grammar as the party: friendly/heal work glows green, rider-bearing
+      // moves mark their target, plain damage charges in.
+      const friendly = targets.length && targets[0].kind === 'enemy';
+      const healish = !!(fx.selfHeal || fx.selfHealPctMax || fx.healAlly || fx.allyCureAll || fx.allyStatChange || fx.allyStatus || fx.allyStripDown);
+      const riderish = !!(fx.status || fx.statuses || fx.statChange || fx.drainCp || fx.forceElement || fx.randomElement || fx.setElementRandom
+        || fx.attackElementOwnWeakness || fx.attackElementBestVsTarget || fx.ignoresDef || fx.lifesteal || fx.summon);
+      if (friendly || healish) this.combatFx('heal', 'heal', e, targets);
+      else if (riderish || !(move.mp > 0)) this.combatFx('ranged', 'zap', e, targets);
+      else this.combatFx('melee', 'strike', e, targets);
+    }
 
     // Attack element resolution.
     let attackEl = currentElement(e);

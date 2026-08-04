@@ -1,7 +1,7 @@
 // GM console. Organizes and suggests, never restricts: every list reachable,
 // every value editable, and nothing here ever says "you can't."
 
-import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, artEl, syncJukebox, volumeSlider, rescanAssets } from '/common.js';
+import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx } from '/common.js';
 import { drawRoomKit } from '/roomkit.js';
 
 const $ = id => document.getElementById(id);
@@ -22,7 +22,9 @@ let lastStateAt = 0;
 await loadStaticData();
 connect('GM');
 
+let fxLockUntil = 0;
 App.onEvent = e => {
+  if (e.kind === 'combat-fx') { fxLockUntil = performance.now() + playCombatFx(e, '#fieldOverlay'); return; }
   if (e.kind === 'announce') announce(e.text);
   if (e.kind === 'gm-note') announce(e.text);
   if (e.kind === 'keypad-attempt') announce(e.text);
@@ -305,6 +307,8 @@ function renderField(view) {
   const overlay = $('fieldOverlay');
   const canvas = $('roomcanvas');
   const inBattle = view.mode === 'battle' && view.battle;
+  // Hold rebuilds while a combat animation is mid-flight.
+  if (inBattle && performance.now() < fxLockUntil && overlay.children.length) return;
   overlay.innerHTML = '';
   if (inBattle) {
     canvas.style.display = 'none';

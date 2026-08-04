@@ -208,6 +208,80 @@ export async function rescanAssets() {
   return App.art;
 }
 
+// ---------- combat action FX
+// One 'combat-fx' event = one action, animated the same on every screen:
+//   melee — the attacker's sprite rushes the target, a flash, and returns
+//   ranged — a white crosshair marks the target
+//   heal — the healer visits the teammate with a green flash
+//   item — a soft flash on the target
+// Flashes and crosshairs live in fixed coordinates so re-renders can't kill
+// them; callers should hold field rebuilds for the returned duration.
+export function playCombatFx(e, scopeSel = '') {
+  const pick = id => (scopeSel && document.querySelector(`${scopeSel} [data-id="${id}"]`)) || document.querySelector(`[data-id="${id}"]`);
+  const actor = pick(e.actorId);
+  const targets = (e.targets || []).map(pick).filter(Boolean);
+  const t0 = targets[0];
+  if (e.style === 'ranged') {
+    for (const t of targets) crosshairOver(t);
+    return 520;
+  }
+  if (e.style === 'item') {
+    for (const t of targets) flashOver(t, 'rgba(255,255,255,.7)');
+    return 420;
+  }
+  if ((e.style === 'melee' || e.style === 'heal') && actor && t0 && actor !== t0) {
+    const a = actor.getBoundingClientRect(), b = t0.getBoundingClientRect();
+    const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
+    const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
+    const prevZ = actor.style.zIndex;
+    actor.style.transition = 'transform .22s ease-in';
+    actor.style.zIndex = 40;
+    actor.style.transform = `translate(${Math.round(dx * 0.8)}px, ${Math.round(dy * 0.8)}px)`;
+    setTimeout(() => {
+      for (const t of targets) flashOver(t, e.style === 'heal' ? 'rgba(90,225,120,.8)' : 'rgba(255,255,255,.85)');
+      actor.style.transition = 'transform .22s ease-out';
+      actor.style.transform = '';
+      setTimeout(() => { actor.style.transition = ''; actor.style.zIndex = prevZ; }, 260);
+    }, 230);
+    return 560;
+  }
+  // no travel possible (self-target, missing node): flash what we have
+  for (const t of (targets.length ? targets : actor ? [actor] : [])) {
+    flashOver(t, e.style === 'heal' ? 'rgba(90,225,120,.8)' : 'rgba(255,255,255,.8)');
+  }
+  return 420;
+}
+
+function flashOver(t, color) {
+  const r = t.getBoundingClientRect();
+  const f = el('div', {
+    style: `position:fixed;left:${r.left - 6}px;top:${r.top - 6}px;width:${r.width + 12}px;height:${r.height + 12}px;`
+      + `background:${color};border-radius:10px;pointer-events:none;z-index:60;opacity:.95;transition:opacity .3s`,
+  });
+  document.body.appendChild(f);
+  requestAnimationFrame(() => requestAnimationFrame(() => { f.style.opacity = '0'; }));
+  setTimeout(() => f.remove(), 380);
+}
+
+function crosshairOver(t) {
+  const r = t.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2, R = Math.max(20, Math.min(r.width, r.height) * 0.45);
+  const c = el('div', {
+    style: `position:fixed;left:${cx - R}px;top:${cy - R}px;width:${R * 2}px;height:${R * 2}px;pointer-events:none;z-index:60;`
+      + 'transition:opacity .25s;opacity:1',
+    html: `<svg width="${R * 2}" height="${R * 2}" viewBox="0 0 100 100">`
+      + '<circle cx="50" cy="50" r="34" fill="none" stroke="#fff" stroke-width="6"/>'
+      + '<line x1="50" y1="0" x2="50" y2="26" stroke="#fff" stroke-width="6"/>'
+      + '<line x1="50" y1="74" x2="50" y2="100" stroke="#fff" stroke-width="6"/>'
+      + '<line x1="0" y1="50" x2="26" y2="50" stroke="#fff" stroke-width="6"/>'
+      + '<line x1="74" y1="50" x2="100" y2="50" stroke="#fff" stroke-width="6"/>'
+      + '<circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
+  });
+  document.body.appendChild(c);
+  setTimeout(() => { c.style.opacity = '0'; }, 320);
+  setTimeout(() => c.remove(), 600);
+}
+
 // ---------- effects (components of scenes)
 export function runEffect(effect, duration = 1200) {
   const el = document.getElementById('fxOverlay');

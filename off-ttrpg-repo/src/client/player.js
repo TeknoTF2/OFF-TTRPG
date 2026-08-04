@@ -2,7 +2,7 @@
 // The UI filters to legality: dead targets grey out and refuse the click,
 // the slot picker shows only legal gear, Muted disables Competence.
 
-import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, artEl, syncJukebox, volumeSlider } from '/common.js';
+import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
 import { drawRoomKit } from '/roomkit.js';
 
 const seat = new URLSearchParams(location.search).get('seat') || localStorage.getItem('off-seat') || 'P1';
@@ -19,7 +19,9 @@ connect(seat);
 document.querySelector('.topbtns').prepend(volumeSlider());
 $('sceneVol').appendChild(volumeSlider());   // scenes cover the top bar; players keep a slider in-scene
 
+let fxLockUntil = 0;
 App.onEvent = e => {
+  if (e.kind === 'combat-fx') { fxLockUntil = performance.now() + playCombatFx(e, '#field'); return; }
   if (e.kind === 'announce') announce(e.text);
   if (e.kind === 'float') showFloat(e.targetId, e.text, e.style);
   if (e.kind === 'victory') announce(e.got && e.got.length ? `You got: ${e.got.join(', ')}` : 'Victory.');
@@ -135,6 +137,9 @@ function itemClicked(name, n) {
 function renderBattle(view) {
   const b = view.battle;
   const field = $('field');
+  // A combat animation is mid-flight: hold the field rebuild so the moving
+  // sprite isn't replaced under it. State catches up on the next push.
+  if (performance.now() < fxLockUntil && $('enemies').children.length) { renderStack(view); return; }
   if (b.backdrop) {
     field.classList.add('backdrop');
     field.style.backgroundImage = `url('/assets/backdrops/${b.backdrop}')`;
