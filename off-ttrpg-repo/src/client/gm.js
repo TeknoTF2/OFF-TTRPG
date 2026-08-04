@@ -170,7 +170,7 @@ function renderPartyCol(view) {
   col.classList.toggle('targeting', !!pendingAction);
   for (const m of view.party) {
     const pm = el('div', { class: 'pm' + (m.down ? ' dead' : ''), style: m.benched ? 'opacity:.4' : '', 'data-id': m.id });
-    pm.appendChild(el('div', { class: 'pmn' }, `${m.name} `, el('span', { style: 'font-size:9px;color:#777' }, `LV${m.level}`),
+    pm.appendChild(el('div', { class: 'pmn' }, `${m.name} `, el('span', { style: 'font-size:13px;color:#777' }, `LV${m.level}`),
       m.benched ? el('span', { class: 'icn', style: 'margin-left:4px;color:#888' }, 'SITTING OUT') : null));
     pm.appendChild(el('div', { class: 'pmnums' },
       el('span', { class: 'pmv' }, `${m.hp}`, el('em', {}, 'hp'), el('i', { style: `width:${Math.round(m.hp / m.maxHp * 100)}%` })),
@@ -563,7 +563,7 @@ function renderStrip(view) {
   const strip = $('strip');
   strip.innerHTML = '';
   if (!view.battle) {
-    strip.appendChild(el('div', { style: 'padding:10px 14px;font-size:10px;color:#666;letter-spacing:2px' },
+    strip.appendChild(el('div', { style: 'padding:12px 16px;font-size:14px;color:#666;letter-spacing:2px' },
       'NO ENCOUNTER RUNNING — BUILD ONE IN THE ENCOUNTER TAB'));
     return;
   }
@@ -1224,7 +1224,7 @@ function renderShopGate(p, view) {
     tog.onclick = () => gm('shop-stock', { name: s.name, on: !s.on });
     row.appendChild(tog);
     row.appendChild(el('span', { style: 'font-family:var(--disp);font-size:20px;flex:1' }, s.name));
-    row.appendChild(el('span', { style: 'font-size:9px;color:#888' }, s.desc || ''));
+    row.appendChild(el('span', { style: 'font-size:13px;color:#888' }, s.desc || ''));
     const price = el('input', { type: 'number', value: s.price, style: 'width:80px' });
     price.onchange = () => gm('shop-stock', { name: s.name, price: +price.value });
     row.appendChild(price);
