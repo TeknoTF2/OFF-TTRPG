@@ -101,7 +101,8 @@ export function artEl(art, name, h = 84) {
   return d;
 }
 
-// 3×4 RPG Maker convention: draw the down-facing idle frame (row 0, column 1).
+// 3×4 sheet, rows top-to-bottom: up, right, down, left. Draw the down-facing
+// idle frame (row 2, column 1).
 export function spriteFrameEl(spritePath, h = 84) {
   const canvas = document.createElement('canvas');
   const img = new Image();
@@ -113,7 +114,7 @@ export function spriteFrameEl(spritePath, h = 84) {
     canvas.style.imageRendering = 'pixelated';
     const x = canvas.getContext('2d');
     x.imageSmoothingEnabled = false;
-    x.drawImage(img, cw, 0, cw, ch, 0, 0, cw, ch);
+    x.drawImage(img, cw, ch * 2, cw, ch, 0, 0, cw, ch);
   };
   img.src = `/assets/${spritePath}`;
   canvas.style.height = `${h}px`;
