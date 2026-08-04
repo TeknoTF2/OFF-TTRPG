@@ -31,6 +31,7 @@ let data = loadAll();
 const store = new Store(data, VAR_DIR);
 const introScene = JSON.parse(readFileSync(path.join(here, 'data', 'intro-scene.json'), 'utf8'));
 const zone0Room = JSON.parse(readFileSync(path.join(here, 'data', 'zone0-room.json'), 'utf8'));
+const zone0Interiors = JSON.parse(readFileSync(path.join(here, 'data', 'zone0-interiors.json'), 'utf8'));
 
 const PORT = process.env.PORT || 8420;
 const seats = new Map();       // seat -> ws
@@ -48,7 +49,11 @@ function campaign() {
   c.sceneMusic = c.sceneMusic || {};
   // Built-in authored rooms ride along with every campaign (theirs to edit).
   c.rooms = c.rooms || {};
-  if (!c.rooms['Zone 0']) c.rooms['Zone 0'] = JSON.parse(JSON.stringify(zone0Room));
+  c.notes = c.notes || {};
+  for (const [name, room] of [['Zone 0', zone0Room], ...Object.entries(zone0Interiors)]) {
+    if (!c.rooms[name]) c.rooms[name] = JSON.parse(JSON.stringify(room));
+    if (!c.notes[`roomzone:${name}`]) c.notes[`roomzone:${name}`] = 'Zone 0';
+  }
   return c;
 }
 function emit(ev) { eventQueue.push(ev); }
@@ -335,7 +340,7 @@ function walkableAt(room, x, y, inVehicle) {
   if (!room) return true;
   if (x < 0 || y < 0 || x >= (room.w || 384) || y >= (room.h || 288)) return false;
   let ok = false;
-  const UNWALKABLE = { water: 1, void: 1 };
+  const UNWALKABLE = { water: 1, void: 1, inkwall0: 1 };
   for (const f of room.floors || []) {
     if (x >= f.x && x < f.x + f.w && y >= f.y && y < f.y + f.h) {
       let walk = !UNWALKABLE[f.p];
@@ -346,7 +351,7 @@ function walkableAt(room, x, y, inVehicle) {
   for (const s of room.structs || []) {
     if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) ok = false;
   }
-  const SOLID = { crate: 1, barrel: 1, cabinet: 1, bottles: 1, counter: 1, plant: 1, stack: 1, lamp: 1, sign: 1, bed: 1, shelf: 1, vat: 1, rock: 1 };
+  const SOLID = { crate: 1, barrel: 1, cabinet: 1, bottles: 1, counter: 1, plant: 1, stack: 1, lamp: 1, sign: 1, bed: 1, shelf: 1, vat: 1, rock: 1, greyblock: 1 };
   for (const p of room.props || []) {
     if (SOLID[p.t] && x >= p.x && x < p.x + (p.w || 24) && y >= p.y && y < p.y + 24) ok = false;
   }

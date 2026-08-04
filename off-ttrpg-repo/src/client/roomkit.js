@@ -66,6 +66,7 @@ export function drawRoomKit(x, room, pal, phase) {
     gold0deep(r) { px(r.x, r.y, r.w, r.h, Z0.deep); },
     path0(r) { pill(x, r, Z0.path); },
     ink0(r) { px(r.x, r.y, r.w, r.h, Z0.ink); },
+    inkwall0(r) { px(r.x, r.y, r.w, r.h, Z0.ink); },   // same look, unwalkable — room outlines
     line0(r) { px(r.x, r.y, r.w, r.h, '#3a3213'); },   // visual storey line — walkable; pair with block0
   };
   const STRUCT = {
@@ -133,6 +134,36 @@ export function drawRoomKit(x, room, pal, phase) {
     },
     greyblock(a, b) { px(a, b, 21, 21, '#3c3c3c'); px(a + 2, b + 2, 17, 17, Z0.grey); },
     doorwhite(a, b) { px(a, b, 20, 63, Z0.ink); px(a + 3, b + 3, 14, 57, Z0.white); },
+    doordark0(a, b) { px(a, b, 39, 66, '#8f8f85'); px(a + 5, b + 5, 29, 61, '#141410'); px(a + 12, b + 12, 15, 3, '#8f8f85'); },
+    mitrenw(a, b, w, h) { const L = h || 60; for (let i = 0; i < L; i += 2) px(a + i, b + i, 3, 3, Z0.ink); },   // frame joint ↘
+    mitrene(a, b, w, h) { const L = h || 60; for (let i = 0; i < L; i += 2) px(a + L - i, b + i, 3, 3, Z0.ink); }, // frame joint ↙
+    steps0(a, b) {
+      // The small stacked-steps glyph that marks Zone 0's stairways.
+      box(a, b + 18, 13, 13, Z0.top); box(a + 9, b + 9, 13, 13, Z0.top); box(a + 18, b, 13, 13, Z0.top);
+    },
+    pit0(a, b, w = 90, h = 60) {
+      px(a, b, w, h, '#33332c');
+      px(a + 4, b + 4, w - 8, h - 8, '#77776b');
+      px(a + 10, b + 10, w - 20, h - 20, '#55554b');
+    },
+    digit0(a, b, w, h, p) {
+      x.fillStyle = Z0.ink;
+      x.font = 'bold 26px monospace';
+      x.textBaseline = 'top';
+      x.fillText((p && p.text) || '?', a, b);
+    },
+    swan0(a, b) {
+      // The swan of Zone 0, in silhouette: body, wing, tail, S-neck, head, beak.
+      const D = Z0.deep;
+      pill(x, { x: a + 14, y: b + 62, w: 102, h: 46 }, D);          // body
+      pill(x, { x: a + 44, y: b + 50, w: 62, h: 34 }, D);           // wing
+      pill(x, { x: a + 96, y: b + 44, w: 30, h: 38 }, D);           // tail rise
+      px(a + 116, b + 40, 12, 22, D);                               // tail tip
+      pill(x, { x: a + 30, y: b + 30, w: 16, h: 48 }, D);           // neck lower
+      pill(x, { x: a + 26, y: b + 12, w: 16, h: 34 }, D);           // neck upper
+      pill(x, { x: a + 18, y: b + 4, w: 30, h: 20 }, D);            // head
+      px(a + 4, b + 8, 18, 9, D);                                   // beak
+    },
   };
   if (room.bg === 'squiggle0') {
     // The Nothingness, in pen: rows of hand-drawn zigzag on pale paper.
@@ -148,6 +179,8 @@ export function drawRoomKit(x, room, pal, phase) {
       }
       x.stroke();
     }
+  } else if (room.bg === 'black0') {
+    px(0, 0, room.w || 384, room.h || 288, '#000');   // interiors float in the dark
   } else {
     x.fillStyle = pal.base;
     x.fillRect(0, 0, room.w || 384, room.h || 288);
@@ -155,7 +188,7 @@ export function drawRoomKit(x, room, pal, phase) {
   for (const f of room.floors || []) (FLOORS[f.p] || FLOORS.plain)(f);
   for (const s of room.structs || []) (STRUCT[s.t] || STRUCT.wall)(s);
   for (const p of room.props || []) {
-    if (PROPS[p.t]) PROPS[p.t](p.x, p.y, p.w, p.h);
+    if (PROPS[p.t]) PROPS[p.t](p.x, p.y, p.w, p.h, p);
     else { // missing prop renders its footprint with a label — never blocks
       x.strokeStyle = '#000'; x.strokeRect(p.x, p.y, 24, 24);
       x.fillStyle = '#000'; x.font = '8px monospace'; x.fillText(p.t, p.x + 1, p.y + 12);

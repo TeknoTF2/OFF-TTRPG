@@ -556,8 +556,8 @@ function owImage(path) {
   return OW.imgs[path];
 }
 
-const UNWALKABLE = { water: 1, void: 1 };
-const SOLID = { crate: 1, barrel: 1, cabinet: 1, bottles: 1, counter: 1, plant: 1, stack: 1, lamp: 1, sign: 1, bed: 1, shelf: 1, vat: 1, rock: 1 };
+const UNWALKABLE = { water: 1, void: 1, inkwall0: 1 };
+const SOLID = { crate: 1, barrel: 1, cabinet: 1, bottles: 1, counter: 1, plant: 1, stack: 1, lamp: 1, sign: 1, bed: 1, shelf: 1, vat: 1, rock: 1, greyblock: 1 };
 
 function walkableAt(room, x, y) {
   if (!room) return true;

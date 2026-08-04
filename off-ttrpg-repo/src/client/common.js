@@ -63,6 +63,7 @@ export function shade(hex, f) {
 
 // Zone identity colors (combat mockup): flat zone-color field per zone.
 export const ZONES = {
+  'Zone 0': { field: '#a8891c', dk: '#6e5a10', tint: '#d8bf62', title: 'ZONE 0', sub: '—' },
   'Zone 1': { field: '#2e6d9e', dk: '#1d4b70', tint: '#7fa8c6', title: 'ZONE 1 — PENTEL', sub: 'smoke mines · alma damien shachihata' },
   'Zone 2': { field: '#c8871c', dk: '#8a5c10', tint: '#e0b56a', title: 'ZONE 2 — BISMARK', sub: 'the library · gomez galleries' },
   'Zone 3': { field: '#2f9e44', dk: '#1d6b2d', tint: '#7fc68f', title: 'ZONE 3 — VESPER', sub: 'the sugar works' },

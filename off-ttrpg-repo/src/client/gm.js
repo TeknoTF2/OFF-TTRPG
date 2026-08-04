@@ -93,7 +93,7 @@ function renderCreateCol(view) {
   col.innerHTML = '';
   col.appendChild(el('div', { class: 'dsec' }, 'BUILD — DRAG RECTANGLES ON THE FIELD'));
   const tools = el('div', { class: 'btool' });
-  const floorTools = ['brackets', 'carpet', 'plain', 'path', 'grass', 'metal', 'tracks', 'water', 'void', 'gold0', 'gold0top', 'gold0deep', 'path0', 'ink0', 'line0'];
+  const floorTools = ['brackets', 'carpet', 'plain', 'path', 'grass', 'metal', 'tracks', 'water', 'void', 'gold0', 'gold0top', 'gold0deep', 'path0', 'ink0', 'inkwall0', 'line0'];
   for (const f of floorTools) tools.appendChild(toolBtn(`F·${f}`, `floor:${f}`));
   for (const s of ['wall', 'building', 'fence', 'ledge', 'block0', 'hut0']) tools.appendChild(toolBtn(`S·${s}`, `struct:${s}`));
   tools.appendChild(toolBtn('Erase', 'erase'));
@@ -103,7 +103,7 @@ function renderCreateCol(view) {
   col.appendChild(el('div', { class: 'dsec' }, 'PROP STAMPS'));
   const props = el('div', { class: 'dgrid' });
   for (const p of ['crate', 'barrel', 'cabinet', 'bottles', 'counter', 'rug', 'door', 'window', 'plant', 'stack', 'lamp', 'sign', 'bed', 'shelf', 'vat', 'dock', 'rock',
-    'ladder', 'window0', 'stairs0', 'fist', 'greyblock', 'doorwhite']) {
+    'ladder', 'window0', 'stairs0', 'fist', 'greyblock', 'doorwhite', 'doordark0', 'steps0', 'swan0', 'mitrenw', 'mitrene']) {
     props.appendChild(stampBtn(p, { stampKind: 'prop', t: p }));
   }
   col.appendChild(props);
@@ -693,7 +693,7 @@ function renderPanels() {
 function renderLocation(p, view) {
   p.appendChild(el('div', { class: 'ph' }, 'LOCATION'));
   p.appendChild(el('div', { class: 'ps' }, 'STAGE A ROOM, SAVE IT, TELEPORT THE PARTY IN LATER — PLACEMENTS ARE SILENT, HIDDEN PIECES STAY HIDDEN. ONE CLICK = ONE POISON TICK.'));
-  const zones = ['Zone 1', 'Zone 2', 'Zone 3', 'The Room', 'Purified'];
+  const zones = ['Zone 0', 'Zone 1', 'Zone 2', 'Zone 3', 'The Room', 'Purified'];
   const roomNames = view.rooms || [];
   for (const z of zones) {
     p.appendChild(el('div', { class: 'dsec' }, z.toUpperCase()));
