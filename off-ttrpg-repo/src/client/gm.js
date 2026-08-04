@@ -169,10 +169,15 @@ function renderPartyCol(view) {
   const col = $('partycol');
   col.innerHTML = '';
   col.classList.toggle('targeting', !!pendingAction);
-  for (const m of view.party) {
-    const pm = el('div', { class: 'pm' + (m.down ? ' dead' : ''), style: m.benched ? 'opacity:.4' : '', 'data-id': m.id });
+  // Only present members: in battle that's the roster; otherwise connected, un-benched
+  // seats. Absent characters live in the PLAYERS tab, not on the table.
+  const present = view.party.filter(m => !m.benched &&
+    ((view.battle && (view.battle.partySlots || []).includes(m.id)) || (view.connected || []).includes(m.id)));
+  if (!present.length) col.appendChild(el('div', { style: 'padding:10px;font-size:13px;color:#666' }, 'NOBODY PRESENT — SEE PLAYERS TAB'));
+  for (const m of present) {
+    const pm = el('div', { class: 'pm' + (m.down ? ' dead' : ''), 'data-id': m.id });
     pm.appendChild(el('div', { class: 'pmn' }, `${m.name} `, el('span', { style: 'font-size:13px;color:#777' }, `LV${m.level}`),
-      m.benched ? el('span', { class: 'icn', style: 'margin-left:4px;color:#888' }, 'SITTING OUT') : null));
+      (view.connected || []).includes(m.id) ? null : el('span', { class: 'icn', style: 'margin-left:4px;color:#888' }, 'OFFLINE — PILOT')));
     pm.appendChild(el('div', { class: 'pmnums' },
       el('span', { class: 'pmv' }, `${m.hp}`, el('em', {}, 'hp'), el('i', { style: `width:${Math.round(m.hp / m.maxHp * 100)}%` })),
       el('span', { class: 'pmv cp' }, `${m.cp}`, el('em', {}, 'cp'), el('i', { style: `width:${Math.round(m.cp / m.maxCp * 100)}%` }))));
@@ -621,10 +626,31 @@ function renderStrip(view) {
 }
 
 function instanceEditor(e) {
-  const hp = prompt(`${e.name} — HP (${e.hp}/${e.maxHp}). New HP:`, e.hp);
-  if (hp != null) gm('edit-instance', { enemyId: e.id, patch: { hp: Math.max(0, +hp || 0) } });
-  const size = prompt(`${e.name} — on-screen size (×${e.size || 1}):`, e.size || 1);
-  if (size != null && +size > 0) gm('edit-instance', { enemyId: e.id, patch: { size: +size } });
+  const st = $('estack');
+  st.innerHTML = '';
+  st.style.left = '34%'; st.style.top = '24%';
+  st.appendChild(el('div', { class: 'eact prompt', style: 'cursor:default' },
+    `EDIT ${e.name.toUpperCase()}`, el('small', {}, 'this creature only — template untouched')));
+  const box = el('div', { style: 'background:var(--blk);padding:12px 16px;display:flex;flex-direction:column;gap:8px;transform:skewX(-4deg)' });
+  const mkRow = (lbl, node) => el('div', { style: 'display:flex;align-items:center;gap:10px;transform:skewX(4deg)' },
+    el('span', { style: 'font-size:13px;letter-spacing:1px;color:#999;width:70px' }, lbl), node);
+  const hpI = el('input', { type: 'number', min: '0', value: String(e.hp), style: 'width:110px;background:#111;border:1px solid #333;color:var(--wht);padding:4px 8px' });
+  box.appendChild(mkRow(`HP /${e.maxHp}`, hpI));
+  const szSel = el('select', { style: 'background:#111;border:1px solid #333;color:var(--wht);padding:4px 8px' });
+  for (const s of ENC_SIZES) szSel.appendChild(el('option', { value: String(s), selected: (e.size || 1) === s ? '' : undefined }, `×${s}`));
+  box.appendChild(mkRow('SIZE', szSel));
+  const bar = el('div', { style: 'display:flex;gap:8px;transform:skewX(4deg)' });
+  const apply = el('button', { class: 'qbtn gmctl' }, 'APPLY');
+  apply.onclick = () => {
+    gm('edit-instance', { enemyId: e.id, patch: { hp: Math.max(0, +hpI.value || 0), size: +szSel.value } });
+    st.classList.remove('open');
+  };
+  const cancel = el('button', { class: 'qbtn' }, 'CANCEL');
+  cancel.onclick = () => st.classList.remove('open');
+  bar.append(apply, cancel);
+  box.appendChild(bar);
+  st.appendChild(box);
+  st.classList.add('open');
 }
 
 // enemy gauge animation
@@ -965,61 +991,7 @@ function renderEncounter(p, view) {
       x.onclick = () => { enc.waves.splice(wi, 1); if (!enc.waves.length) enc.waves.push({ trigger: 'launch', queue: [] }); renderPanels(); };
       return x;
     })()));
-    for (const q of w.queue) {
-      const row = el('div', { class: 'qrow' });
-      row.appendChild(el('span', { class: 'qn' }, q.name || q.template));
-      const slotB = el('button', { class: 'qbtn' }, `SLOT ${q.slot ?? 'auto'}`);
-      slotB.onclick = () => { q.slot = q.slot == null ? 1 : (q.slot % 8) + 1 === 1 ? null : (q.slot % 8) + 1; if (q.slot === 0) q.slot = null; slotB.textContent = `SLOT ${q.slot ?? 'auto'}`; };
-      row.appendChild(slotB);
-      const SIZES = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
-      const sizeB = el('button', { class: 'qbtn' }, `SIZE ×${q.size ?? 1}`);
-      sizeB.onclick = () => {
-        const cur = SIZES.indexOf(q.size ?? 1);
-        q.size = SIZES[(cur + 1) % SIZES.length];
-        sizeB.textContent = `SIZE ×${q.size}`;
-      };
-      row.appendChild(sizeB);
-      const ctlB = el('button', { class: 'qbtn' + (q.control === 'gm' ? ' gmctl' : '') }, q.control.toUpperCase());
-      ctlB.onclick = () => { q.control = q.control === 'ai' ? 'gm' : 'ai'; renderPanels(); };
-      row.appendChild(ctlB);
-      const dropB = el('button', { class: 'qbtn' }, dropLabel(q.drop));
-      dropB.onclick = () => {
-        const t = prompt('Drop: type "item Name", "credits N", or "none"', dropLabel(q.drop));
-        if (t == null) return;
-        if (t.startsWith('item ')) q.drop = { type: 'item', name: t.slice(5) };
-        else if (t.startsWith('credits ')) q.drop = { type: 'credits', amount: +t.slice(8) || 0 };
-        else q.drop = { type: 'none' };
-        renderPanels();
-      };
-      row.appendChild(dropB);
-      const itemsB = el('button', { class: 'qbtn' + (q.items && Object.keys(q.items).length ? ' mod' : '') },
-        q.items && Object.keys(q.items).length ? `ITEMS: ${Object.entries(q.items).map(([n, c]) => n + '×' + c).join(', ')}` : 'ITEMS');
-      itemsB.onclick = () => {
-        const cur = q.items ? Object.entries(q.items).map(([n, c]) => `${n}:${c}`).join(', ') : '';
-        const t = prompt('This enemy carries (feeds the shared pool; Ursa Shot and Cutpurse steal from it) — "Item:count, Item:count":', cur);
-        if (t == null) return;
-        q.items = {};
-        for (const part of t.split(',')) {
-          const [n, c] = part.split(':').map(x => x.trim());
-          if (n) q.items[n] = +(c || 1);
-        }
-        if (!Object.keys(q.items).length) delete q.items;
-        renderPanels();
-      };
-      row.appendChild(itemsB);
-      const edit = el('button', { class: 'qbtn' + (q.overrides ? ' mod' : '') }, q.overrides ? 'MODIFIED' : 'EDIT THIS ONE');
-      edit.onclick = () => {
-        const cur = JSON.stringify(q.overrides || {});
-        const t = prompt('Per-instance overrides (JSON: hp, def, res, lck, gauge_s, dmg_per_action, element, cp) — template untouched:', cur);
-        if (t == null) return;
-        try { q.overrides = Object.keys(JSON.parse(t)).length ? JSON.parse(t) : undefined; renderPanels(); } catch { announce('Bad JSON.'); }
-      };
-      row.appendChild(edit);
-      const x = el('button', { class: 'qx' }, '×');
-      x.onclick = () => { w.queue = w.queue.filter(z => z !== q); renderPanels(); };
-      row.appendChild(x);
-      wave.appendChild(row);
-    }
+    for (const q of w.queue) wave.appendChild(encRow(q, w));
     right.appendChild(wave);
   });
   const addWave = el('button', { class: 'addwave' }, '+ ADD WAVE');
@@ -1078,6 +1050,138 @@ function dropLabel(d) {
   if (!d || d.type === 'none') return 'DROP: nothing';
   if (d.type === 'item') return `DROP: ${d.name}`;
   return `DROP: ${d.amount} credits`;
+}
+
+// One enemy in the encounter queue: a compact row of selects, expanding into
+// stat / drop / carried-item tables. Everything edits this instance only —
+// the template is never touched. Open state survives re-renders.
+const encOpen = new WeakSet();
+const ENC_SIZES = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+const ELEMENTS = ['Plastic', 'Metal', 'Smoke', 'Meat', 'Sugar'];
+
+function encRow(q, w) {
+  const tmpl = App.staticData.bestiary.find(b => b.name === q.template) || {};
+  const modified = !!((q.overrides && Object.keys(q.overrides).length) ||
+    (q.items && Object.keys(q.items).length) || (q.drop && q.drop.type !== 'none'));
+  const row = el('div', { class: 'qrow' });
+  row.appendChild(el('span', { class: 'qn' }, q.name || q.template));
+
+  const slotSel = el('select', { title: 'field position (auto = next open spot)' });
+  slotSel.appendChild(el('option', { value: '' }, 'SLOT auto'));
+  for (let s = 1; s <= 8; s++) slotSel.appendChild(el('option', { value: String(s), selected: q.slot === s ? '' : undefined }, `SLOT ${s}`));
+  slotSel.onchange = () => q.slot = slotSel.value ? +slotSel.value : null;
+  row.appendChild(slotSel);
+
+  const sizeSel = el('select', { title: 'on-screen size' });
+  for (const s of ENC_SIZES) sizeSel.appendChild(el('option', { value: String(s), selected: (q.size ?? 1) === s ? '' : undefined }, `SIZE ×${s}`));
+  sizeSel.onchange = () => q.size = +sizeSel.value;
+  row.appendChild(sizeSel);
+
+  const ctlB = el('button', { class: 'qbtn' + (q.control === 'gm' ? ' gmctl' : ''), title: 'AI acts on its own · GM waits for your clicks' }, q.control.toUpperCase());
+  ctlB.onclick = () => { q.control = q.control === 'ai' ? 'gm' : 'ai'; renderPanels(); };
+  row.appendChild(ctlB);
+
+  const open = encOpen.has(q);
+  const det = el('button', { class: 'qbtn' + (modified && !open ? ' mod' : '') },
+    (open ? '▾ ' : '▸ ') + (modified ? 'EDITED' : 'STATS · DROP · ITEMS'));
+  det.onclick = () => { open ? encOpen.delete(q) : encOpen.add(q); renderPanels(); };
+  row.appendChild(det);
+
+  const x = el('button', { class: 'qx' }, '×');
+  x.onclick = () => { w.queue = w.queue.filter(z => z !== q); renderPanels(); };
+  row.appendChild(x);
+
+  if (open) row.appendChild(encDetail(q, tmpl));
+  return row;
+}
+
+function encDetail(q, tmpl) {
+  const d = el('div', { class: 'qdetail' });
+
+  // -- stat table: blank field = template value (shown as the placeholder)
+  const stats = el('div', {});
+  stats.appendChild(el('div', { class: 'qdh' }, 'STATS — BLANK USES TEMPLATE'));
+  const FIELDS = [['hp', 'HP'], ['def', 'DEF'], ['res', 'RES'], ['lck', 'LUCK'], ['gauge_s', 'GAUGE (SEC)'], ['dmg_per_action', 'DMG / ACTION'], ['cp', 'CP']];
+  for (const [k, lbl] of FIELDS) {
+    const i = el('input', {
+      type: 'number', step: 'any',
+      placeholder: tmpl[k] != null ? String(tmpl[k]) : '—',
+      value: q.overrides && q.overrides[k] != null ? String(q.overrides[k]) : '',
+    });
+    i.onchange = () => {
+      q.overrides = q.overrides || {};
+      if (i.value === '') delete q.overrides[k]; else q.overrides[k] = +i.value;
+      if (!Object.keys(q.overrides).length) delete q.overrides;
+    };
+    stats.appendChild(el('div', { class: 'statrow' }, el('span', { class: 'sl' }, lbl), i));
+  }
+  const eSel = el('select', {});
+  eSel.appendChild(el('option', { value: '' }, `template (${tmpl.element || 'none'})`));
+  for (const elm of ELEMENTS) eSel.appendChild(el('option', { value: elm, selected: q.overrides && q.overrides.element === elm ? '' : undefined }, elm));
+  eSel.onchange = () => {
+    q.overrides = q.overrides || {};
+    if (!eSel.value) delete q.overrides.element; else q.overrides.element = eSel.value;
+    if (!Object.keys(q.overrides).length) delete q.overrides;
+  };
+  stats.appendChild(el('div', { class: 'statrow' }, el('span', { class: 'sl' }, 'ELEMENT'), eSel));
+  d.appendChild(stats);
+
+  // -- drop on death
+  const drop = el('div', {});
+  drop.appendChild(el('div', { class: 'qdh' }, 'DROP ON DEATH'));
+  const kindSel = el('select', {});
+  const kind = (q.drop && q.drop.type) || 'none';
+  for (const [v, lbl] of [['none', 'nothing'], ['item', 'an item'], ['credits', 'credits']])
+    kindSel.appendChild(el('option', { value: v, selected: kind === v ? '' : undefined }, lbl));
+  kindSel.onchange = () => {
+    q.drop = kindSel.value === 'item' ? { type: 'item', name: q.drop && q.drop.name || 'Luck Ticket' }
+      : kindSel.value === 'credits' ? { type: 'credits', amount: q.drop && q.drop.amount || 40 }
+      : { type: 'none' };
+    renderPanels();
+  };
+  drop.appendChild(el('div', { class: 'statrow' }, el('span', { class: 'sl' }, 'DROPS'), kindSel));
+  if (kind === 'item') {
+    const itSel = el('select', {});
+    for (const it of App.staticData.items.catalog)
+      itSel.appendChild(el('option', { value: it.name, selected: q.drop.name === it.name ? '' : undefined }, it.name));
+    itSel.onchange = () => q.drop.name = itSel.value;
+    drop.appendChild(el('div', { class: 'statrow' }, el('span', { class: 'sl' }, 'ITEM'), itSel));
+  }
+  if (kind === 'credits') {
+    const amt = el('input', { type: 'number', min: '0', value: String(q.drop.amount || 0) });
+    amt.onchange = () => q.drop.amount = Math.max(0, +amt.value || 0);
+    drop.appendChild(el('div', { class: 'statrow' }, el('span', { class: 'sl' }, 'AMOUNT'), amt));
+  }
+  d.appendChild(drop);
+
+  // -- carried items (feed the shared enemy pool)
+  const carry = el('div', {});
+  carry.appendChild(el('div', { class: 'qdh' }, 'CARRIES — FEEDS THE ENEMY POOL'));
+  for (const [name, cnt] of Object.entries(q.items || {})) {
+    const cr = el('div', { class: 'carryrow' });
+    const sel = el('select', {});
+    for (const it of App.staticData.items.catalog)
+      sel.appendChild(el('option', { value: it.name, selected: it.name === name ? '' : undefined }, it.name));
+    sel.onchange = () => { delete q.items[name]; q.items[sel.value] = (q.items[sel.value] || 0) + cnt; renderPanels(); };
+    const num = el('input', { type: 'number', min: '1', value: String(cnt) });
+    num.onchange = () => q.items[name] = Math.max(1, +num.value || 1);
+    const rm = el('button', { class: 'qx' }, '×');
+    rm.onclick = () => { delete q.items[name]; if (!Object.keys(q.items).length) delete q.items; renderPanels(); };
+    cr.append(sel, num, rm);
+    carry.appendChild(cr);
+  }
+  const add = el('button', { class: 'qbtn' }, '+ CARRY ITEM');
+  add.onclick = () => {
+    q.items = q.items || {};
+    const first = App.staticData.items.catalog.find(it => !(it.name in q.items));
+    if (first) q.items[first.name] = 1;
+    renderPanels();
+  };
+  carry.appendChild(add);
+  carry.appendChild(el('div', { style: 'font-size:11px;color:#666;margin-top:6px;max-width:230px' }, 'Carried objects enter the shared pool any creature can spend a turn on — Ursa Shot and Cutpurse steal from it.'));
+  d.appendChild(carry);
+
+  return d;
 }
 
 function labeledRow(host, lbl, node) { host.appendChild(el('div', { class: 'statrow' }, el('span', { class: 'sl' }, lbl), node)); }
@@ -1207,6 +1311,12 @@ function renderPlayers(p, view) {
     const benchB = el('button', { class: 'qbtn' + (m.benched ? ' gmctl' : '') }, m.benched ? 'REJOIN' : 'SIT OUT');
     benchB.onclick = () => gm('player-bench', { seat: m.id, benched: !m.benched });
     elRow.appendChild(benchB);
+    // Absent characters don't launch into fights — this sends one in mid-battle (you pilot them).
+    if (view.battle && !view.battle.over && !m.benched && !(view.battle.partySlots || []).includes(m.id)) {
+      const joinB = el('button', { class: 'qbtn mod' }, 'SEND INTO BATTLE');
+      joinB.onclick = () => gm('player-bench', { seat: m.id, benched: false });
+      elRow.appendChild(joinB);
+    }
     const renameB = el('button', { class: 'qbtn' }, 'RENAME');
     renameB.onclick = () => { const n = prompt('Name:', m.name); if (n) gm('player-edit', { seat: m.id, patch: { name: n } }); };
     elRow.appendChild(renameB);

@@ -142,6 +142,16 @@ body { display: grid; grid-template-rows: 64px 1fr; grid-template-columns: 280px
 .qbtn { background: transparent; border: 1px solid #333; color: #999; font-size: 13px; letter-spacing: 1px; padding: 4px 10px; cursor: pointer; }
 .qbtn:hover { color: var(--amber); border-color: var(--amber); }
 .qbtn.gmctl { background: var(--red); border-color: var(--red); color: var(--wht); }
+.qbtn.mod { border-color: var(--amber); color: var(--amber); }
+.qrow select { background: #111; border: 1px solid #333; color: var(--wht); font-size: 13px; padding: 3px 6px; }
+.qdetail { flex-basis: 100%; background: #0b0b0b; border-top: 1px dashed #2a2a2a; margin-top: 6px; padding: 12px 10px 6px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.qdetail .qdh { font-size: 12px; letter-spacing: 2px; color: var(--amber); margin-bottom: 8px; }
+.qdetail input, .qdetail select { background: #111; border: 1px solid #333; color: var(--wht); font-size: 14px; padding: 4px 8px; width: 130px; }
+.qdetail .statrow { margin-bottom: 5px; }
+.qdetail .statrow .sl { width: 110px; }
+.carryrow { display: flex; gap: 6px; align-items: center; margin-bottom: 5px; }
+.carryrow input { width: 56px; }
+.carryrow select { flex: 1; width: auto; min-width: 120px; }
 .qx { background: transparent; border: 0; color: #666; font-family: var(--disp); text-transform: uppercase; font-size: 25px; cursor: pointer; }
 .qx:hover { color: var(--red); }
 .wave { background: var(--panel); border: 1px solid #232323; padding: 12px 14px; margin-bottom: 12px; }

@@ -39,6 +39,17 @@ function announce(t) { $('announce').textContent = t; }
 
 function me() { return App.view ? App.view.party.find(m => m.id === seat) : null; }
 
+// Small-group play: a member renders only when actually present — you always see
+// yourself; others must be un-benched AND either connected or already fighting
+// in the current battle (a mid-battle disconnect keeps them on the field for
+// the GM to pilot). Absent members don't appear anywhere.
+function isPresent(m, view) {
+  if (m.id === seat) return true;
+  if (m.benched) return false;
+  if (view.battle && (view.battle.partySlots || []).includes(m.id)) return true;
+  return (view.connected || []).includes(m.id);
+}
+
 // ---------------------------------------------------------------- render root
 function render(view) {
   const z = applyZone(view.location.zone);
@@ -214,7 +225,7 @@ function targetList() {
     const item = armed.kind === 'item' || armed.kind === 'ooc-item'
       ? App.staticData.items.catalog.find(c => c.name === armed.item) : null;
     const wantsDown = (comp && comp.kind === 'revive') || (item && item.effect.type === 'revive');
-    return view.party.filter(pm => !pm.benched && (wantsDown ? pm.down : !pm.down)).map(pm => ({ kind: 'ally', id: pm.id }));
+    return view.party.filter(pm => isPresent(pm, view) && !pm.benched && (wantsDown ? pm.down : !pm.down)).map(pm => ({ kind: 'ally', id: pm.id }));
   }
   return [];
 }
@@ -359,7 +370,9 @@ function showFloat(targetId, text, style) {
 function renderStrip(view) {
   const strip = $('strip');
   strip.innerHTML = '';
-  for (const pm of view.party) {
+  const present = view.party.filter(pm => isPresent(pm, view));
+  strip.style.gridTemplateColumns = `repeat(${Math.max(1, present.length)}, 1fr)`;
+  for (const pm of present) {
     const targetable = !pm.benched && (allyTargetable(pm) && !pm.down || (armedMode() === 'ooc-ally'));
     const onCursorP = armed && targetable && (() => { const c = kselTarget(); return c && c.id === pm.id; })();
     const pc = el('div', { class: 'pc' + (pm.id === seat ? ' me' : '') + (pm.down ? ' deadpc' : '') + (targetable ? ' targetable' : '') + (onCursorP ? ' ksel' : ''), style: pm.benched ? 'opacity:.35' : '', 'data-id': pm.id });
@@ -662,6 +675,8 @@ function drawOverworld() {
   for (const [pid, sp] of Object.entries(view.positions || {})) {
     const pm = view.party.find(z => z.id === pid);
     if (!pm) continue;
+    // Only members actually present walk the map — no idle sprites for empty seats.
+    if (pid !== seat && (pm.benched || !(view.connected || []).includes(pid))) continue;
     const pp = pid === seat && OW.pos ? OW.pos : sp;   // our own sprite draws predicted, never the echo
     const px = Math.round(pp.x), py = Math.round(pp.y);
     const art = partyArt(pm.klass);

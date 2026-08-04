@@ -32,7 +32,8 @@ let seq = 0;
 const uid = p => `${p}${++seq}`;
 
 export class Battle {
-  constructor(data, campaign, encounter, { rng = Math.random, emit = () => {}, log = () => {} } = {}) {
+  constructor(data, campaign, encounter, { rng = Math.random, emit = () => {}, log = () => {}, present = null } = {}) {
+    this.present = present;           // seat ids actually at the table (null = everyone)
     this.data = data;
     this.campaign = campaign;         // party, inventory, credits live here (shared)
     this.encounter = encounter;       // the launched encounter definition (already deep-copied)
@@ -58,8 +59,11 @@ export class Battle {
 
   // ---------- helpers ----------
   party() { return this.campaign.party; }
-  livingParty() { return this.party().filter(p => !p.down && !p.benched); }
-  activeParty() { return this.party().filter(p => !p.benched); }
+  // partySlots is THE battle roster: members launch into it only when present
+  // (connected or GM-chosen), and the GM can bench out / send in mid-fight.
+  inRoster(p) { return this.partySlots.includes(p.id); }
+  livingParty() { return this.party().filter(p => this.inRoster(p) && !p.down); }
+  activeParty() { return this.party().filter(p => this.inRoster(p)); }
   livingEnemies() { return this.enemies.filter(e => !e.dead); }
   memberByClass(k) { return this.party().find(p => p.klass === k); }
   find(id) { return this.party().find(p => p.id === id) || this.enemies.find(e => e.id === id); }
@@ -69,7 +73,9 @@ export class Battle {
   float(targetId, text, style) { this.emit({ kind: 'float', targetId, text, style }); }
 
   randomizePartySlots() {
-    const order = this.party().filter(p => !p.benched).map(p => p.id);
+    const order = this.party()
+      .filter(p => !p.benched && (!this.present || this.present.includes(p.id)))
+      .map(p => p.id);
     for (let i = order.length - 1; i > 0; i--) {
       const j = Math.floor(this.rng() * (i + 1));
       [order[i], order[j]] = [order[j], order[i]];
@@ -605,7 +611,7 @@ export class Battle {
   // and nothing is spent — the click simply doesn't respond.
 
   canAct(p) {
-    return !this.over && !this.frozen && !this.campaign.paused && !p.down && !p.benched && p.holding;
+    return !this.over && !this.frozen && !this.campaign.paused && !p.down && this.inRoster(p) && p.holding;
   }
 
   // Furious: the player still clicks — they pick a target; the engine substitutes a
@@ -752,7 +758,7 @@ export class Battle {
     let targets = [];
     if (rider.kind === 'revive') {
       const t = this.find(targetId);
-      if (!t || t.kind !== 'player' || !t.down || t.benched) return { ok: false, refuse: true };
+      if (!t || t.kind !== 'player' || !t.down || !this.inRoster(t)) return { ok: false, refuse: true };
       targets = [t];
     } else if (targetSpec === 'one enemy') {
       const t = this.find(targetId);
@@ -764,7 +770,7 @@ export class Battle {
       if (!targets.length) return { ok: false, refuse: true };
     } else if (targetSpec === 'one ally') {
       const t = this.find(targetId);
-      if (!t || t.kind !== 'player' || t.down || t.benched) return { ok: false, refuse: true };
+      if (!t || t.kind !== 'player' || t.down || !this.inRoster(t)) return { ok: false, refuse: true };
       targets = [t];
     } else if (targetSpec === 'all allies') {
       targets = this.livingParty();
@@ -1220,7 +1226,7 @@ export class Battle {
     // one player target
     if (chosenId) {
       const t = this.find(chosenId);
-      return t && !this.dead(t) && t.kind === 'player' && !t.benched ? [t] : [];
+      return t && !this.dead(t) && t.kind === 'player' && this.inRoster(t) ? [t] : [];
     }
     const pool = this.livingParty();
     return pool.length ? [pool[Math.floor(this.rng() * pool.length)]] : [];

@@ -212,6 +212,7 @@ export function runEffect(effect, duration = 1200) {
 export function el(tag, attrs = {}, ...children) {
   const d = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
+    if (v == null) continue;   // absent attribute, not the string "undefined"
     if (k === 'class') d.className = v;
     else if (k === 'style') d.style.cssText = v;
     else if (k.startsWith('on')) d[k] = v;

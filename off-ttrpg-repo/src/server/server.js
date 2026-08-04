@@ -243,7 +243,7 @@ function viewFor(seat) {
     })(),
     scene: sceneRun && !sceneRun.state.done ? (gm ? sceneRun.gmView([...seats.keys()]) : sceneRun.viewFor(seat)) : null,
     jukebox: { track: c.jukebox.track, playing: c.jukebox.playing, queue: gm ? c.jukebox.queue : undefined },
-    connected: gm ? [...seats.keys()] : undefined,
+    connected: [...seats.keys()],   // presence: absent members simply don't render
   };
   if (gm) {
     view.templates = Object.keys(c.templates);
@@ -311,7 +311,9 @@ function launchEncounter(def) {
   }));
   if (isBoss) store.snapshot(`before ${enc.name || 'boss'}`);   // auto-snapshot before every boss launch
   startCombatLog(enc.name || 'encounter');
-  battle = new Battle(data, c, enc, { emit, log: logCombat });
+  // Only members actually at the table launch into the fight; the GM can send
+  // an absent character in from the PLAYERS tab (they arrive gauge-empty).
+  battle = new Battle(data, c, enc, { emit, log: logCombat, present: [...seats.keys()].filter(s => s !== 'GM') });
   c.mode = 'battle';
   if (enc.music) { c.jukebox.track = enc.music; c.jukebox.playing = true; }
   touch();
@@ -817,8 +819,13 @@ function handleGm(msg) {
       m.benched = !!msg.benched;
       if (m.benched) { m.holding = false; m.gauge = 0; }
       if (battle) battle.partySlots = battle.partySlots.filter(id => id !== m.id || !m.benched);
-      if (battle && !m.benched && !battle.partySlots.includes(m.id)) battle.partySlots.push(m.id);
-      emit({ kind: 'announce', text: m.benched ? `${m.name} sits this one out.` : `${m.name} rejoins the party.` });
+      const joinsFight = battle && !m.benched && !battle.partySlots.includes(m.id);
+      if (joinsFight) {
+        battle.partySlots.push(m.id);
+        m.gauge = 0; m.holding = false; m.defending = false; m.hastySecond = false;
+        battle.rollCrit(m);
+      }
+      emit({ kind: 'announce', text: m.benched ? `${m.name} sits this one out.` : joinsFight ? `${m.name} steps onto the field!` : `${m.name} rejoins the party.` });
       if (battle) battle.checkEnd();
       touch(); break;
     }
