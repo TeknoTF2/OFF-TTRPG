@@ -17,6 +17,7 @@ const $ = id => document.getElementById(id);
 await loadStaticData();
 connect(seat);
 document.querySelector('.topbtns').prepend(volumeSlider());
+$('sceneVol').appendChild(volumeSlider());   // scenes cover the top bar; players keep a slider in-scene
 
 App.onEvent = e => {
   if (e.kind === 'announce') announce(e.text);

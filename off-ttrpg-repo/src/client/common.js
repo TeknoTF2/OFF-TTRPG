@@ -131,6 +131,8 @@ export function getVolume() {
 export function setVolume(v) {
   localStorage.setItem('off-vol', String(Math.min(1, Math.max(0, v))));
   if (musicEl) musicEl.volume = getVolume();
+  // Keep every mounted slider in agreement (top bar + in-scene).
+  window.dispatchEvent(new CustomEvent('off-volume'));
 }
 
 function ensureMusicEl() {
@@ -180,6 +182,7 @@ export function volumeSlider() {
     title: 'your music volume (only yours)',
   });
   input.oninput = () => setVolume(input.value / 100);
+  window.addEventListener('off-volume', () => { input.value = String(Math.round(getVolume() * 100)); });
   wrap.appendChild(input);
   return wrap;
 }
