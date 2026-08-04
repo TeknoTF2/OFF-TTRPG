@@ -657,7 +657,7 @@ function drawOverworld() {
     }
     x.font = '10px "OFF Display"';
     x.fillStyle = pid === seat ? '#f2a71b' : '#f4f2ec';
-    x.fillText(pm.name.slice(0, 10), pp.x - 6, pp.y + 26);
+    x.fillText(pm.name.slice(0, 10).toUpperCase(), pp.x - 6, pp.y + 26);
   }
 }
 
@@ -693,18 +693,18 @@ const zline = k => ZLINES[k][Math.floor(Math.random() * ZLINES[k].length)];
 function renderShop(view) {
   const wrap = $('shopWrap');
   if (!view.shop.open) {
-    wrap.innerHTML = '<div style="position:absolute;inset:0;background:#1c1c1c;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-size:30px;color:#777">ZACHARIE IS ARRANGING HIS WARES…</div>';
+    wrap.innerHTML = '<div style="position:absolute;inset:0;background:#1c1c1c;display:flex;align-items:center;justify-content:center;font-family:var(--disp);text-transform:uppercase;font-size:30px;color:#777">ZACHARIE IS ARRANGING HIS WARES…</div>';
     return;
   }
   wrap.innerHTML = `
   <div style="position:absolute;inset:0;background:#565656;display:flex;flex-direction:column;overflow:hidden;
        background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 34px,transparent 34px 68px)">
     <div style="background:#1c1c1c;padding:8px 0 12px;text-align:center;border-bottom:6px solid rgba(0,0,0,.35)">
-      <span style="font-family:var(--disp);font-size:48px;letter-spacing:4px;text-shadow:3px 3px 0 #000">SHOP</span>
+      <span style="font-family:var(--disp);text-transform:uppercase;font-size:48px;letter-spacing:4px;text-shadow:3px 3px 0 #000">SHOP</span>
     </div>
     <div style="flex:1;position:relative;display:flex;align-items:flex-start;justify-content:center;padding-top:6vh">
       <div id="shopMenu" style="display:flex;flex-direction:column;gap:14px;z-index:2"></div>
-      <div id="shopTag" style="position:absolute;left:4%;top:8%;background:#f5d31c;color:#1c1c1c;font-family:var(--disp);font-size:26px;
+      <div id="shopTag" style="position:absolute;left:4%;top:8%;background:#f5d31c;color:#1c1c1c;font-family:var(--disp);text-transform:uppercase;font-size:26px;
         padding:2px 36px 4px 20px;clip-path:polygon(0 0,calc(100% - 20px) 0,100% 50%,calc(100% - 20px) 100%,0 100%);
         filter:drop-shadow(3px 3px 0 rgba(0,0,0,.45));display:none;cursor:pointer"></div>
       <div id="shopList" style="position:absolute;left:26%;top:8%;display:none;flex-direction:column;gap:2px;z-index:2;min-width:420px;max-height:70%;overflow-y:auto"></div>
@@ -714,18 +714,18 @@ function renderShop(view) {
         <div style="position:relative;background:#cfcfcf;color:#1c1c1c;border:3px solid #0a0a0a;padding:16px 22px;max-width:420px;font-size:15px;line-height:1.5;margin-bottom:60px;border-radius:18px">
           <span id="shopBubble">${zline('hello')}</span>
           <div id="shopPrice" style="position:absolute;left:30px;bottom:-46px;background:#f2f0ea;color:#1c1c1c;border:3px solid #0a0a0a;
-            font-family:var(--disp);font-size:24px;padding:2px 20px;min-width:150px;display:none">$ <b id="shopPval" style="float:right;font-weight:400"></b></div>
+            font-family:var(--disp);text-transform:uppercase;font-size:24px;padding:2px 20px;min-width:150px;display:none">$ <b id="shopPval" style="float:right;font-weight:400"></b></div>
         </div>
       </div>
       <div style="position:fixed;right:16px;bottom:14px;display:flex;align-items:center;gap:10px;z-index:3">
-        <div style="background:#1c1c1c;border:3px solid #0a0a0a;font-family:var(--disp);font-size:26px;color:#f5d31c;padding:0 16px 2px">$${view.credits}</div>
+        <div style="background:#1c1c1c;border:3px solid #0a0a0a;font-family:var(--disp);text-transform:uppercase;font-size:26px;color:#f5d31c;padding:0 16px 2px">$${view.credits}</div>
       </div>
     </div>
   </div>`;
   const menu = wrap.querySelector('#shopMenu');
   const mkRibbon = (label, fn, sel) => {
     const r = el('button', {
-      style: `position:relative;background:${sel ? '#0a0a0a' : '#f2f0ea'};color:${sel ? '#f5d31c' : '#1c1c1c'};font-family:var(--disp);font-size:30px;letter-spacing:2px;border:0;cursor:pointer;padding:2px 46px 4px 34px;text-align:center;min-width:230px;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 50%,calc(100% - 22px) 100%,0 100%);filter:drop-shadow(3px 3px 0 rgba(0,0,0,.45))`,
+      style: `position:relative;background:${sel ? '#0a0a0a' : '#f2f0ea'};color:${sel ? '#f5d31c' : '#1c1c1c'};font-family:var(--disp);text-transform:uppercase;font-size:30px;letter-spacing:2px;border:0;cursor:pointer;padding:2px 46px 4px 34px;text-align:center;min-width:230px;clip-path:polygon(0 0,calc(100% - 22px) 0,100% 50%,calc(100% - 22px) 100%,0 100%);filter:drop-shadow(3px 3px 0 rgba(0,0,0,.45))`,
     }, label);
     r.onclick = fn;
     return r;
@@ -760,8 +760,8 @@ function renderShop(view) {
         style: `display:flex;align-items:center;gap:12px;padding:4px 16px;cursor:pointer;color:${selRow ? '#f5d31c' : '#9c9c9c'};background:${selRow ? '#0a0a0a' : 'transparent'};opacity:${broke ? .4 : 1}`,
       },
         selRow ? el('span', { style: 'font-size:24px;color:#f2f0ea;text-shadow:2px 2px 0 #000' }, '☞') : null,
-        el('span', { style: 'font-family:var(--disp);font-size:26px;letter-spacing:1px;flex:1' }, r.name + (r.n != null ? ` ×${r.n}` : '')),
-        el('span', { style: 'font-family:var(--disp);font-size:22px' }, `$${r.price}`));
+        el('span', { style: 'font-family:var(--disp);text-transform:uppercase;font-size:26px;letter-spacing:1px;flex:1' }, r.name + (r.n != null ? ` ×${r.n}` : '')),
+        el('span', { style: 'font-family:var(--disp);text-transform:uppercase;font-size:22px' }, `$${r.price}`));
       row.onclick = () => {
         if (shopSel === r.name) {
           if (shopMode === 'buy') { if (broke) { say(zline('poor')); return; } send({ t: 'shop-buy', name: r.name }); say(zline('bought')); }
@@ -834,7 +834,7 @@ function renderSheet() {
   body.appendChild(el('h3', {}, 'PASSIVES'));
   for (const p of m.passives) {
     body.appendChild(el('div', { style: `font-size:12px;margin-bottom:4px;${p.active ? '' : 'opacity:.4'}` },
-      el('b', { style: 'font-family:var(--disp);font-size:17px' }, `${p.name} (${p.level}) `), p.effect));
+      el('b', { style: 'font-family:var(--disp);text-transform:uppercase;font-size:17px' }, `${p.name} (${p.level}) `), p.effect));
   }
   if (Object.keys(m.flavor || {}).length || m.gender) {
     body.appendChild(el('h3', {}, 'SOUL'));
