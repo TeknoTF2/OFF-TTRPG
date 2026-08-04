@@ -41,7 +41,12 @@ let stateDirtyView = true;
 const ZONE_PRICE_MULT = { 'Zone 1': 1, 'Zone 2': 1, 'Zone 3': 1.5, 'The Room': 2, 'Purified': 2 };
 
 // ---------------------------------------------------------------- utilities
-function campaign() { return store.campaign; }
+function campaign() {
+  const c = store.campaign;
+  c.musicZones = c.musicZones || {};
+  c.sceneMusic = c.sceneMusic || {};
+  return c;
+}
 function emit(ev) { eventQueue.push(ev); }
 function touch() { store.markDirty(); stateDirtyView = true; }
 
@@ -96,7 +101,7 @@ function assetTree() {
   for (const f of all) {
     const parts = f.split('/');
     const top = parts[0].toLowerCase();
-    if (top === 'music' && parts.length >= 2) {
+    if (top === 'music' && parts.length >= 2 && /\.(mp3|ogg|wav|m4a|flac|opus)$/i.test(f)) {
       const zone = parts.length > 2 ? parts[1] : '(root)';
       (tree.music[zone] = tree.music[zone] || []).push(f);
     } else if (top === 'stingers') tree.stingers.push(f);
@@ -250,6 +255,8 @@ function viewFor(seat) {
     view.zoneDropTables = c.zoneDropTables;
     view.rooms = Object.keys(c.rooms);
     view.scenes = ['intro', ...Object.keys(c.scenes)];
+    view.musicZones = c.musicZones;
+    view.sceneMusic = c.sceneMusic;
   }
   return view;
 }
@@ -661,6 +668,8 @@ function handleGm(msg) {
       sceneRun = new SceneRun(data, c, def, { emit });
       c.scene = sceneRun.state;
       c.mode = 'scene';
+      // Scenes autoplay their assigned track, looping — same grammar as encounters.
+      if (c.sceneMusic[msg.id]) { c.jukebox.track = c.sceneMusic[msg.id]; c.jukebox.playing = true; }
       touch(); break;
     }
     case 'scene-continue': if (sceneRun) { sceneRun.advance(); c.scene = sceneRun.state; touch(); } break;
@@ -887,6 +896,20 @@ function handleGm(msg) {
 
     // ---- jukebox & stingers
     case 'jukebox-play': c.jukebox.track = msg.file; c.jukebox.playing = true; touch(); break;
+    case 'music-zone':
+      if (msg.zone) c.musicZones[msg.file] = msg.zone;
+      else delete c.musicZones[msg.file];
+      touch(); break;
+    case 'scene-music':
+      if (msg.file) c.sceneMusic[msg.id] = msg.file;
+      else delete c.sceneMusic[msg.id];
+      touch(); break;
+    case 'jukebox-queue-add':
+      c.jukebox.queue.push(msg.file); touch(); break;
+    case 'jukebox-queue-remove':
+      c.jukebox.queue.splice(msg.index, 1); touch(); break;
+    case 'jukebox-queue-clear':
+      c.jukebox.queue = []; touch(); break;
     case 'jukebox-stop': c.jukebox.playing = false; touch(); break;
     case 'jukebox-queue': c.jukebox.queue = msg.queue || []; touch(); break;
     case 'jukebox-skip': {
@@ -927,6 +950,10 @@ const server = http.createServer((req, res) => {
     if (url === '/api/assets') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify(assetTree()));
+    }
+    if (url === '/api/art') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify(artIndex()));
     }
     if (url === '/api/static-data') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1009,13 +1036,19 @@ setInterval(() => {
   }
 }, 30000);
 
+// Rebuilt from disk on every call: drop a file named after an enemy into the
+// hot folders and it's matched on the next connect or RESCAN — no manual step.
 function artIndex() {
   const tree = assetTree();
   const enemies = {};
-  for (const e of data.bestiary.enemies) {
-    enemies[e.name] = {
-      sprite: findArt(tree.sprites.enemies, e.name),
-      portrait: findArt([...tree.portraits.Enemies, ...tree.portraits.Bosses], e.name),
+  const names = new Set([
+    ...Object.keys(data.enemiesByName),            // bestiary + compound-fight units
+    ...Object.keys(campaign().templates || {}),    // GM-created templates
+  ]);
+  for (const name of names) {
+    enemies[name] = {
+      sprite: findArt(tree.sprites.enemies, name),
+      portrait: findArt([...tree.portraits.Enemies, ...tree.portraits.Bosses], name),
     };
   }
   const party = {};

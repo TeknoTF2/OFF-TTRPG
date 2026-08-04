@@ -28,6 +28,8 @@ export function newCampaign(data) {
     scene: null,              // active cutscene state (scene machine)
     scenes: {},               // authored scene overlay (intro ships as the first entry)
     jukebox: { track: null, queue: [], playing: false },
+    musicZones: {},           // track file -> zone heading (folders are layout; this is the GM's re-shelving)
+    sceneMusic: {},           // scene id -> track that starts looping when the scene starts
     notes: {},                // GM notes by key ("room:alma", "enc:dedan", "tmpl:Tiburce")
     log: [],                  // combat logs per encounter: {id, name, startedAt, entries[]}
     poisonNote: 'Poisoned ticks 1/10 max HP per location transition',
