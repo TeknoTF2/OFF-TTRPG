@@ -48,10 +48,15 @@ function campaign() {
   c.musicZones = c.musicZones || {};
   c.sceneMusic = c.sceneMusic || {};
   // Built-in authored rooms ride along with every campaign (theirs to edit).
+  // A version bump replaces stale copies (e.g. kit-drawn → real art + collision).
+  const BUILTIN_VER = 2;
   c.rooms = c.rooms || {};
   c.notes = c.notes || {};
   for (const [name, room] of [['Zone 0', zone0Room], ...Object.entries(zone0Interiors)]) {
-    if (!c.rooms[name]) c.rooms[name] = JSON.parse(JSON.stringify(room));
+    if (!c.rooms[name] || (+c.notes[`builtinver:${name}`] || 0) < BUILTIN_VER) {
+      c.rooms[name] = JSON.parse(JSON.stringify(room));
+      c.notes[`builtinver:${name}`] = String(BUILTIN_VER);
+    }
     if (!c.notes[`roomzone:${name}`]) c.notes[`roomzone:${name}`] = 'Zone 0';
   }
   return c;
