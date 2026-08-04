@@ -2,7 +2,7 @@
 // The UI filters to legality: dead targets grey out and refuse the click,
 // the slot picker shows only legal gear, Muted disables Competence.
 
-import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, artEl, syncJukebox, volumeSlider } from '/common.js';
+import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
 import { drawRoomKit } from '/roomkit.js';
 
 const seat = new URLSearchParams(location.search).get('seat') || localStorage.getItem('off-seat') || 'P1';
@@ -17,8 +17,11 @@ const $ = id => document.getElementById(id);
 await loadStaticData();
 connect(seat);
 document.querySelector('.topbtns').prepend(volumeSlider());
+$('sceneVol').appendChild(volumeSlider());   // scenes cover the top bar; players keep a slider in-scene
 
+let fxLockUntil = 0;
 App.onEvent = e => {
+  if (e.kind === 'combat-fx') { fxLockUntil = performance.now() + playCombatFx(e, '#field'); return; }
   if (e.kind === 'announce') announce(e.text);
   if (e.kind === 'float') showFloat(e.targetId, e.text, e.style);
   if (e.kind === 'victory') announce(e.got && e.got.length ? `You got: ${e.got.join(', ')}` : 'Victory.');
@@ -37,6 +40,17 @@ App.onState = view => {
 function announce(t) { $('announce').textContent = t; }
 
 function me() { return App.view ? App.view.party.find(m => m.id === seat) : null; }
+
+// Small-group play: a member renders only when actually present — you always see
+// yourself; others must be un-benched AND either connected or already fighting
+// in the current battle (a mid-battle disconnect keeps them on the field for
+// the GM to pilot). Absent members don't appear anywhere.
+function isPresent(m, view) {
+  if (m.id === seat) return true;
+  if (m.benched) return false;
+  if (view.battle && (view.battle.partySlots || []).includes(m.id)) return true;
+  return (view.connected || []).includes(m.id);
+}
 
 // ---------------------------------------------------------------- render root
 function render(view) {
@@ -123,6 +137,9 @@ function itemClicked(name, n) {
 function renderBattle(view) {
   const b = view.battle;
   const field = $('field');
+  // A combat animation is mid-flight: hold the field rebuild so the moving
+  // sprite isn't replaced under it. State catches up on the next push.
+  if (performance.now() < fxLockUntil && $('enemies').children.length) { renderStack(view); return; }
   if (b.backdrop) {
     field.classList.add('backdrop');
     field.style.backgroundImage = `url('/assets/backdrops/${b.backdrop}')`;
@@ -213,7 +230,7 @@ function targetList() {
     const item = armed.kind === 'item' || armed.kind === 'ooc-item'
       ? App.staticData.items.catalog.find(c => c.name === armed.item) : null;
     const wantsDown = (comp && comp.kind === 'revive') || (item && item.effect.type === 'revive');
-    return view.party.filter(pm => !pm.benched && (wantsDown ? pm.down : !pm.down)).map(pm => ({ kind: 'ally', id: pm.id }));
+    return view.party.filter(pm => isPresent(pm, view) && !pm.benched && (wantsDown ? pm.down : !pm.down)).map(pm => ({ kind: 'ally', id: pm.id }));
   }
   return [];
 }
@@ -358,7 +375,9 @@ function showFloat(targetId, text, style) {
 function renderStrip(view) {
   const strip = $('strip');
   strip.innerHTML = '';
-  for (const pm of view.party) {
+  const present = view.party.filter(pm => isPresent(pm, view));
+  strip.style.gridTemplateColumns = `repeat(${Math.max(1, present.length)}, 1fr)`;
+  for (const pm of present) {
     const targetable = !pm.benched && (allyTargetable(pm) && !pm.down || (armedMode() === 'ooc-ally'));
     const onCursorP = armed && targetable && (() => { const c = kselTarget(); return c && c.id === pm.id; })();
     const pc = el('div', { class: 'pc' + (pm.id === seat ? ' me' : '') + (pm.down ? ' deadpc' : '') + (targetable ? ' targetable' : '') + (onCursorP ? ' ksel' : ''), style: pm.benched ? 'opacity:.35' : '', 'data-id': pm.id });
@@ -513,7 +532,7 @@ function renderGate(gate) {
 }
 
 // ---------------------------------------------------------------- overworld
-const OW = { keys: {}, moving: false, animClock: 0, seq: [0, 1, 2, 1], seqi: 1, imgs: {} };
+const OW = { keys: {}, moving: false, pos: null, seq: [0, 1, 2, 1], seqi: 1, animDist: 0, imgs: {}, lastSent: null, sentAt: 0 };
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   const view = App.view;
@@ -542,8 +561,8 @@ function owImage(path) {
   return OW.imgs[path];
 }
 
-const UNWALKABLE = { water: 1, void: 1 };
-const SOLID = { crate: 1, barrel: 1, cabinet: 1, bottles: 1, counter: 1, plant: 1, stack: 1, lamp: 1, sign: 1, bed: 1, shelf: 1, vat: 1, rock: 1 };
+const UNWALKABLE = { water: 1, void: 1, inkwall0: 1 };
+const SOLID = { crate: 1, barrel: 1, cabinet: 1, bottles: 1, counter: 1, plant: 1, stack: 1, lamp: 1, sign: 1, bed: 1, shelf: 1, vat: 1, rock: 1, greyblock: 1 };
 
 function walkableAt(room, x, y) {
   if (!room) return true;
@@ -559,7 +578,7 @@ function walkableAt(room, x, y) {
 function tryExamine() {
   const view = App.view, room = view.room;
   if (!room) return;
-  const pos = view.positions[seat];
+  const pos = OW.pos || view.positions[seat];
   if (!pos) return;
   for (const p of room.pieces || []) {
     if (Math.abs(p.x - pos.x) < 26 && Math.abs(p.y - pos.y) < 26) {
@@ -572,36 +591,52 @@ function tryExamine() {
   }
 }
 
-setInterval(() => {
+// Walking is client-predicted: the local sprite moves every animation frame and
+// never waits for the server. Positions sync to the server on a throttle; the
+// server echo is ignored for our own sprite unless it disagrees hard (a GM
+// teleport or room change), so the ~180ms state broadcast can't rubber-band us.
+let owPrevT = 0;
+function owLoop(t) {
+  requestAnimationFrame(owLoop);
   const view = App.view;
-  if (!view || view.mode !== 'overworld' || view.paused) return;
+  const dt = Math.min(0.05, Math.max(0, (t - owPrevT) / 1000));
+  owPrevT = t;
+  if (!view || view.mode !== 'overworld' || view.paused || view.scene) return;
   const room = view.room;
-  const pos = view.positions[seat];
-  if (!pos) return;
-  const spd = 4;
-  let { x, y, facing } = pos;
-  let moved = false;
-  if (OW.keys.ArrowUp || OW.keys.w) { y -= spd; facing = 3; moved = true; }
-  else if (OW.keys.ArrowDown || OW.keys.s) { y += spd; facing = 0; moved = true; }
-  else if (OW.keys.ArrowLeft || OW.keys.a) { x -= spd; facing = 1; moved = true; }
-  else if (OW.keys.ArrowRight || OW.keys.d) { x += spd; facing = 2; moved = true; }
+  const sp = view.positions[seat];
+  if (!sp) return;
+  const roomKey = (room && room.id) || view.location.name;
+  if (!OW.pos || OW.roomKey !== roomKey || Math.abs(sp.x - OW.pos.x) + Math.abs(sp.y - OW.pos.y) > 48) OW.pos = { ...sp };
+  OW.roomKey = roomKey;
+  let { x, y, facing } = OW.pos;
+  const spd = 88 * dt;
+  let dx = 0, dy = 0;
+  if (OW.keys.ArrowUp || OW.keys.w) { dy = -spd; facing = 3; }
+  else if (OW.keys.ArrowDown || OW.keys.s) { dy = spd; facing = 0; }
+  else if (OW.keys.ArrowLeft || OW.keys.a) { dx = -spd; facing = 1; }
+  else if (OW.keys.ArrowRight || OW.keys.d) { dx = spd; facing = 2; }
+  const moved = dx !== 0 || dy !== 0;
   OW.moving = moved;
   if (moved) {
-    if (walkableAt(room, x + 4, y + 12) && walkableAt(room, x + 12, y + 12)) {
-      view.positions[seat] = { x, y, facing };
-      send({ t: 'move', x, y, facing });
-    } else {
-      view.positions[seat] = { ...pos, facing };
-      send({ t: 'move', x: pos.x, y: pos.y, facing });
-    }
-    OW.animClock++;
-    if (OW.animClock % 4 === 0) OW.seqi = (OW.seqi + 1) % 4;
+    const nx = x + dx, ny = y + dy;
+    if (walkableAt(room, nx + 4, ny + 12) && walkableAt(room, nx + 12, ny + 12)) { x = nx; y = ny; }
+    OW.animDist += Math.abs(dx) + Math.abs(dy);
+    OW.seqi = Math.floor(OW.animDist / 11) % 4;
   } else OW.seqi = 1;
+  OW.pos = { x, y, facing };
+  const rp = { x: Math.round(x), y: Math.round(y), facing };
+  const ls = OW.lastSent;
+  if ((!ls || ls.x !== rp.x || ls.y !== rp.y || ls.facing !== rp.facing) && t - OW.sentAt >= 90) {
+    send({ t: 'move', ...rp });
+    OW.lastSent = rp;
+    OW.sentAt = t;
+  }
   drawOverworld();
-}, 50);
+}
+requestAnimationFrame(owLoop);
 
 let owPhase = 0;
-setInterval(() => { owPhase = !owPhase; if (App.view && App.view.mode === 'overworld') drawOverworld(); }, 380);
+setInterval(() => { owPhase = !owPhase; }, 380);
 
 function drawOverworld() {
   const view = App.view;
@@ -615,15 +650,19 @@ function drawOverworld() {
   x.imageSmoothingEnabled = false;
   const pals = App.staticData.palettes;
   const pal = paletteFor(room, pals);
-  const pos = view.positions[seat] || { x: 48, y: 48 };
-  const camX = Math.max(0, Math.min((room.w || 384) - 384, pos.x - 192));
-  const camY = Math.max(0, Math.min((room.h || 288) - 288, pos.y - 144));
+  const pos = OW.pos || view.positions[seat] || { x: 48, y: 48 };
+  const camX = Math.round(Math.max(0, Math.min((room.w || 384) - 384, pos.x - 192)));
+  const camY = Math.round(Math.max(0, Math.min((room.h || 288) - 288, pos.y - 144)));
   x.setTransform(1, 0, 0, 1, 0, 0);
   x.fillStyle = '#000'; x.fillRect(0, 0, 384, 288);
   x.translate(-camX, -camY);
-  if (room.backdrop === 'image' && room.image) {
-    const img = owImage(room.image);
-    if (img && img.complete) x.drawImage(img, 0, 0);
+  // A hot-folder room image (assets/rooms/<room name>.png) IS the room's look,
+  // stretched to the room's size; the shapes underneath become invisible
+  // collision. No image → the kit draws the shapes as before.
+  const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
+  if (bgPath) {
+    const img = owImage(bgPath);
+    if (img && img.complete && img.width) x.drawImage(img, 0, 0, room.w || 384, room.h || 288);
   } else {
     drawRoomKit(x, room, pal, owPhase);
   }
@@ -633,7 +672,7 @@ function drawOverworld() {
       const img = owImage(p.sprite);
       if (img && img.complete) {
         const cw = Math.floor(img.width / 3), ch = Math.floor(img.height / 4);
-        x.drawImage(img, cw, 0, cw, ch, p.x, p.y - ch + 16, cw, ch);
+        x.drawImage(img, cw, ch * 2, cw, ch, p.x, p.y - ch + 16, cw, ch);   // row 2 = down-facing
         continue;
       }
     }
@@ -642,23 +681,27 @@ function drawOverworld() {
     x.fillText(p.g || '◇', p.x, p.y + 12);
   }
   // party tokens, each client cameras on its own sprite
-  for (const [pid, pp] of Object.entries(view.positions || {})) {
+  for (const [pid, sp] of Object.entries(view.positions || {})) {
     const pm = view.party.find(z => z.id === pid);
     if (!pm) continue;
+    // Only members actually present walk the map — no idle sprites for empty seats.
+    if (pid !== seat && (pm.benched || !(view.connected || []).includes(pid))) continue;
+    const pp = pid === seat && OW.pos ? OW.pos : sp;   // our own sprite draws predicted, never the echo
+    const px = Math.round(pp.x), py = Math.round(pp.y);
     const art = partyArt(pm.klass);
     const img = art.sprite ? owImage(art.sprite) : null;
     if (img && img.complete) {
       const cw = Math.floor(img.width / 3), ch = Math.floor(img.height / 4);
-      const rowMap = [0, 1, 2, 3];   // down, left, right, up
+      const rowMap = [2, 3, 1, 0];   // facing 0=down,1=left,2=right,3=up → sheet rows top-to-bottom: up, right, down, left
       const col = pid === seat ? OW.seq[OW.seqi] : 1;
-      x.drawImage(img, col * cw, rowMap[pp.facing || 0] * ch, cw, ch, pp.x - 4, pp.y - ch + 16, cw, ch);
+      x.drawImage(img, col * cw, rowMap[pp.facing || 0] * ch, cw, ch, px - 4, py - ch + 16, cw, ch);
     } else {
-      x.fillStyle = '#000'; x.fillRect(pp.x - 1, pp.y - 1, 18, 18);
-      x.fillStyle = pid === seat ? '#f2a71b' : '#f4f2ec'; x.fillRect(pp.x, pp.y, 16, 16);
+      x.fillStyle = '#000'; x.fillRect(px - 1, py - 1, 18, 18);
+      x.fillStyle = pid === seat ? '#f2a71b' : '#f4f2ec'; x.fillRect(px, py, 16, 16);
     }
     x.font = '10px "OFF Display"';
     x.fillStyle = pid === seat ? '#f2a71b' : '#f4f2ec';
-    x.fillText(pm.name.slice(0, 10).toUpperCase(), pp.x - 6, pp.y + 26);
+    x.fillText(pm.name.slice(0, 10).toUpperCase(), px - 6, py + 26);
   }
 }
 

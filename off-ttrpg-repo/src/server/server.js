@@ -30,6 +30,8 @@ const ACCESS_KEY = process.env.ACCESS_KEY || null;
 let data = loadAll();
 const store = new Store(data, VAR_DIR);
 const introScene = JSON.parse(readFileSync(path.join(here, 'data', 'intro-scene.json'), 'utf8'));
+const zone0Room = JSON.parse(readFileSync(path.join(here, 'data', 'zone0-room.json'), 'utf8'));
+const zone0Interiors = JSON.parse(readFileSync(path.join(here, 'data', 'zone0-interiors.json'), 'utf8'));
 
 const PORT = process.env.PORT || 8420;
 const seats = new Map();       // seat -> ws
@@ -45,9 +47,48 @@ function campaign() {
   const c = store.campaign;
   c.musicZones = c.musicZones || {};
   c.sceneMusic = c.sceneMusic || {};
+  // Built-in authored rooms ride along with every campaign (theirs to edit).
+  // A version bump replaces stale copies (e.g. kit-drawn → real art + collision).
+  const BUILTIN_VER = 2;
+  c.rooms = c.rooms || {};
+  c.notes = c.notes || {};
+  for (const [name, room] of [['Zone 0', zone0Room], ...Object.entries(zone0Interiors)]) {
+    if (!c.rooms[name] || (+c.notes[`builtinver:${name}`] || 0) < BUILTIN_VER) {
+      c.rooms[name] = JSON.parse(JSON.stringify(room));
+      c.notes[`builtinver:${name}`] = String(BUILTIN_VER);
+    }
+    if (!c.notes[`roomzone:${name}`]) c.notes[`roomzone:${name}`] = 'Zone 0';
+  }
   return c;
 }
 function emit(ev) { eventQueue.push(ev); }
+
+// Combat sounds resolve to whatever stinger file matches by name (hot folder:
+// missing files just stay silent). Multi-candidate sounds pick uniformly, and
+// the pick happens here so every client hears the same file.
+const FX_SOUNDS = {
+  strike: ['strike01', 'strike02', 'strike05'],
+  zap: ['attack2', 'bolt03'],
+  heal: ['revive3'],
+  item: ['item1'],
+};
+function fxStinger(sound) {
+  const cands = FX_SOUNDS[sound] || [];
+  const files = assetTree().stingers;
+  const hits = [];
+  for (const cand of cands) {
+    const f = files.find(f2 => path.basename(f2).toLowerCase().replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-9]/g, '').endsWith(cand));
+    if (f) hits.push(f);
+  }
+  return hits.length ? hits[Math.floor(Math.random() * hits.length)] : null;
+}
+function emitBattleFx(ev) {
+  emit(ev);
+  if (ev.kind === 'combat-fx' && ev.sound) {
+    const f = fxStinger(ev.sound);
+    if (f) emit({ kind: 'stinger', file: f });
+  }
+}
 function touch() { store.markDirty(); stateDirtyView = true; }
 
 function logCombat(entry) {
@@ -97,7 +138,7 @@ function walkAssets(dir, rel = '') {
 
 function assetTree() {
   const all = walkAssets(ASSETS_DIR);
-  const tree = { music: {}, stingers: [], sprites: { party: [], enemies: [], npcs: [] }, backdrops: [], portraits: { Party: [], Enemies: [], Bosses: [] }, props: [], fonts: [] };
+  const tree = { music: {}, stingers: [], sprites: { party: [], enemies: [], npcs: [] }, backdrops: [], rooms: [], portraits: { Party: [], Enemies: [], Bosses: [] }, props: [], fonts: [] };
   for (const f of all) {
     const parts = f.split('/');
     const top = parts[0].toLowerCase();
@@ -109,6 +150,7 @@ function assetTree() {
       const cat = (parts[1] || '').toLowerCase();
       if (tree.sprites[cat]) tree.sprites[cat].push(f);
     } else if (top === 'backdrops') tree.backdrops.push(f);
+    else if (top === 'rooms' && /\.(png|webp|gif|jpg|jpeg)$/i.test(f)) tree.rooms.push(f);
     else if (top === 'portraits') {
       const cat = parts[1];
       if (tree.portraits[cat]) tree.portraits[cat].push(f);
@@ -243,7 +285,7 @@ function viewFor(seat) {
     })(),
     scene: sceneRun && !sceneRun.state.done ? (gm ? sceneRun.gmView([...seats.keys()]) : sceneRun.viewFor(seat)) : null,
     jukebox: { track: c.jukebox.track, playing: c.jukebox.playing, queue: gm ? c.jukebox.queue : undefined },
-    connected: gm ? [...seats.keys()] : undefined,
+    connected: [...seats.keys()],   // presence: absent members simply don't render
   };
   if (gm) {
     view.templates = Object.keys(c.templates);
@@ -311,7 +353,11 @@ function launchEncounter(def) {
   }));
   if (isBoss) store.snapshot(`before ${enc.name || 'boss'}`);   // auto-snapshot before every boss launch
   startCombatLog(enc.name || 'encounter');
-  battle = new Battle(data, c, enc, { emit, log: logCombat });
+  // Only members actually at the table launch into the fight; the GM can send
+  // an absent character in from the PLAYERS tab (they arrive gauge-empty).
+  // Nobody connected at all (GM prepping/testing solo) → the full un-benched party.
+  const present = [...seats.keys()].filter(s => s !== 'GM');
+  battle = new Battle(data, c, enc, { emit: emitBattleFx, log: logCombat, present: present.length ? present : null });
   c.mode = 'battle';
   if (enc.music) { c.jukebox.track = enc.music; c.jukebox.playing = true; }
   touch();
@@ -329,7 +375,7 @@ function walkableAt(room, x, y, inVehicle) {
   if (!room) return true;
   if (x < 0 || y < 0 || x >= (room.w || 384) || y >= (room.h || 288)) return false;
   let ok = false;
-  const UNWALKABLE = { water: 1, void: 1 };
+  const UNWALKABLE = { water: 1, void: 1, inkwall0: 1 };
   for (const f of room.floors || []) {
     if (x >= f.x && x < f.x + f.w && y >= f.y && y < f.y + f.h) {
       let walk = !UNWALKABLE[f.p];
@@ -340,7 +386,7 @@ function walkableAt(room, x, y, inVehicle) {
   for (const s of room.structs || []) {
     if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) ok = false;
   }
-  const SOLID = { crate: 1, barrel: 1, cabinet: 1, bottles: 1, counter: 1, plant: 1, stack: 1, lamp: 1, sign: 1, bed: 1, shelf: 1, vat: 1, rock: 1 };
+  const SOLID = { crate: 1, barrel: 1, cabinet: 1, bottles: 1, counter: 1, plant: 1, stack: 1, lamp: 1, sign: 1, bed: 1, shelf: 1, vat: 1, rock: 1, greyblock: 1 };
   for (const p of room.props || []) {
     if (SOLID[p.t] && x >= p.x && x < p.x + (p.w || 24) && y >= p.y && y < p.y + 24) ok = false;
   }
@@ -405,6 +451,8 @@ function outOfCombatItem(userSeat, itemName, targetSeat) {
   }
   if (used) {
     c.inventory[itemName]--;
+    const itemSting = fxStinger('item');
+    if (itemSting) emit({ kind: 'stinger', file: itemSting });
     emit({ kind: 'announce', text: `${c.party.find(m => m.id === userSeat)?.name || userSeat} uses ${itemName}.` });
     touch();
   }
@@ -817,8 +865,13 @@ function handleGm(msg) {
       m.benched = !!msg.benched;
       if (m.benched) { m.holding = false; m.gauge = 0; }
       if (battle) battle.partySlots = battle.partySlots.filter(id => id !== m.id || !m.benched);
-      if (battle && !m.benched && !battle.partySlots.includes(m.id)) battle.partySlots.push(m.id);
-      emit({ kind: 'announce', text: m.benched ? `${m.name} sits this one out.` : `${m.name} rejoins the party.` });
+      const joinsFight = battle && !m.benched && !battle.partySlots.includes(m.id);
+      if (joinsFight) {
+        battle.partySlots.push(m.id);
+        m.gauge = 0; m.holding = false; m.defending = false; m.hastySecond = false;
+        battle.rollCrit(m);
+      }
+      emit({ kind: 'announce', text: m.benched ? `${m.name} sits this one out.` : joinsFight ? `${m.name} steps onto the field!` : `${m.name} rejoins the party.` });
       if (battle) battle.checkEnd();
       touch(); break;
     }

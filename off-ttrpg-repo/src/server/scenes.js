@@ -44,11 +44,13 @@ export class SceneRun {
     }
     this.state.beatIndex++;
     const nb = this.beat();
-    // Branch beats apply their overrides the moment they play.
+    // Branch beats apply their overrides the moment they play. Who matched is
+    // remembered first — the override may rewrite the very key the branch reads,
+    // and the matching seats must still see the branch's own text.
     if (nb && nb.type === 'branch-text' && nb.override) {
-      for (const [seat, ch] of Object.entries(this.state.choices)) {
-        if (ch[nb.on] === nb.equals) this.recordChoice(seat, nb.override.key, nb.override.value, { silent: true });
-      }
+      const matched = Object.entries(this.state.choices).filter(([, ch]) => ch[nb.on] === nb.equals).map(([s]) => s);
+      (this.state.branchMatched = this.state.branchMatched || {})[this.state.beatIndex] = matched;
+      for (const seat of matched) this.recordChoice(seat, nb.override.key, nb.override.value, { silent: true });
     }
   }
 
@@ -113,11 +115,10 @@ export class SceneRun {
     if (!b) return view;
     const t = { ...b };
     if (b.type === 'branch-text') {
-      t.lines = my[b.on] === b.equals || (b.override && my[b.override.key] === b.override.value && my[b.on] === b.equals)
-        ? b.textIf : b.textElse;
-      // Only the Mercy-choosers see their virtue overwritten.
-      if (my[b.on] === b.equals) t.lines = b.textIf;
-      else t.lines = b.textElse;
+      // Matching is judged when the beat fires (the override may have already
+      // rewritten the choice); fall back to a live check for late arrivals.
+      const matched = ((this.state.branchMatched || {})[this.state.beatIndex] || []).includes(seat) || my[b.on] === b.equals;
+      t.lines = matched ? b.textIf : b.textElse;
     }
     if (b.type === 'ceremony-stats') {
       const member = this.campaign.party.find(m => m.id === seat);

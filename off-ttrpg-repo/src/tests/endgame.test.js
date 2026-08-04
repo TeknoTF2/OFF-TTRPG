@@ -15,12 +15,12 @@ const alwaysLow = () => 0.0;
 const alwaysHigh = () => 0.999;
 const mid = () => 0.5;
 
-function makeBattle({ enemies = [{ template: 'Common Spectre' }], rng = alwaysHigh, party, pool = {} } = {}) {
+function makeBattle({ enemies = [{ template: 'Common Spectre' }], rng = alwaysHigh, party, pool = {}, present = null } = {}) {
   const campaign = newCampaign(data);
   if (party) for (const [i, lvl] of party.entries()) campaign.party[i].level = lvl;
   const enc = { name: 'test', waves: [{ trigger: 'launch', queue: enemies }], pool };
   const events = [];
-  const b = new Battle(data, campaign, enc, { rng, emit: e => events.push(e), log: () => {} });
+  const b = new Battle(data, campaign, enc, { rng, emit: e => events.push(e), log: () => {}, present });
   return { b, campaign, events };
 }
 const seatOf = (c, k) => c.party.find(m => m.klass === k);
@@ -236,6 +236,7 @@ test('a benched seat sits out: not a target, not counted for the wipe, AoE skips
   const { b, campaign } = makeBattle({ enemies: [{ template: 'Rupture-burnt', control: 'ai' }, { template: 'Common Spectre' }], rng: alwaysHigh });
   const eps = seatOf(campaign, 'Epsilon');
   eps.benched = true;
+  b.partySlots = b.partySlots.filter(id => id !== eps.id);   // what the bench op does: leave the roster
   // enemy blast hits the whole party except the benched seat
   const e = b.enemies[0];
   e.hp = Math.floor(e.maxHp * 0.2);
@@ -252,7 +253,20 @@ test('benched seats refuse their own actions', () => {
   const { b, campaign } = makeBattle();
   const p = seatOf(campaign, 'Purifier');
   p.benched = true; p.holding = true;
+  b.partySlots = b.partySlots.filter(id => id !== p.id);   // what the bench op does: leave the roster
   assert.equal(b.playerAction(p, { kind: 'defend' }).refuse, true);
+});
+
+test('only present members launch into battle; absent ones are outside the fight entirely', () => {
+  const { b, campaign } = makeBattle({ present: ['P1', 'P2'], rng: alwaysHigh });
+  assert.deepEqual([...b.partySlots].sort(), ['P1', 'P2'], 'roster is the present members only');
+  const absent = campaign.party.find(m => m.id === 'P3');
+  absent.holding = true;
+  assert.equal(b.playerAction(absent, { kind: 'defend' }).refuse, true, 'absent member cannot act');
+  // wipe counts only the roster: both present members down = frozen, absentees irrelevant
+  for (const id of ['P1', 'P2']) { const m = campaign.party.find(x => x.id === id); m.hp = 0; m.down = true; }
+  b.checkEnd();
+  assert.equal(b.frozen, true, 'two present members down is the wipe');
 });
 
 test('the GM pilots an absent character through the normal action path', () => {

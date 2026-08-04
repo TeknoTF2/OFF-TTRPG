@@ -63,6 +63,7 @@ export function shade(hex, f) {
 
 // Zone identity colors (combat mockup): flat zone-color field per zone.
 export const ZONES = {
+  'Zone 0': { field: '#a8891c', dk: '#6e5a10', tint: '#d8bf62', title: 'ZONE 0', sub: '—' },
   'Zone 1': { field: '#2e6d9e', dk: '#1d4b70', tint: '#7fa8c6', title: 'ZONE 1 — PENTEL', sub: 'smoke mines · alma damien shachihata' },
   'Zone 2': { field: '#c8871c', dk: '#8a5c10', tint: '#e0b56a', title: 'ZONE 2 — BISMARK', sub: 'the library · gomez galleries' },
   'Zone 3': { field: '#2f9e44', dk: '#1d6b2d', tint: '#7fc68f', title: 'ZONE 3 — VESPER', sub: 'the sugar works' },
@@ -83,6 +84,18 @@ export function applyZone(zone) {
 export function partyArt(klass) { return (App.art && App.art.party[klass]) || {}; }
 export function enemyArt(template) { return (App.art && App.art.enemies[template]) || {}; }
 
+// A room image from assets/rooms/, matched by filename = room name. When one
+// exists it IS the room's look; the room's shapes become invisible collision.
+export function roomArt(name) {
+  const list = (App.art && App.art.tree && App.art.tree.rooms) || [];
+  const n = String(name || '').toLowerCase().trim();
+  for (const f of list) {
+    const base = f.split('/').pop().replace(/\.[a-z0-9]+$/i, '').toLowerCase().trim();
+    if (base === n) return f;
+  }
+  return null;
+}
+
 // Render an element that shows the portrait if present, else the sprite frame,
 // else a named grey silhouette. Returns an HTMLElement.
 export function artEl(art, name, h = 84) {
@@ -101,7 +114,8 @@ export function artEl(art, name, h = 84) {
   return d;
 }
 
-// 3×4 RPG Maker convention: draw the down-facing idle frame (row 0, column 1).
+// 3×4 sheet, rows top-to-bottom: up, right, down, left. Draw the down-facing
+// idle frame (row 2, column 1).
 export function spriteFrameEl(spritePath, h = 84) {
   const canvas = document.createElement('canvas');
   const img = new Image();
@@ -113,7 +127,7 @@ export function spriteFrameEl(spritePath, h = 84) {
     canvas.style.imageRendering = 'pixelated';
     const x = canvas.getContext('2d');
     x.imageSmoothingEnabled = false;
-    x.drawImage(img, cw, 0, cw, ch, 0, 0, cw, ch);
+    x.drawImage(img, cw, ch * 2, cw, ch, 0, 0, cw, ch);
   };
   img.src = `/assets/${spritePath}`;
   canvas.style.height = `${h}px`;
@@ -131,6 +145,8 @@ export function getVolume() {
 export function setVolume(v) {
   localStorage.setItem('off-vol', String(Math.min(1, Math.max(0, v))));
   if (musicEl) musicEl.volume = getVolume();
+  // Keep every mounted slider in agreement (top bar + in-scene).
+  window.dispatchEvent(new CustomEvent('off-volume'));
 }
 
 function ensureMusicEl() {
@@ -180,6 +196,7 @@ export function volumeSlider() {
     title: 'your music volume (only yours)',
   });
   input.oninput = () => setVolume(input.value / 100);
+  window.addEventListener('off-volume', () => { input.value = String(Math.round(getVolume() * 100)); });
   wrap.appendChild(input);
   return wrap;
 }
@@ -189,6 +206,80 @@ export function volumeSlider() {
 export async function rescanAssets() {
   App.art = await (await fetch('/api/art')).json();
   return App.art;
+}
+
+// ---------- combat action FX
+// One 'combat-fx' event = one action, animated the same on every screen:
+//   melee — the attacker's sprite rushes the target, a flash, and returns
+//   ranged — a white crosshair marks the target
+//   heal — the healer visits the teammate with a green flash
+//   item — a soft flash on the target
+// Flashes and crosshairs live in fixed coordinates so re-renders can't kill
+// them; callers should hold field rebuilds for the returned duration.
+export function playCombatFx(e, scopeSel = '') {
+  const pick = id => (scopeSel && document.querySelector(`${scopeSel} [data-id="${id}"]`)) || document.querySelector(`[data-id="${id}"]`);
+  const actor = pick(e.actorId);
+  const targets = (e.targets || []).map(pick).filter(Boolean);
+  const t0 = targets[0];
+  if (e.style === 'ranged') {
+    for (const t of targets) crosshairOver(t);
+    return 520;
+  }
+  if (e.style === 'item') {
+    for (const t of targets) flashOver(t, 'rgba(255,255,255,.7)');
+    return 420;
+  }
+  if ((e.style === 'melee' || e.style === 'heal') && actor && t0 && actor !== t0) {
+    const a = actor.getBoundingClientRect(), b = t0.getBoundingClientRect();
+    const dx = (b.left + b.width / 2) - (a.left + a.width / 2);
+    const dy = (b.top + b.height / 2) - (a.top + a.height / 2);
+    const prevZ = actor.style.zIndex;
+    actor.style.transition = 'transform .22s ease-in';
+    actor.style.zIndex = 40;
+    actor.style.transform = `translate(${Math.round(dx * 0.8)}px, ${Math.round(dy * 0.8)}px)`;
+    setTimeout(() => {
+      for (const t of targets) flashOver(t, e.style === 'heal' ? 'rgba(90,225,120,.8)' : 'rgba(255,255,255,.85)');
+      actor.style.transition = 'transform .22s ease-out';
+      actor.style.transform = '';
+      setTimeout(() => { actor.style.transition = ''; actor.style.zIndex = prevZ; }, 260);
+    }, 230);
+    return 560;
+  }
+  // no travel possible (self-target, missing node): flash what we have
+  for (const t of (targets.length ? targets : actor ? [actor] : [])) {
+    flashOver(t, e.style === 'heal' ? 'rgba(90,225,120,.8)' : 'rgba(255,255,255,.8)');
+  }
+  return 420;
+}
+
+function flashOver(t, color) {
+  const r = t.getBoundingClientRect();
+  const f = el('div', {
+    style: `position:fixed;left:${r.left - 6}px;top:${r.top - 6}px;width:${r.width + 12}px;height:${r.height + 12}px;`
+      + `background:${color};border-radius:10px;pointer-events:none;z-index:60;opacity:.95;transition:opacity .3s`,
+  });
+  document.body.appendChild(f);
+  requestAnimationFrame(() => requestAnimationFrame(() => { f.style.opacity = '0'; }));
+  setTimeout(() => f.remove(), 380);
+}
+
+function crosshairOver(t) {
+  const r = t.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2, R = Math.max(20, Math.min(r.width, r.height) * 0.45);
+  const c = el('div', {
+    style: `position:fixed;left:${cx - R}px;top:${cy - R}px;width:${R * 2}px;height:${R * 2}px;pointer-events:none;z-index:60;`
+      + 'transition:opacity .25s;opacity:1',
+    html: `<svg width="${R * 2}" height="${R * 2}" viewBox="0 0 100 100">`
+      + '<circle cx="50" cy="50" r="34" fill="none" stroke="#fff" stroke-width="6"/>'
+      + '<line x1="50" y1="0" x2="50" y2="26" stroke="#fff" stroke-width="6"/>'
+      + '<line x1="50" y1="74" x2="50" y2="100" stroke="#fff" stroke-width="6"/>'
+      + '<line x1="0" y1="50" x2="26" y2="50" stroke="#fff" stroke-width="6"/>'
+      + '<line x1="74" y1="50" x2="100" y2="50" stroke="#fff" stroke-width="6"/>'
+      + '<circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
+  });
+  document.body.appendChild(c);
+  setTimeout(() => { c.style.opacity = '0'; }, 320);
+  setTimeout(() => c.remove(), 600);
 }
 
 // ---------- effects (components of scenes)
@@ -208,6 +299,7 @@ export function runEffect(effect, duration = 1200) {
 export function el(tag, attrs = {}, ...children) {
   const d = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
+    if (v == null) continue;   // absent attribute, not the string "undefined"
     if (k === 'class') d.className = v;
     else if (k === 'style') d.style.cssText = v;
     else if (k.startsWith('on')) d[k] = v;
