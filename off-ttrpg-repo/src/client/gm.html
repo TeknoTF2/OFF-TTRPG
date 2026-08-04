@@ -102,12 +102,13 @@ body { display: grid; grid-template-rows: 64px 1fr; grid-template-columns: 280px
 .pc.waveslot { cursor: default; background: #0e0e0e; min-width: 120px; }
 
 /* panels */
-.gmpanel { position: absolute; inset: 40px 0 90px 0; background: rgba(10,10,10,.95); z-index: 8; display: none; overflow-y: auto; scrollbar-width: thin; padding: 20px 26px; }
+.gmpanel { position: absolute; inset: 40px 0 90px 0; background: rgba(10,10,10,.95); z-index: 8; display: none; overflow-y: auto; scrollbar-width: thin; padding: 20px 26px 48px; }
 .gmpanel.open { display: block; }
 .ph { font-family: var(--disp); text-transform: uppercase; font-size: 38px; color: var(--amber); margin-bottom: 4px; }
 .ps { font-size: 14px; letter-spacing: 1px; color: #777; margin-bottom: 16px; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
-.card { background: var(--panel); border: 1px solid #262626; padding: 10px 12px; cursor: pointer; position: relative; }
+.card { background: var(--panel); border: 1px solid #262626; padding: 10px 12px; cursor: pointer; position: relative; overflow: hidden; }
+.card select, .card input { min-width: 0; max-width: 100%; }
 .card:hover { border-color: var(--amber); }
 .card .cn { font-family: var(--disp); text-transform: uppercase; font-size: 26px; line-height: 1; margin-top: 2px; }
 .card .cs { font-size: 13px; color: #8a8a8a; margin-top: 4px; }
@@ -121,8 +122,9 @@ body { display: grid; grid-template-rows: 64px 1fr; grid-template-columns: 280px
 .step button { width: 30px; height: 30px; background: #000; border: 1px solid #333; color: var(--wht); font-family: var(--disp); text-transform: uppercase; font-size: 21px; cursor: pointer; line-height: 1; }
 .step button:hover { border-color: var(--amber); color: var(--amber); }
 .step .v { font-family: var(--disp); text-transform: uppercase; font-size: 26px; min-width: 60px; text-align: center; }
-.statrow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.statrow { display: flex; align-items: center; gap: 8px 10px; margin-bottom: 8px; flex-wrap: wrap; }
 .statrow .sl { width: 96px; font-size: 13px; letter-spacing: 1px; color: #999; }
+.statrow select, .statrow input { min-width: 0; max-width: 100%; }
 .edsec { background: var(--panel); border: 1px solid #232323; padding: 14px 16px; margin-bottom: 14px; }
 .edsec h4 { font-family: var(--disp); text-transform: uppercase; font-size: 24px; color: var(--amber); letter-spacing: 1px; margin-bottom: 10px; }
 .edgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -164,8 +166,9 @@ body { display: grid; grid-template-rows: 64px 1fr; grid-template-columns: 280px
 .grant { display: flex; gap: 6px; flex-wrap: wrap; }
 .grant button { flex: 1; background: #000; border: 1px solid #333; color: var(--wht); font-family: var(--disp); text-transform: uppercase; font-size: 19px; padding: 3px 6px; cursor: pointer; min-width: 34px; }
 .grant button:hover { color: var(--amber); border-color: var(--amber); }
-.pcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
-.pcard { background: var(--panel); border: 1px solid #262626; padding: 12px 14px; }
+.pcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 14px; }
+.pcard { background: var(--panel); border: 1px solid #262626; padding: 12px 14px; overflow: hidden; }
+.pcard select, .pcard input { min-width: 0; max-width: 100%; }
 .pcard .pn { font-family: var(--disp); text-transform: uppercase; font-size: 30px; }
 .pcard .pl { font-size: 13px; color: #888; letter-spacing: 1px; margin-bottom: 8px; }
 select, input[type=text], input[type=number] { background: #161616; border: 1px solid #333; color: var(--wht); font-family: var(--mono); padding: 6px 8px; font-size: 16px; }

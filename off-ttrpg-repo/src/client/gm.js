@@ -1455,8 +1455,9 @@ function renderCutscene(p, view) {
   for (const id of view.scenes || ['intro']) {
     const c = el('div', { class: 'card' }, el('div', { class: 'cn' }, id === 'intro' ? 'The Birthday (Intro)' : id), el('div', { class: 'cs' }, id === 'intro' ? 'interactive · choice gates · the sparkle protocol' : 'authored scene'));
     c.onclick = () => gm('scene-start', { id });
-    const musicRow = el('div', { class: 'statrow', style: 'margin-top:8px' }, el('span', { class: 'sl' }, 'MUSIC'));
+    const musicRow = el('div', { class: 'statrow', style: 'margin-top:8px' }, el('span', { class: 'sl', style: 'width:auto' }, 'MUSIC'));
     const sel = musicSelect((view.sceneMusic || {})[id] || null, v => gm('scene-music', { id, file: v || null }));
+    sel.style.cssText = 'flex:1 1 140px;min-width:0;max-width:100%';
     sel.onclick = ev => ev.stopPropagation();
     musicRow.onclick = ev => ev.stopPropagation();
     musicRow.appendChild(sel);
