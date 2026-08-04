@@ -414,7 +414,7 @@ function drawStaging(view) {
   for (const [pid, pp] of Object.entries(view.positions || {})) {
     const pm = view.party.find(z => z.id === pid);
     if (!pm) continue;
-    const d = el('div', { style: `position:absolute;left:${pp.x * sc}px;top:${pp.y * sc}px;z-index:2;font-size:10px;font-family:var(--disp);color:var(--amber)` }, pm.name.slice(0, 8));
+    const d = el('div', { style: `position:absolute;left:${pp.x * sc}px;top:${pp.y * sc}px;z-index:2;font-size:10px;font-family:var(--disp);text-transform:uppercase;color:var(--amber)` }, pm.name.slice(0, 8).toUpperCase());
     $('fieldOverlay').appendChild(d);
   }
 }
@@ -796,7 +796,7 @@ function renderEnemyEditor(p, view) {
   const back = el('button', { class: 'bigbtn ghost' }, '← LIBRARY');
   back.onclick = () => { editingTmpl = null; renderPanels(); };
   p.appendChild(back);
-  const nameI = el('input', { type: 'text', value: t.name, style: 'font-family:var(--disp);font-size:26px;background:transparent;border:0;border-bottom:2px solid #333;color:var(--wht);width:320px;margin-left:14px' });
+  const nameI = el('input', { type: 'text', value: t.name, style: 'font-family:var(--disp);text-transform:uppercase;font-size:26px;background:transparent;border:0;border-bottom:2px solid #333;color:var(--wht);width:320px;margin-left:14px' });
   nameI.onchange = () => { t.name = nameI.value; };
   p.appendChild(nameI);
   const grid = el('div', { class: 'edgrid', style: 'margin-top:14px' });
@@ -1223,7 +1223,7 @@ function renderShopGate(p, view) {
     const tog = el('button', { class: 'qbtn' + (s.on ? ' gmctl' : '') }, s.on ? 'ON' : 'OFF');
     tog.onclick = () => gm('shop-stock', { name: s.name, on: !s.on });
     row.appendChild(tog);
-    row.appendChild(el('span', { style: 'font-family:var(--disp);font-size:20px;flex:1' }, s.name));
+    row.appendChild(el('span', { style: 'font-family:var(--disp);text-transform:uppercase;font-size:20px;flex:1' }, s.name));
     row.appendChild(el('span', { style: 'font-size:13px;color:#888' }, s.desc || ''));
     const price = el('input', { type: 'number', value: s.price, style: 'width:80px' });
     price.onchange = () => gm('shop-stock', { name: s.name, price: +price.value });
@@ -1246,7 +1246,7 @@ function renderJukebox(p, view) {
   p.appendChild(el('div', { class: 'ps' }, 'ONE LIBRARY, ORGANIZED BY ZONE FOLDER — HEADINGS, NEVER LOCKS. ASSIGNMENTS AUTOPLAY ON ENTRY/LAUNCH.'));
   p.appendChild(el('div', { class: 'edsec' },
     el('h4', {}, 'NOW PLAYING'),
-    el('div', { style: 'font-family:var(--disp);font-size:20px' }, view.jukebox.track ? `${view.jukebox.playing ? '▶' : '❚❚'} ${view.jukebox.track.split('/').pop()}` : 'silence'),
+    el('div', { style: 'font-family:var(--disp);text-transform:uppercase;font-size:20px' }, view.jukebox.track ? `${view.jukebox.playing ? '▶' : '❚❚'} ${view.jukebox.track.split('/').pop()}` : 'silence'),
     (() => {
       const bar = el('div', { style: 'display:flex;gap:8px;margin-top:8px' });
       const stop = el('button', { class: 'qbtn' }, 'STOP');
