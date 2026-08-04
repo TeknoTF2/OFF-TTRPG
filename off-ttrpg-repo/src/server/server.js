@@ -30,6 +30,7 @@ const ACCESS_KEY = process.env.ACCESS_KEY || null;
 let data = loadAll();
 const store = new Store(data, VAR_DIR);
 const introScene = JSON.parse(readFileSync(path.join(here, 'data', 'intro-scene.json'), 'utf8'));
+const zone0Room = JSON.parse(readFileSync(path.join(here, 'data', 'zone0-room.json'), 'utf8'));
 
 const PORT = process.env.PORT || 8420;
 const seats = new Map();       // seat -> ws
@@ -45,6 +46,9 @@ function campaign() {
   const c = store.campaign;
   c.musicZones = c.musicZones || {};
   c.sceneMusic = c.sceneMusic || {};
+  // Built-in authored rooms ride along with every campaign (theirs to edit).
+  c.rooms = c.rooms || {};
+  if (!c.rooms['Zone 0']) c.rooms['Zone 0'] = JSON.parse(JSON.stringify(zone0Room));
   return c;
 }
 function emit(ev) { eventQueue.push(ev); }

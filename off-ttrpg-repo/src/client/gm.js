@@ -93,16 +93,17 @@ function renderCreateCol(view) {
   col.innerHTML = '';
   col.appendChild(el('div', { class: 'dsec' }, 'BUILD — DRAG RECTANGLES ON THE FIELD'));
   const tools = el('div', { class: 'btool' });
-  const floorTools = ['brackets', 'carpet', 'plain', 'path', 'grass', 'metal', 'tracks', 'water', 'void'];
+  const floorTools = ['brackets', 'carpet', 'plain', 'path', 'grass', 'metal', 'tracks', 'water', 'void', 'gold0', 'gold0top', 'gold0deep', 'path0', 'ink0', 'line0'];
   for (const f of floorTools) tools.appendChild(toolBtn(`F·${f}`, `floor:${f}`));
-  for (const s of ['wall', 'building', 'fence', 'ledge']) tools.appendChild(toolBtn(`S·${s}`, `struct:${s}`));
+  for (const s of ['wall', 'building', 'fence', 'ledge', 'block0', 'hut0']) tools.appendChild(toolBtn(`S·${s}`, `struct:${s}`));
   tools.appendChild(toolBtn('Erase', 'erase'));
   tools.appendChild(toolBtn('Done', null));
   col.appendChild(tools);
 
   col.appendChild(el('div', { class: 'dsec' }, 'PROP STAMPS'));
   const props = el('div', { class: 'dgrid' });
-  for (const p of ['crate', 'barrel', 'cabinet', 'bottles', 'counter', 'rug', 'door', 'window', 'plant', 'stack', 'lamp', 'sign', 'bed', 'shelf', 'vat', 'dock', 'rock']) {
+  for (const p of ['crate', 'barrel', 'cabinet', 'bottles', 'counter', 'rug', 'door', 'window', 'plant', 'stack', 'lamp', 'sign', 'bed', 'shelf', 'vat', 'dock', 'rock',
+    'ladder', 'window0', 'stairs0', 'fist', 'greyblock', 'doorwhite']) {
     props.appendChild(stampBtn(p, { stampKind: 'prop', t: p }));
   }
   col.appendChild(props);
