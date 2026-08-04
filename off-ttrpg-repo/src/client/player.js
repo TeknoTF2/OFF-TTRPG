@@ -2,7 +2,7 @@
 // The UI filters to legality: dead targets grey out and refuse the click,
 // the slot picker shows only legal gear, Muted disables Competence.
 
-import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, artEl, syncJukebox, volumeSlider } from '/common.js';
+import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, artEl, syncJukebox, volumeSlider } from '/common.js';
 import { drawRoomKit } from '/roomkit.js';
 
 const seat = new URLSearchParams(location.search).get('seat') || localStorage.getItem('off-seat') || 'P1';
@@ -651,9 +651,13 @@ function drawOverworld() {
   x.setTransform(1, 0, 0, 1, 0, 0);
   x.fillStyle = '#000'; x.fillRect(0, 0, 384, 288);
   x.translate(-camX, -camY);
-  if (room.backdrop === 'image' && room.image) {
-    const img = owImage(room.image);
-    if (img && img.complete) x.drawImage(img, 0, 0);
+  // A hot-folder room image (assets/rooms/<room name>.png) IS the room's look,
+  // stretched to the room's size; the shapes underneath become invisible
+  // collision. No image → the kit draws the shapes as before.
+  const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
+  if (bgPath) {
+    const img = owImage(bgPath);
+    if (img && img.complete && img.width) x.drawImage(img, 0, 0, room.w || 384, room.h || 288);
   } else {
     drawRoomKit(x, room, pal, owPhase);
   }

@@ -106,7 +106,7 @@ function walkAssets(dir, rel = '') {
 
 function assetTree() {
   const all = walkAssets(ASSETS_DIR);
-  const tree = { music: {}, stingers: [], sprites: { party: [], enemies: [], npcs: [] }, backdrops: [], portraits: { Party: [], Enemies: [], Bosses: [] }, props: [], fonts: [] };
+  const tree = { music: {}, stingers: [], sprites: { party: [], enemies: [], npcs: [] }, backdrops: [], rooms: [], portraits: { Party: [], Enemies: [], Bosses: [] }, props: [], fonts: [] };
   for (const f of all) {
     const parts = f.split('/');
     const top = parts[0].toLowerCase();
@@ -118,6 +118,7 @@ function assetTree() {
       const cat = (parts[1] || '').toLowerCase();
       if (tree.sprites[cat]) tree.sprites[cat].push(f);
     } else if (top === 'backdrops') tree.backdrops.push(f);
+    else if (top === 'rooms' && /\.(png|webp|gif|jpg|jpeg)$/i.test(f)) tree.rooms.push(f);
     else if (top === 'portraits') {
       const cat = parts[1];
       if (tree.portraits[cat]) tree.portraits[cat].push(f);

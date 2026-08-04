@@ -1,7 +1,7 @@
 // GM console. Organizes and suggests, never restricts: every list reachable,
 // every value editable, and nothing here ever says "you can't."
 
-import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, artEl, syncJukebox, volumeSlider, rescanAssets } from '/common.js';
+import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, artEl, syncJukebox, volumeSlider, rescanAssets } from '/common.js';
 import { drawRoomKit } from '/roomkit.js';
 
 const $ = id => document.getElementById(id);
@@ -388,6 +388,17 @@ function fieldScale() {
   return Math.min(field.clientWidth / (room.w || 768), field.clientHeight / (room.h || 576));
 }
 
+const stagingImgs = {};
+function stagingImage(p) {
+  if (!stagingImgs[p]) {
+    const i = new Image();
+    i.onload = () => { if (App.view) drawStaging(App.view); };
+    i.src = `/assets/${p}`;
+    stagingImgs[p] = i;
+  }
+  return stagingImgs[p];
+}
+
 function drawStaging(view) {
   const canvas = $('roomcanvas');
   if (!canvas) return;
@@ -403,7 +414,19 @@ function drawStaging(view) {
   const zmap = { 'Zone 1': ['#2e6d9e', '#1d4b70', '#7fa8c6', '#cfe3f2'], 'Zone 2': ['#c8871c', '#8a5c10', '#e0b56a', '#f4e2bb'], 'Zone 3': ['#2f9e44', '#1d6b2d', '#7fc68f', '#c9ecc9'], 'The Room': ['#d0231f', '#8f1512', '#e07f7c', '#f2c9c7'] };
   const [zb, zd, zl, zp] = zmap[view.location.zone] || zmap['Zone 1'];
   const pal = p ? { base: p.base, dark: zd, lite: p.pale, pale: p.tint } : { base: zb, dark: zd, lite: zl, pale: zp };
-  drawRoomKit(x, room, pal, phase);
+  const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
+  if (bgPath) {
+    // Image rooms: the art is the look; the shapes are invisible collision,
+    // shown here (and only here) as a translucent overlay so the GM can edit it.
+    const img = stagingImage(bgPath);
+    x.fillStyle = '#000'; x.fillRect(0, 0, room.w, room.h);
+    if (img.complete && img.width) x.drawImage(img, 0, 0, room.w, room.h);
+    x.globalAlpha = 0.3;
+    drawRoomKit(x, { ...room, bg: 'none' }, pal, phase);
+    x.globalAlpha = 1;
+  } else {
+    drawRoomKit(x, room, pal, phase);
+  }
   // pieces as DOM over the canvas
   const overlay = $('fieldOverlay');
   for (const piece of room.pieces || []) {

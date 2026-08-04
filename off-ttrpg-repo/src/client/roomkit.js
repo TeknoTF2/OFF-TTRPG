@@ -181,6 +181,8 @@ export function drawRoomKit(x, room, pal, phase) {
     }
   } else if (room.bg === 'black0') {
     px(0, 0, room.w || 384, room.h || 288, '#000');   // interiors float in the dark
+  } else if (room.bg === 'none') {
+    // no background fill — shapes only (the GM's collision overlay on image rooms)
   } else {
     x.fillStyle = pal.base;
     x.fillRect(0, 0, room.w || 384, room.h || 288);

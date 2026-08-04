@@ -84,6 +84,18 @@ export function applyZone(zone) {
 export function partyArt(klass) { return (App.art && App.art.party[klass]) || {}; }
 export function enemyArt(template) { return (App.art && App.art.enemies[template]) || {}; }
 
+// A room image from assets/rooms/, matched by filename = room name. When one
+// exists it IS the room's look; the room's shapes become invisible collision.
+export function roomArt(name) {
+  const list = (App.art && App.art.tree && App.art.tree.rooms) || [];
+  const n = String(name || '').toLowerCase().trim();
+  for (const f of list) {
+    const base = f.split('/').pop().replace(/\.[a-z0-9]+$/i, '').toLowerCase().trim();
+    if (base === n) return f;
+  }
+  return null;
+}
+
 // Render an element that shows the portrait if present, else the sprite frame,
 // else a named grey silhouette. Returns an HTMLElement.
 export function artEl(art, name, h = 84) {
