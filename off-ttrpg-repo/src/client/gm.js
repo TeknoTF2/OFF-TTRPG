@@ -1368,6 +1368,44 @@ function renderConductor(p, view) {
   end.onclick = () => gm('scene-end');
   bar.append(cont, end);
   p.appendChild(bar);
+
+  // The script, as performed: the current beat's full content.
+  const b = sc.currentBeat;
+  if (b) {
+    const box = el('div', { class: 'edsec', style: 'border-left:4px solid var(--amber)' }, el('h4', {}, 'ON SCREEN NOW — YOUR SCRIPT'));
+    const line = (t, style = '') => box.appendChild(el('div', { style: 'font-size:17px;line-height:1.7;color:#e8e5dd;' + style }, t));
+    if (b.type === 'text') line(`“${b.text}”`);
+    else if (b.type === 'input' || b.type === 'choice') {
+      line(`“${b.title}”`);
+      if (b.options) line(`Menu: ${b.options.join(' · ')}`, 'color:#9a978f;font-size:14px');
+      if (b.hoverLines) {
+        line('Hover whispers (private, per player):', 'color:#9a978f;font-size:14px;margin-top:6px');
+        for (const [opt, hl] of Object.entries(b.hoverLines)) line(`${opt}: “${hl}”`, 'font-size:14px;color:#c9c5bb');
+      }
+      if (b.reactions) {
+        line('Your reaction to each answer:', 'color:#9a978f;font-size:14px;margin-top:6px');
+        for (const [opt, r] of Object.entries(b.reactions)) line(`${opt}: “${r}”`, 'font-size:14px;color:#c9c5bb');
+      }
+    } else if (b.type === 'ceremony-stats') {
+      line('Each Continue fills one stat as you voice its line:', 'color:#9a978f;font-size:14px');
+      (b.lines || []).forEach((l, i) => {
+        const isCurrent = i === sc.subIndex;
+        const done = i < sc.subIndex;
+        line(`${isCurrent ? '▸ ' : done ? '✓ ' : '· '}“${l.line}”`,
+          isCurrent ? 'color:var(--amber);font-size:19px' : done ? 'opacity:.5' : 'opacity:.8');
+      });
+    } else if (b.type === 'ceremony-competences') {
+      line('Their starter competences appear on every screen. (“Next, I shall grant you Power” was the cue.)', 'color:#c9c5bb');
+    } else if (b.type === 'scene') {
+      line(`[STAGING] ${b.caption || b.scene}`, 'color:#c9c5bb;font-style:italic');
+    } else if (b.type === 'branch-text') {
+      line(`If ${b.on} = ${b.equals}:`, 'color:#9a978f;font-size:14px');
+      for (const t of b.textIf || []) line(`“${t}”`);
+      line('Everyone else sees:', 'color:#9a978f;font-size:14px;margin-top:6px');
+      for (const t of b.textElse || []) line(`“${t}”`);
+    }
+    p.appendChild(box);
+  }
   const grid = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:18px' });
   const beats = el('div', { class: 'edsec', style: 'max-height:46vh;overflow-y:auto' }, el('h4', {}, 'BEATS'));
   (sc.beats || []).forEach(b => {

@@ -142,13 +142,28 @@ export class SceneRun {
   }
 
   // The conductor: full beat list, current beat, choice matrix, pending indicators.
+  gmScriptLabel(b) {
+    switch (b.type) {
+      case 'text': return b.text;
+      case 'choice': return `${b.title}  →  ${(b.options || []).join(' / ')}`;
+      case 'input': return b.title;
+      case 'ceremony-stats': return `STAT CEREMONY — each Continue reveals one: ${(b.lines || []).map(l => l.stat.toUpperCase()).join(', ')}`;
+      case 'ceremony-competences': return 'COMPETENCE CEREMONY — their starter kits appear';
+      case 'scene': return `[STAGING] ${b.caption || b.scene}`;
+      case 'branch-text': return `BRANCH (${b.on} = ${b.equals}): "${(b.textIf || []).join(' ')}"  /  else: "${(b.textElse || []).join(' ')}"`;
+      default: return b.type;
+    }
+  }
+
   gmView(connectedSeats) {
+    const cur = this.beat();
     return {
       sceneId: this.def.id, name: this.def.name, done: this.state.done,
       beatIndex: this.state.beatIndex, subIndex: this.state.subIndex,
+      currentBeat: cur ? { ...cur } : null,
       beats: this.def.beats.map((b, i) => ({
         index: i, type: b.type, key: b.key || null,
-        label: b.title || b.text || (b.lines ? '(ceremony)' : b.type) || b.type,
+        label: this.gmScriptLabel(b),
       })),
       matrix: this.state.choices,
       pending: this.def.beats
