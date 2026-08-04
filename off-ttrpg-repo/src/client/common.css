@@ -29,7 +29,7 @@ button { font-family: inherit; color: inherit; }
 
 /* skewed black action boxes */
 .act {
-  background: var(--blk); color: var(--wht); font-family: var(--disp); font-size: 30px; letter-spacing: 1px;
+  background: var(--blk); color: var(--wht); font-family: var(--disp); font-size: 34px; letter-spacing: 1px;
   padding: 4px 26px 6px 18px; border: 0; cursor: pointer; text-align: left; position: relative;
   transform: skewX(-4deg); width: max-content; min-width: 190px; transition: transform .06s;
 }
@@ -38,7 +38,7 @@ button { font-family: inherit; color: inherit; }
 .act:disabled { opacity: .35; cursor: not-allowed; }
 
 /* status / stat-change icon chips */
-.icn { font-size: 10px; font-weight: 600; letter-spacing: .5px; background: var(--blk); border: 1px solid #2a2a2a; color: var(--wht); padding: 2px 4px; line-height: 1.1; cursor: help; font-family: var(--mono); }
+.icn { font-size: 13px; font-weight: 600; letter-spacing: .5px; background: var(--blk); border: 1px solid #2a2a2a; color: var(--wht); padding: 2px 4px; line-height: 1.1; cursor: help; font-family: var(--mono); }
 .icn.up { color: var(--amber); }
 .icn.down b { color: var(--amber); }
 .icn.elem { background: transparent; border: 1px solid var(--blk); color: var(--blk); }
