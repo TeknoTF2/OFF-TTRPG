@@ -535,9 +535,7 @@ function enemyClicked(e) {
   st.innerHTML = '';
   st.style.left = '30%'; st.style.top = '18%';
   for (const pr of e.prompts || []) {
-    const b = el('button', { class: 'eact prompt', style: pr.ready ? '' : 'opacity:.55' },
-      (pr.ready ? '▶ ' : '') + pr.label,
-      el('small', {}, pr.ready ? 'scripted — fire it, or ignore it' : 'condition not met — yours to call early anyway'));
+    const b = el('button', { class: 'eact prompt' }, pr.label, el('small', {}, 'scripted'));
     b.onclick = () => { st.classList.remove('open'); gm('enemy-action', { enemyId: e.id, action: { kind: 'trigger', triggerId: pr.id } }); };
     st.appendChild(b);
   }
@@ -704,6 +702,10 @@ setInterval(() => {
 // ---------------------------------------------------------------- PANELS
 function renderPanels() {
   let host = $('panels');
+  // Never yank a field out from under the GM: state pushes arrive constantly,
+  // and rebuilding while they type (shop prices, names, stats) eats the edit.
+  const ae = document.activeElement;
+  if (ae && host.contains(ae) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName)) return;
   host.innerHTML = '';
   for (const t of TABS) $(`tab-${t}`).classList.toggle('on', activeTab === t);
   if (!activeTab || !App.view) return;
