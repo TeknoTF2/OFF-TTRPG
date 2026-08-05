@@ -189,6 +189,7 @@ function enemyPublicView(e) {
     v.hp = e.hp; v.maxHp = e.maxHp;
     v.def = e.def; v.res = e.res; v.lck = e.lck;
     v.tiers = e.statusTiers;
+    v.gaugeS = e.gaugeS;
   }
   return v;
 }

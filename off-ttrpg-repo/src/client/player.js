@@ -165,7 +165,7 @@ function renderBattle(view) {
       div.appendChild(el('div', { class: 'ehpbar' }, el('i', { style: `width:${Math.round(e.hp / e.maxHp * 100)}%` })));
     }
     const icons = el('div', { class: 'eicons' });
-    if (e.revealed && e.element) icons.appendChild(el('span', { class: 'icn elem', title: `Element: ${e.element} — revealed` }, e.element.slice(0, 3).toUpperCase()));
+    if (e.revealed) icons.appendChild(el('span', { class: 'icn elem', title: `Element: ${e.element || 'none'} — revealed` }, e.element ? e.element.slice(0, 3).toUpperCase() : 'Ø'));
     if (e.elementSet && !e.revealed) icons.appendChild(el('span', { class: 'icn elem', title: `Element set to ${e.elementSet}` }, e.elementSet.slice(0, 3).toUpperCase()));
     for (const s of e.statuses) icons.appendChild(statusChip(s));
     for (const sc of e.statChanges) icons.appendChild(statChangeChip(sc));
@@ -362,7 +362,7 @@ function targetClicked(t) {
 
 function showRevealCard(e) {
   const tiers = e.tiers || {};
-  announce(`${e.name}: ${e.element} · HP ${e.hp}/${e.maxHp} · DEF ${e.def} · RES ${e.res} · LCK ${e.lck} · ` +
+  announce(`${e.name}: Element ${e.element || 'none'} · HP ${e.hp}/${e.maxHp} · DEF ${e.def} · RES ${e.res} · LCK ${e.lck} · acts every ${e.gaugeS}s · ` +
     Object.entries(tiers).map(([k, v]) => `${k.slice(0, 3)}:${{ vulnerable: 'V', neutral: 'N', light_immune: 'L', strong_immune: 'S' }[v] || v}`).join(' '));
 }
 

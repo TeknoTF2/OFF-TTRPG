@@ -911,7 +911,10 @@ export class Battle {
   reveal(enemy) {
     if (enemy.kind !== 'enemy') return;
     this.revealed.add(enemy.id);   // party-wide, lasts the encounter
-    this.announce(`${enemy.name} is revealed!`);
+    // The analysis itself: the announce carries what the party just learned.
+    const el = currentElement(enemy) || 'no element';
+    const st = enemy.statuses && enemy.statuses.length ? ` · ${enemy.statuses.map(s => s.name).join(', ')}` : '';
+    this.announce(`${enemy.name} revealed — Element: ${el} · HP ${enemy.hp}/${enemy.maxHp} · DEF ${enemy.def} · RES ${enemy.res} · acts every ${enemy.gaugeS}s${st}`);
     this.log({ ev: 'reveal', target: enemy.id });
   }
 
