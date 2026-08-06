@@ -218,7 +218,7 @@ const canonCanvases = new Map();
 export function canonRoom(mapKey, chipset, onReady = () => {}) {
   const key = `${mapKey}|${chipset}`;
   if (canonCanvases.has(key)) return canonCanvases.get(key);
-  const entry = { ready: false, ground: null, overlay: null, w: 0, h: 0 };
+  const entry = { ready: false, ground: null, overlay: null, w: 0, h: 0, evc: [], chip: null };
   canonCanvases.set(key, entry);
   (async () => {
     try {
@@ -278,10 +278,29 @@ export function canonRoom(mapKey, chipset, onReady = () => {}) {
         blit(e.c.length === 3 ? ox : gx, e.c.length === 3 ? e.c.slice(0, 2) : e.c, e.x * 16, e.y * 16);
       }
       entry.ground = g; entry.overlay = o; entry.ready = true;
+      entry.evc = tm.evc || [];   // conditioned scenery — drawn live, not baked
+      entry.chip = img;
       onReady();
     } catch { /* missing map/chipset renders black — never blocks */ }
   })();
   return entry;
+}
+
+// Conditioned scenery (hidden doors, chapter changes): tiles the game gates
+// behind a switch/item, drawn only when the GM has toggled their group on.
+// layer 'ground' draws under sprites, 'above' over them. ghostInactive shows
+// the off groups faintly — the GM's x-ray; players never pass it.
+export function drawCanonCond(x, entry, condOn, layer = 'all', ghostInactive = false) {
+  if (!entry.ready || !entry.evc.length) return;
+  for (const e of entry.evc) {
+    const above = e.c.length === 3;
+    if (layer === 'ground' ? above : layer === 'above' ? !above : false) continue;
+    const on = !!(condOn && condOn[e.cond]);
+    if (!on && !ghostInactive) continue;
+    x.globalAlpha = on ? 1 : 0.35;
+    x.drawImage(entry.chip, e.c[0], e.c[1], 16, 16, e.x * 16, e.y * 16, 16, 16);
+  }
+  x.globalAlpha = 1;
 }
 
 // ---------- combat action FX

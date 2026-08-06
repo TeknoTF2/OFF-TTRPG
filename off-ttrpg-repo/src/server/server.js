@@ -810,6 +810,18 @@ function handleGm(msg) {
       }
       touch(); break;
     }
+    case 'canon-cond': {
+      // Conditioned scenery toggle — the GM is the event system: flip the
+      // hidden door / chapter scenery group named by its game condition.
+      const room = currentRoom();
+      if (room && room.imported && msg.cond) {
+        room.condOn = room.condOn || {};
+        if (msg.on) room.condOn[msg.cond] = true;
+        else delete room.condOn[msg.cond];
+        touch();
+      }
+      break;
+    }
     case 'room-chipset': {
       const room = currentRoom();
       if (room && room.imported && (msg.chipset == null || canonIndex.chipsets.includes(msg.chipset))) {

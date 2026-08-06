@@ -78,19 +78,29 @@ function parseLmu(buf) {
     else if (id === 0x48) map.upper = readI16(body.b, len);
     else if (id === 0x51) {
       lcfArray(body, (evId, f) => {
-        const ev = { id: evId, name: '', x: 0, y: 0, doors: [] };
+        const ev = { id: evId, name: '', x: 0, y: 0, doors: [], condTiles: [] };
         if (f[0x01]) ev.name = f[0x01].body.str(f[0x01].len).trim();
         if (f[0x02]) ev.x = f[0x02].body.varint();
         if (f[0x03]) ev.y = f[0x03].body.varint();
         if (f[0x05]) {
           lcfArray(f[0x05].body, (pageId, pf) => {
-            // First page: if its graphic is a chipset tile (empty charset name),
-            // bake it as static scenery — doors, ladders, signs live here.
-            if (pageId === 1) {
-              const charset = pf[0x15] ? pf[0x15].body.str(pf[0x15].len).trim() : '';
-              const tileIdx = pf[0x16] ? pf[0x16].body.varint() : 0;
-              const layer = pf[0x22] ? pf[0x22].body.varint() : 0;
-              if (!charset && tileIdx > 0) ev.tile = { idx: tileIdx, above: layer === 2 };
+            // Page condition (chunk 0x02): flags bit 1/2 = switches, 4 = variable,
+            // 8 = item-in-inventory. A conditioned page's graphic is scenery that
+            // appears when the story says so — the Zone 0 secret door.
+            let cond = null;
+            if (pf[0x02]) {
+              const cc = {};
+              chunks(pf[0x02].body, (cid, cb) => { cc[cid] = cb.varint(); });
+              if (cc[0x01]) cond = { flags: cc[0x01], switchA: cc[0x02] || 0, switchB: cc[0x03] || 0, varId: cc[0x04] || 0, varVal: cc[0x05] || 0, itemId: cc[0x06] || 0 };
+            }
+            const charset = pf[0x15] ? pf[0x15].body.str(pf[0x15].len).trim() : '';
+            const tileIdx = pf[0x16] ? pf[0x16].body.varint() : 0;
+            const layer = pf[0x22] ? pf[0x22].body.varint() : 0;
+            if (!charset && tileIdx > 0) {
+              // Unconditioned page 1 bakes as static scenery — doors, ladders,
+              // signs. Conditioned pages (any number) become toggleable scenery.
+              if (pageId === 1 && !cond) ev.tile = { idx: tileIdx, above: layer === 2 };
+              else if (cond) ev.condTiles.push({ idx: tileIdx, above: layer === 2, cond });
             }
             if (!pf[0x34]) return;
             for (const c of parseCommands(pf[0x34].body)) {
@@ -121,22 +131,29 @@ function parseCommands(r) {
   return out;
 }
 
-// ---------------------------------------------------------------- LDB (chipsets)
-function parseLdbChipsets(buf) {
+// ---------------------------------------------------------------- LDB
+// Chipsets (0x14) for rendering/passability; item (0x0D) and switch (0x17)
+// names so condition-gated scenery gets a human-readable label.
+function parseLdb(buf) {
   const r = new R(buf);
   if (r.header() !== 'LcfDataBase') throw new Error('not an LDB');
-  const chipsets = {};
+  const chipsets = {}, items = {}, switches = {};
   chunks(r, (id, body) => {
-    if (id !== 0x14) return;             // 20 = chipset section
-    lcfArray(body, (csId, f) => {
-      const cs = { name: '', lower: null, upper: null };
-      if (f[0x02]) cs.name = f[0x02].body.str(f[0x02].len).trim();
-      if (f[0x04]) cs.lower = Buffer.from(f[0x04].body.b);
-      if (f[0x05]) cs.upper = Buffer.from(f[0x05].body.b);
-      chipsets[csId] = cs;
-    });
+    if (id === 0x14) {
+      lcfArray(body, (csId, f) => {
+        const cs = { name: '', lower: null, upper: null };
+        if (f[0x02]) cs.name = f[0x02].body.str(f[0x02].len).trim();
+        if (f[0x04]) cs.lower = Buffer.from(f[0x04].body.b);
+        if (f[0x05]) cs.upper = Buffer.from(f[0x05].body.b);
+        chipsets[csId] = cs;
+      });
+    } else if (id === 0x0d) {
+      lcfArray(body, (itId, f) => { if (f[0x01]) items[itId] = f[0x01].body.str(f[0x01].len).trim(); });
+    } else if (id === 0x17) {
+      lcfArray(body, (swId, f) => { if (f[0x01]) switches[swId] = f[0x01].body.str(f[0x01].len).trim(); });
+    }
   }, { zeroEnds: false });
-  return chipsets;
+  return { chipsets, items, switches };
 }
 
 // ---------------------------------------------------------------- LMT (names)
@@ -308,10 +325,21 @@ function upperAbove(upId, cs) {
 // ---------------------------------------------------------------- batch
 const only = process.argv.includes('--one') ? process.argv[process.argv.indexOf('--one') + 1] : null;
 
-const ldb = parseLdbChipsets(readFileSync(path.join(SRC, 'RPG_RT.ldb')));
+const { chipsets: ldb, items: ldbItems, switches: ldbSwitches } = parseLdb(readFileSync(path.join(SRC, 'RPG_RT.ldb')));
 const lmt = parseLmt(readFileSync(path.join(SRC, 'RPG_RT.lmt')));
 const chipFiles = readdirSync(path.join(SRC, 'chipset')).filter(f => /\.png$/i.test(f));
-console.log(`LDB: ${Object.keys(ldb).length} chipsets · LMT: ${Object.keys(lmt.names).length} map names · ${chipFiles.length} chipset PNGs`);
+console.log(`LDB: ${Object.keys(ldb).length} chipsets, ${Object.keys(ldbItems).length} items, ${Object.keys(ldbSwitches).length} switches · LMT: ${Object.keys(lmt.names).length} map names · ${chipFiles.length} chipset PNGs`);
+
+// Human-readable label for a page condition — this is the toggle's name in the
+// GM console, so favor the story-facing part (item/switch names) over IDs.
+function condLabel(cond) {
+  const parts = [];
+  if (cond.flags & 1) parts.push(ldbSwitches[cond.switchA] ? `switch "${ldbSwitches[cond.switchA]}"` : `switch #${cond.switchA}`);
+  if (cond.flags & 2) parts.push(ldbSwitches[cond.switchB] ? `switch "${ldbSwitches[cond.switchB]}"` : `switch #${cond.switchB}`);
+  if (cond.flags & 4) parts.push(`var #${cond.varId} ≥ ${cond.varVal}`);
+  if (cond.flags & 8) parts.push(ldbItems[cond.itemId] ? `has "${ldbItems[cond.itemId]}"` : `has item #${cond.itemId}`);
+  return parts.join(' & ') || 'special';
+}
 
 const mapFiles = readdirSync(path.join(SRC, 'maps')).filter(f => /^Map\d+\.lmu$/i.test(f)).sort();
 const index = { maps: {}, chipsets: chipFiles };
@@ -360,18 +388,30 @@ for (const mf of mapFiles) {
     // Static scenery from tile-graphic events (ladders, doors, signs): the
     // upper-tile source rect at the event's cell. Visual only — no behavior.
     const evTiles = [];
+    // Conditioned scenery: tile graphics on pages gated by a switch/item/var —
+    // hidden by default (a first visit's view), toggleable live by the GM.
+    const evCond = [];
     for (const ev of m.events) {
-      if (!ev.tile) continue;
-      const cell = upperCell(10000 + ev.tile.idx);
-      if (!cell) continue;
-      if (ev.tile.above) cell.push(1);
-      evTiles.push({ x: ev.x, y: ev.y, c: cell });
+      if (ev.tile) {
+        const cell = upperCell(10000 + ev.tile.idx);
+        if (cell) {
+          if (ev.tile.above) cell.push(1);
+          evTiles.push({ x: ev.x, y: ev.y, c: cell });
+        }
+      }
+      for (const ct of ev.condTiles || []) {
+        const cell = upperCell(10000 + ct.idx);
+        if (!cell) continue;
+        if (ct.above) cell.push(1);
+        evCond.push({ x: ev.x, y: ev.y, c: cell, cond: condLabel(ct.cond) });
+      }
     }
 
     const dir = path.join(OUT, mapKey);
     mkdirSync(dir, { recursive: true });
     writeFileSync(path.join(dir, 'tilemap.json'), JSON.stringify({
       w: m.w, h: m.h, tile: 16, lower, upper, ev: evTiles,
+      evc: evCond.length ? evCond : undefined,           // conditioned scenery, GM-toggled
       pano: m.panoFlag && m.pano ? m.pano : null,       // panorama shows through keyed-transparent cells
     }));
     writeFileSync(path.join(dir, 'collision.json'), JSON.stringify({ width: m.w, height: m.h, grid }));

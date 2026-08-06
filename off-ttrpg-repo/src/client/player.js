@@ -2,7 +2,7 @@
 // The UI filters to legality: dead targets grey out and refuse the click,
 // the slot picker shows only legal gear, Muted disables Competence.
 
-import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
+import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
 import { drawRoomKit } from '/roomkit.js';
 
 const seat = new URLSearchParams(location.search).get('seat') || localStorage.getItem('off-seat') || 'P1';
@@ -735,10 +735,14 @@ function drawOverworld() {
   x.translate(-camX, -camY);
   // Canon rooms blit their composed tilemap; the above-hero overlay draws
   // after the sprites, at the end of this function.
-  let canonOverlay = null;
+  let canonOverlay = null, canonCr = null;
   if (room.imported) {
     const cr = canonRoom(room.imported, room.chipset || room.nativeChipset || 'yellow.png');
-    if (cr.ready) { x.drawImage(cr.ground, 0, 0); canonOverlay = cr.overlay; }
+    if (cr.ready) {
+      x.drawImage(cr.ground, 0, 0);
+      drawCanonCond(x, cr, room.condOn, 'ground');   // GM-toggled scenery (hidden doors)
+      canonOverlay = cr.overlay; canonCr = cr;
+    }
   } else {
     // A hot-folder room image (assets/rooms/<room name>.png) IS the room's look,
     // stretched to the room's size; the shapes underneath become invisible
@@ -807,6 +811,7 @@ function drawOverworld() {
     x.fillText(pm.name.slice(0, 10).toUpperCase(), px - 6, py + 26);
   }
   if (canonOverlay) x.drawImage(canonOverlay, 0, 0);   // above-hero tiles cover sprites
+  if (canonCr) drawCanonCond(x, canonCr, room.condOn, 'above');
 }
 
 function paletteFor(room, pals) {

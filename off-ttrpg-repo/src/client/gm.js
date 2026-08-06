@@ -1,7 +1,7 @@
 // GM console. Organizes and suggests, never restricts: every list reachable,
 // every value editable, and nothing here ever says "you can't."
 
-import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx } from '/common.js';
+import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx } from '/common.js';
 
 // Canon map index (names, hierarchy, chipsets) — fetched once.
 let canonIndex = { maps: {}, chipsets: [] };
@@ -475,7 +475,10 @@ function drawStaging(view) {
     // Canon room: composed tilemap + the GM-only pin overlay.
     const cr = canonRoom(room.imported, room.chipset || room.nativeChipset || 'yellow.png', () => drawStaging(App.view));
     x.fillStyle = '#000'; x.fillRect(0, 0, room.w, room.h);
-    if (cr.ready) { x.drawImage(cr.ground, 0, 0); x.drawImage(cr.overlay, 0, 0); }
+    if (cr.ready) {
+      x.drawImage(cr.ground, 0, 0); x.drawImage(cr.overlay, 0, 0);
+      drawCanonCond(x, cr, room.condOn, 'all', true);   // GM x-ray: off groups ghosted
+    }
     const overlayEl = $('fieldOverlay');
     for (const p of room.pins || []) {
       const d = el('div', {
@@ -622,10 +625,10 @@ function drawGmWalk(view, room) {
   x.setTransform(1, 0, 0, 1, 0, 0);
   x.fillStyle = '#000'; x.fillRect(0, 0, 384, 288);
   x.translate(-camX, -camY);
-  let overlay = null;
+  let overlay = null, walkCr = null;
   if (room.imported) {
     const cr = canonRoom(room.imported, room.chipset || room.nativeChipset || 'yellow.png');
-    if (cr.ready) { x.drawImage(cr.ground, 0, 0); overlay = cr.overlay; }
+    if (cr.ready) { x.drawImage(cr.ground, 0, 0); drawCanonCond(x, cr, room.condOn, 'ground', true); overlay = cr.overlay; walkCr = cr; }
   } else {
     const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
     if (bgPath) {
@@ -669,6 +672,7 @@ function drawGmWalk(view, room) {
     x.fillText(label.slice(0, 12).toUpperCase(), px2 - 6, py2 + 26);
   }
   if (overlay) x.drawImage(overlay, 0, 0);
+  if (walkCr) drawCanonCond(x, walkCr, room.condOn, 'above', true);
 }
 
 // staging mouse: drag rects for floors/structs, click for stamps
@@ -1030,6 +1034,28 @@ function renderLocation(p, view) {
       row.append(el('span', { class: 'sl', style: 'width:auto' }, 'CHIPSET'), cs);
     }
     p.appendChild(row);
+
+    // Conditioned scenery: tiles the game gates behind a switch or item
+    // (the Zone 0 secret door, Enoch's corridors). Hidden from players until
+    // toggled; the GM's field view ghosts the off groups.
+    if (view.room && view.room.imported) {
+      const cr = canonRoom(view.room.imported, view.room.chipset || view.room.nativeChipset || 'yellow.png', () => renderPanels());
+      if (cr.ready && cr.evc.length) {
+        const groups = {};
+        for (const e of cr.evc) groups[e.cond] = (groups[e.cond] || 0) + 1;
+        p.appendChild(el('div', { class: 'dsec' }, 'CONDITIONED SCENERY — APPEARS WHEN YOU SAY SO'));
+        const crow = el('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px' });
+        for (const [cond, n] of Object.entries(groups)) {
+          const on = !!(view.room.condOn && view.room.condOn[cond]);
+          const b = el('button', { class: 'bigbtn' + (on ? '' : ' ghost'), style: 'font-size:15px;padding:3px 12px' },
+            `${on ? '● ' : '○ '}${cond}${n > 1 ? ` ×${n}` : ''}`);
+          b.title = on ? 'visible to players — click to hide' : 'hidden from players — click to reveal';
+          b.onclick = () => gm('canon-cond', { cond, on: !on });
+          crow.appendChild(b);
+        }
+        p.appendChild(crow);
+      }
+    }
   }
 
   const zones = ['Zone 1', 'Zone 2', 'Zone 3', 'The Room', 'Purified', 'Canon'];
@@ -1549,6 +1575,7 @@ function openSpawnPicker(mapKey) {
     x.imageSmoothingEnabled = false;
     x.drawImage(cr.ground, 0, 0);
     x.drawImage(cr.overlay, 0, 0);
+    drawCanonCond(x, cr, null, 'all', true);   // conditioned scenery, ghosted
   };
   draw();
   cv.onclick = ev => {
