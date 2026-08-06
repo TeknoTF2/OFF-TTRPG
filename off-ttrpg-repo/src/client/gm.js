@@ -994,8 +994,9 @@ function renderLocation(p, view) {
       sel.innerHTML = '';
       const byParent = {};
       for (const [k, m] of Object.entries(canonIndex.maps)) {
-        if (q && !(`${m.name} ${k}`.toLowerCase().includes(q))) continue;
         const pname = m.parent && canonIndex.maps[`Map${String(m.parent).padStart(4, '0')}`]?.name || '(top level)';
+        // match the parent's name too: "zone 0" surfaces the pièces inside it
+        if (q && !(`${m.name} ${k} ${pname}`.toLowerCase().includes(q))) continue;
         (byParent[pname] = byParent[pname] || []).push([k, m]);
       }
       for (const pname of Object.keys(byParent).sort()) {
