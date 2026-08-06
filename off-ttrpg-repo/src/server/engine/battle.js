@@ -1194,19 +1194,21 @@ export class Battle {
 
   // GM-piloted enemy action.
   gmEnemyAction(e, action) {
-    if (this.over || this.frozen || this.campaign.paused || e.dead || !e.holding) return { ok: false, refuse: true };
+    if (this.over || this.frozen || this.campaign.paused || e.dead) return { ok: false, refuse: true };
+    if (action.kind === 'trigger') {
+      // The GM's hand is never gated by the trigger's condition OR the gauge —
+      // a stage direction is theirs to call early, late, mid-fill, or never,
+      // and it costs the creature nothing.
+      const t = this.allTriggers(e).find(x => x.id === action.triggerId);
+      if (!t || this.triggerSpent(e, t)) return { ok: false, refuse: true };
+      this.fireTrigger(e, t);
+      return { ok: true };
+    }
+    if (!e.holding) return { ok: false, refuse: true };   // acting spends the turn — that needs the gauge
     if (action.kind === 'defend') {
       e.defending = true;
       this.announce(`${e.name} defends.`);
       this.spendTurn(e);
-      return { ok: true };
-    }
-    if (action.kind === 'trigger') {
-      // The GM's hand is never gated by the trigger's condition — a stage
-      // direction is theirs to call early, late, or never.
-      const t = this.allTriggers(e).find(x => x.id === action.triggerId);
-      if (!t || this.triggerSpent(e, t)) return { ok: false, refuse: true };
-      this.fireTrigger(e, t);
       return { ok: true };
     }
     if (action.kind === 'pool-item') {
