@@ -30,8 +30,34 @@ const ACCESS_KEY = process.env.ACCESS_KEY || null;
 let data = loadAll();
 const store = new Store(data, VAR_DIR);
 const introScene = JSON.parse(readFileSync(path.join(here, 'data', 'intro-scene.json'), 'utf8'));
-const zone0Room = JSON.parse(readFileSync(path.join(here, 'data', 'zone0-room.json'), 'utf8'));
-const zone0Interiors = JSON.parse(readFileSync(path.join(here, 'data', 'zone0-interiors.json'), 'utf8'));
+
+// Canon maps: pre-converted by tools/import-lmu.mjs — the engine never parses LCF.
+const CANON_DIR = path.join(here, 'data', 'canon');
+const canonIndex = existsSync(path.join(CANON_DIR, 'rooms-index.json'))
+  ? JSON.parse(readFileSync(path.join(CANON_DIR, 'rooms-index.json'), 'utf8'))
+  : { maps: {}, chipsets: [] };
+const canonCache = { collision: new Map(), pins: new Map() };
+function canonCollision(mapKey) {
+  if (!canonCache.collision.has(mapKey)) {
+    try { canonCache.collision.set(mapKey, JSON.parse(readFileSync(path.join(CANON_DIR, mapKey, 'collision.json'), 'utf8'))); }
+    catch { canonCache.collision.set(mapKey, null); }
+  }
+  return canonCache.collision.get(mapKey);
+}
+function canonPins(mapKey) {
+  if (!canonCache.pins.has(mapKey)) {
+    try { canonCache.pins.set(mapKey, JSON.parse(readFileSync(path.join(CANON_DIR, mapKey, 'pins.json'), 'utf8'))); }
+    catch { canonCache.pins.set(mapKey, []); }
+  }
+  return canonCache.pins.get(mapKey);
+}
+// A canon room's display name; duplicates across the tree get their map key.
+function canonRoomName(mapKey) {
+  const info = canonIndex.maps[mapKey];
+  if (!info) return mapKey;
+  const dupes = Object.values(canonIndex.maps).filter(m => m.name === info.name);
+  return dupes.length > 1 ? `${info.name} [${mapKey.slice(3)}]` : info.name;
+}
 
 const PORT = process.env.PORT || 8420;
 const seats = new Map();       // seat -> ws
@@ -47,17 +73,16 @@ function campaign() {
   const c = store.campaign;
   c.musicZones = c.musicZones || {};
   c.sceneMusic = c.sceneMusic || {};
-  // Built-in authored rooms ride along with every campaign (theirs to edit).
-  // A version bump replaces stale copies (e.g. kit-drawn → real art + collision).
-  const BUILTIN_VER = 2;
   c.rooms = c.rooms || {};
   c.notes = c.notes || {};
-  for (const [name, room] of [['Zone 0', zone0Room], ...Object.entries(zone0Interiors)]) {
-    if (!c.rooms[name] || (+c.notes[`builtinver:${name}`] || 0) < BUILTIN_VER) {
-      c.rooms[name] = JSON.parse(JSON.stringify(room));
-      c.notes[`builtinver:${name}`] = String(BUILTIN_VER);
+  c.gmAvatar = c.gmAvatar || { on: false, sprite: null, name: 'The Judge' };
+  // Retire the old PNG-based Zone 0 built-ins — canon maps replace them.
+  for (const name of Object.keys(c.rooms)) {
+    if ((c.notes[`builtinver:${name}`] || 0) && !c.rooms[name].imported) {
+      delete c.rooms[name];
+      delete c.notes[`builtinver:${name}`];
+      delete c.notes[`roomzone:${name}`];
     }
-    if (!c.notes[`roomzone:${name}`]) c.notes[`roomzone:${name}`] = 'Zone 0';
   }
   return c;
 }
@@ -189,6 +214,7 @@ function enemyPublicView(e) {
     v.hp = e.hp; v.maxHp = e.maxHp;
     v.def = e.def; v.res = e.res; v.lck = e.lck;
     v.tiers = e.statusTiers;
+    v.gaugeS = e.gaugeS;
   }
   return v;
 }
@@ -245,10 +271,36 @@ function memberView(m, { self = false } = {}) {
 
 function roomViewFor(room, gm) {
   if (!room) return null;
-  return {
+  const v = {
     ...room,
     pieces: (room.pieces || []).filter(p => gm || !p.hidden),
   };
+  if (room.imported) {
+    const col = canonCollision(room.imported);
+    if (col) v.grid = col.grid;                     // client-side movement prediction
+    const info = canonIndex.maps[room.imported];
+    v.nativeChipset = info ? info.chipset : null;
+    if (gm) {
+      // Pins are GM-only overlays; doors near a player hoist into the Location panel.
+      const pins = canonPins(room.imported).map(p => ({
+        ...p,
+        destName: p.door ? canonRoomName(`Map${String(p.door.map).padStart(4, '0')}`) : null,
+        destMap: p.door ? `Map${String(p.door.map).padStart(4, '0')}` : null,
+      }));
+      v.pins = pins;
+      const c = campaign();
+      v.doorsNear = [];
+      for (const [pid, pos] of Object.entries(c.positions || {})) {
+        if (!seats.has(pid)) continue;
+        for (const p of pins) {
+          if (!p.door) continue;
+          const dx = Math.abs(p.x * 16 + 8 - (pos.x + 8)), dy = Math.abs(p.y * 16 + 8 - (pos.y + 12));
+          if (dx <= 24 && dy <= 24) v.doorsNear.push({ player: pid, pin: p.name, destName: p.destName, destMap: p.destMap, x: p.door.x, y: p.door.y });
+        }
+      }
+    }
+  }
+  return v;
 }
 
 function battleViewFor(seat) {
@@ -286,6 +338,7 @@ function viewFor(seat) {
     scene: sceneRun && !sceneRun.state.done ? (gm ? sceneRun.gmView([...seats.keys()]) : sceneRun.viewFor(seat)) : null,
     jukebox: { track: c.jukebox.track, playing: c.jukebox.playing, queue: gm ? c.jukebox.queue : undefined },
     connected: [...seats.keys()],   // presence: absent members simply don't render
+    gmAvatar: c.gmAvatar && c.gmAvatar.on ? { name: c.gmAvatar.name, sprite: c.gmAvatar.sprite } : null,
   };
   if (gm) {
     view.templates = Object.keys(c.templates);
@@ -374,6 +427,23 @@ function endEncounter() {
 function walkableAt(room, x, y, inVehicle) {
   if (!room) return true;
   if (x < 0 || y < 0 || x >= (room.w || 384) || y >= (room.h || 288)) return false;
+  if (room.imported) {
+    // Canon rooms: the 16px collision grid baked at import is the ground truth.
+    const col = canonCollision(room.imported);
+    if (!col) return false;
+    const gx = Math.floor(x / 16), gy = Math.floor(y / 16);
+    if (gy < 0 || gy >= col.grid.length || gx < 0 || gx >= col.width) return false;
+    if (col.grid[gy][gx] !== '1') return false;
+    // GM-placed solid props still block on top, identically to procedural rooms.
+    const SOLID_I = { crate: 1, barrel: 1, cabinet: 1, bottles: 1, counter: 1, plant: 1, stack: 1, lamp: 1, sign: 1, bed: 1, shelf: 1, vat: 1, rock: 1, greyblock: 1 };
+    for (const p of room.props || []) {
+      if (SOLID_I[p.t] && x >= p.x && x < p.x + (p.w || 24) && y >= p.y && y < p.y + 24) return false;
+    }
+    for (const s of room.structs || []) {
+      if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) return false;
+    }
+    return true;
+  }
   let ok = false;
   const UNWALKABLE = { water: 1, void: 1, inkwall0: 1 };
   for (const f of room.floors || []) {
@@ -555,14 +625,15 @@ function handlePlayer(seat, msg) {
     }
     case 'move': {
       if (c.mode !== 'overworld') return;
+      if (seat === 'GM' && !(c.gmAvatar && c.gmAvatar.on)) return;   // the GM walks only as an avatar
       const room = currentRoom();
       const pos = (c.positions = c.positions || {})[seat] || { x: 48, y: 48, facing: 0 };
       const { x, y, facing } = msg;
       if (typeof x !== 'number' || typeof y !== 'number') return;
       if (Math.abs(x - pos.x) + Math.abs(y - pos.y) > 24) return;  // one step at a time
-      if (walkableAt(room, x + 4, y + 12, me.inVehicle) && walkableAt(room, x + 12, y + 12, me.inVehicle)) {
+      if (walkableAt(room, x + 4, y + 12, me && me.inVehicle) && walkableAt(room, x + 12, y + 12, me && me.inVehicle)) {
         c.positions[seat] = { x, y, facing: facing | 0 };
-        checkPieceContact(seat, x, y);
+        if (seat !== 'GM') checkPieceContact(seat, x, y);   // triggers never fire on the avatar
         stateDirtyView = true;
         store.markDirty();
       }
@@ -697,6 +768,68 @@ function handleGm(msg) {
     }
 
     case 'set-location': setLocation(msg.zone || c.location.zone, msg.name); break;
+    case 'canon-visit': {
+      // Enter a canon map: an "imported" room, created on first visit, then an
+      // ordinary room — pieces, hidden props, chipset choice all persist on it.
+      const info = canonIndex.maps[msg.map];
+      if (!info) break;
+      const name = canonRoomName(msg.map);
+      if (!c.rooms[name]) {
+        c.rooms[name] = { imported: msg.map, chipset: null, w: info.w * 16, h: info.h * 16, floors: [], structs: [], props: [], pieces: [] };
+      }
+      c.notes[`roomzone:${name}`] = 'Canon';
+      // Spawn at the requested tile (a door destination) or nearest walkable to center.
+      const col = canonCollision(msg.map);
+      let sx = msg.x != null ? msg.x : Math.floor(info.w / 2);
+      let sy = msg.y != null ? msg.y : Math.floor(info.h / 2);
+      if (col && (col.grid[sy] || '')[sx] !== '1') {
+        outer: for (let r = 1; r < Math.max(info.w, info.h); r++) {
+          for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+            const nx = sx + dx, ny = sy + dy;
+            if ((col.grid[ny] || '')[nx] === '1') { sx = nx; sy = ny; break outer; }
+          }
+        }
+      }
+      c.rooms[name].spawn = { x: sx * 16, y: sy * 16 - 12 };
+      setLocation('Canon', name);
+      break;
+    }
+    case 'gm-avatar': {
+      // The GM walks the map in person — any sprite, any name, The Judge included.
+      if ('sprite' in msg) c.gmAvatar.sprite = msg.sprite || null;
+      if ('name' in msg) c.gmAvatar.name = String(msg.name || 'The Judge').slice(0, 40);
+      if ('on' in msg) {
+        c.gmAvatar.on = !!msg.on;
+        c.positions = c.positions || {};
+        if (c.gmAvatar.on) {
+          const room = currentRoom();
+          const near = Object.values(c.positions)[0];
+          const spawn = near ? { x: near.x + 20, y: near.y } : (room && room.spawn ? room.spawn : { x: 48, y: 48 });
+          c.positions.GM = { x: spawn.x, y: spawn.y, facing: 0 };
+        } else delete c.positions.GM;
+      }
+      touch(); break;
+    }
+    case 'canon-cond': {
+      // Conditioned scenery toggle — the GM is the event system: flip the
+      // hidden door / chapter scenery group named by its game condition.
+      const room = currentRoom();
+      if (room && room.imported && msg.cond) {
+        room.condOn = room.condOn || {};
+        if (msg.on) room.condOn[msg.cond] = true;
+        else delete room.condOn[msg.cond];
+        touch();
+      }
+      break;
+    }
+    case 'room-chipset': {
+      const room = currentRoom();
+      if (room && room.imported && (msg.chipset == null || canonIndex.chipsets.includes(msg.chipset))) {
+        room.chipset = msg.chipset || null;   // null = the map's native chipset
+        touch();
+      }
+      break;
+    }
     case 'set-mode': c.mode = msg.mode; touch(); break;
 
     case 'rest': {
@@ -1007,6 +1140,17 @@ const server = http.createServer((req, res) => {
     if (url === '/api/art') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify(artIndex()));
+    }
+    if (url === '/api/canon/index') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify(canonIndex));
+    }
+    const canonMatch = url.match(/^\/api\/canon\/(Map\d{4})\/tilemap\.json$/);
+    if (canonMatch) {
+      const p = path.join(CANON_DIR, canonMatch[1], 'tilemap.json');
+      if (!existsSync(p)) { res.writeHead(404); return res.end('no such map'); }
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=3600' });
+      return res.end(readFileSync(p));
     }
     if (url === '/api/static-data') {
       res.writeHead(200, { 'Content-Type': 'application/json' });

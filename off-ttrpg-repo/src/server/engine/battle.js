@@ -183,6 +183,18 @@ export class Battle {
       firedTriggers: [], sprite: tmpl.sprite || null, portrait: tmpl.portrait || null,
     };
     if (inst.slot == null) inst.slot = this.freeEnemySlot();
+    // Duplicates get letter suffixes so the table can call its targets:
+    // the second "Common Spectre" renames the first to "Common Spectre A"
+    // and becomes "Common Spectre B"; later spawns continue the lettering.
+    if (!q.name) {
+      this.nameCounts = this.nameCounts || {};
+      const n = (this.nameCounts[tmplName] = (this.nameCounts[tmplName] || 0) + 1);
+      if (n === 2) {
+        const first = this.enemies.find(x => x.template === tmplName && x.name === tmplName);
+        if (first) first.name = `${tmplName} A`;
+      }
+      if (n > 1) inst.name = `${tmplName} ${String.fromCharCode(64 + n)}`;
+    }
     // Compound/phase fights: no top-level gauge_s means take the first phase's.
     if (inst.gaugeS == null && tmpl.gauge_phases) inst.gaugeS = Object.values(tmpl.gauge_phases)[0];
     if (inst.gaugeS == null) inst.gaugeS = 5.0;
@@ -911,7 +923,10 @@ export class Battle {
   reveal(enemy) {
     if (enemy.kind !== 'enemy') return;
     this.revealed.add(enemy.id);   // party-wide, lasts the encounter
-    this.announce(`${enemy.name} is revealed!`);
+    // The analysis itself: the announce carries what the party just learned.
+    const el = currentElement(enemy) || 'no element';
+    const st = enemy.statuses && enemy.statuses.length ? ` · ${enemy.statuses.map(s => s.name).join(', ')}` : '';
+    this.announce(`${enemy.name} revealed — Element: ${el} · HP ${enemy.hp}/${enemy.maxHp} · DEF ${enemy.def} · RES ${enemy.res} · acts every ${enemy.gaugeS}s${st}`);
     this.log({ ev: 'reveal', target: enemy.id });
   }
 
@@ -1191,19 +1206,21 @@ export class Battle {
 
   // GM-piloted enemy action.
   gmEnemyAction(e, action) {
-    if (this.over || this.frozen || this.campaign.paused || e.dead || !e.holding) return { ok: false, refuse: true };
+    if (this.over || this.frozen || this.campaign.paused || e.dead) return { ok: false, refuse: true };
+    if (action.kind === 'trigger') {
+      // The GM's hand is never gated by the trigger's condition OR the gauge —
+      // a stage direction is theirs to call early, late, mid-fill, or never,
+      // and it costs the creature nothing.
+      const t = this.allTriggers(e).find(x => x.id === action.triggerId);
+      if (!t || this.triggerSpent(e, t)) return { ok: false, refuse: true };
+      this.fireTrigger(e, t);
+      return { ok: true };
+    }
+    if (!e.holding) return { ok: false, refuse: true };   // acting spends the turn — that needs the gauge
     if (action.kind === 'defend') {
       e.defending = true;
       this.announce(`${e.name} defends.`);
       this.spendTurn(e);
-      return { ok: true };
-    }
-    if (action.kind === 'trigger') {
-      // The GM's hand is never gated by the trigger's condition — a stage
-      // direction is theirs to call early, late, or never.
-      const t = this.allTriggers(e).find(x => x.id === action.triggerId);
-      if (!t || this.triggerSpent(e, t)) return { ok: false, refuse: true };
-      this.fireTrigger(e, t);
       return { ok: true };
     }
     if (action.kind === 'pool-item') {

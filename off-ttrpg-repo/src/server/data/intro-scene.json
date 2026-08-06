@@ -37,7 +37,7 @@
         { "stat": "hp", "line": "Health points, the measure of your very survival." },
         { "stat": "atk", "line": "Attack, the measure of your physical prowess." },
         { "stat": "cp", "line": "Competence Points, the measure of your magical capacity." },
-        { "stat": "esp", "line": "Espirit, the measure of your magical prowess." },
+        { "stat": "esp", "line": "Esprit, the measure of your magical prowess." },
         { "stat": "def", "line": "Defense, the measure of your durability." },
         { "stat": "agi", "line": "Agility, the measure of your speed." },
         { "stat": "res", "line": "Resistance, the measure of your immunity." },

@@ -63,7 +63,7 @@ export function shade(hex, f) {
 
 // Zone identity colors (combat mockup): flat zone-color field per zone.
 export const ZONES = {
-  'Zone 0': { field: '#a8891c', dk: '#6e5a10', tint: '#d8bf62', title: 'ZONE 0', sub: '—' },
+  'Canon': { field: '#3a3a33', dk: '#23231e', tint: '#a8a48e', title: 'OFF', sub: '—' },
   'Zone 1': { field: '#2e6d9e', dk: '#1d4b70', tint: '#7fa8c6', title: 'ZONE 1 — PENTEL', sub: 'smoke mines · alma damien shachihata' },
   'Zone 2': { field: '#c8871c', dk: '#8a5c10', tint: '#e0b56a', title: 'ZONE 2 — BISMARK', sub: 'the library · gomez galleries' },
   'Zone 3': { field: '#2f9e44', dk: '#1d6b2d', tint: '#7fc68f', title: 'ZONE 3 — VESPER', sub: 'the sugar works' },
@@ -206,6 +206,101 @@ export function volumeSlider() {
 export async function rescanAssets() {
   App.art = await (await fetch('/api/art')).json();
   return App.art;
+}
+
+// ---------- canon (imported) rooms
+// tilemap.json is a neutral render recipe: per cell either [sx,sy] (one 16×16
+// blit) or eight numbers (four 8×8 quadrant blits) — autotile shapes were
+// resolved at import, so any chipset PNG paints any map. Composed once per
+// (map, chipset) into two canvases: ground, and the above-hero overlay that
+// draws over sprites. Rendering is async; callers redraw when ready.
+const canonCanvases = new Map();
+export function canonRoom(mapKey, chipset, onReady = () => {}) {
+  const key = `${mapKey}|${chipset}`;
+  if (canonCanvases.has(key)) return canonCanvases.get(key);
+  const entry = { ready: false, ground: null, overlay: null, w: 0, h: 0, evc: [], chip: null };
+  canonCanvases.set(key, entry);
+  (async () => {
+    try {
+      const tm = await (await fetch(`/api/canon/${mapKey}/tilemap.json`)).json();
+      const raw = new Image();
+      raw.src = `/assets/level creation/chipset/${encodeURIComponent(chipset)}`;
+      await raw.decode();
+      // RM2k chipsets key transparency to a palette color, stored literally in
+      // the PNG. The blank upper tile (F0) is pure key — sample it and knock
+      // that exact color out, or every overlay tile carries its backing color.
+      const kc = document.createElement('canvas');
+      kc.width = raw.width; kc.height = raw.height;
+      const kx = kc.getContext('2d');
+      kx.drawImage(raw, 0, 0);
+      const idat = kx.getImageData(0, 0, kc.width, kc.height);
+      const d = idat.data;
+      const ki = (128 + 8) * kc.width * 4 + (288 + 8) * 4;   // center of blank F0
+      const kr = d[ki], kg = d[ki + 1], kb = d[ki + 2];
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i] === kr && d[i + 1] === kg && d[i + 2] === kb) d[i + 3] = 0;
+      }
+      kx.putImageData(idat, 0, 0);
+      const img = kc;
+      entry.w = tm.w * 16; entry.h = tm.h * 16;
+      const mk = () => {
+        const c = document.createElement('canvas');
+        c.width = entry.w; c.height = entry.h;
+        const x = c.getContext('2d');
+        x.imageSmoothingEnabled = false;
+        return [c, x];
+      };
+      const [g, gx] = mk(), [o, ox] = mk();
+      // Panorama (if the map declares one and the file has been dropped into
+      // the hot folder) tiles behind everything; keyed cells show through.
+      if (tm.pano) {
+        try {
+          const pano = new Image();
+          pano.src = `/assets/level creation/Panorama/${encodeURIComponent(tm.pano)}.png`;
+          await pano.decode();
+          for (let py = 0; py < entry.h; py += pano.height) {
+            for (let px2 = 0; px2 < entry.w; px2 += pano.width) gx.drawImage(pano, px2, py);
+          }
+        } catch { /* not uploaded yet — keyed cells show black */ }
+      }
+      const blit = (x, cell, dx, dy) => {
+        if (cell.length <= 3) { x.drawImage(img, cell[0], cell[1], 16, 16, dx, dy, 16, 16); return; }
+        for (let q = 0; q < 4; q++) x.drawImage(img, cell[q * 2], cell[q * 2 + 1], 8, 8, dx + (q % 2) * 8, dy + Math.floor(q / 2) * 8, 8, 8);
+      };
+      for (let y = 0; y < tm.h; y++) for (let cx = 0; cx < tm.w; cx++) {
+        const lc = tm.lower[y][cx];
+        if (lc) blit(gx, lc, cx * 16, y * 16);
+        const uc = tm.upper[y][cx];
+        if (uc) blit(uc.length === 3 ? ox : gx, uc.length === 3 ? uc.slice(0, 2) : uc, cx * 16, y * 16);
+      }
+      // static scenery baked from tile-graphic events (ladders, doors, signs)
+      for (const e of tm.ev || []) {
+        blit(e.c.length === 3 ? ox : gx, e.c.length === 3 ? e.c.slice(0, 2) : e.c, e.x * 16, e.y * 16);
+      }
+      entry.ground = g; entry.overlay = o; entry.ready = true;
+      entry.evc = tm.evc || [];   // conditioned scenery — drawn live, not baked
+      entry.chip = img;
+      onReady();
+    } catch { /* missing map/chipset renders black — never blocks */ }
+  })();
+  return entry;
+}
+
+// Conditioned scenery (hidden doors, chapter changes): tiles the game gates
+// behind a switch/item, drawn only when the GM has toggled their group on.
+// layer 'ground' draws under sprites, 'above' over them. ghostInactive shows
+// the off groups faintly — the GM's x-ray; players never pass it.
+export function drawCanonCond(x, entry, condOn, layer = 'all', ghostInactive = false) {
+  if (!entry.ready || !entry.evc.length) return;
+  for (const e of entry.evc) {
+    const above = e.c.length === 3;
+    if (layer === 'ground' ? above : layer === 'above' ? !above : false) continue;
+    const on = !!(condOn && condOn[e.cond]);
+    if (!on && !ghostInactive) continue;
+    x.globalAlpha = on ? 1 : 0.35;
+    x.drawImage(entry.chip, e.c[0], e.c[1], 16, 16, e.x * 16, e.y * 16, 16, 16);
+  }
+  x.globalAlpha = 1;
 }
 
 // ---------- combat action FX

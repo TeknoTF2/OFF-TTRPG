@@ -1,7 +1,11 @@
 // GM console. Organizes and suggests, never restricts: every list reachable,
 // every value editable, and nothing here ever says "you can't."
 
-import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx } from '/common.js';
+import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx } from '/common.js';
+
+// Canon map index (names, hierarchy, chipsets) — fetched once.
+let canonIndex = { maps: {}, chipsets: [] };
+fetch('/api/canon/index').then(r => r.json()).then(i => { canonIndex = i; }).catch(() => {});
 import { drawRoomKit } from '/roomkit.js';
 
 const $ = id => document.getElementById(id);
@@ -34,6 +38,7 @@ App.onEvent = e => {
 };
 
 let wasBattle = false;
+let autoOpened = null;   // enemy id whose stack auto-popped this hold
 App.onState = view => {
   lastStateAt = performance.now();
   document.body.classList.toggle('paused', !!view.paused);
@@ -42,6 +47,13 @@ App.onState = view => {
   if (!inBattle && wasBattle) setLeftMode('create');
   wasBattle = inBattle;
   render(view);
+  // The GM's loop mirrors the players': a GM-controlled gauge fills → its
+  // action stack pops on its own. Escape dismisses; it won't re-pop that hold.
+  if (inBattle && !$('estack').classList.contains('open') && !pendingAction && !pendingPilot) {
+    const ready = view.battle.enemies.find(x => x.control === 'gm' && x.holding && !x.dead);
+    if (ready && autoOpened !== ready.id) { autoOpened = ready.id; enemyClicked(ready); }
+    if (!ready) autoOpened = null;
+  }
 };
 
 function announce(t) { $('announce').textContent = t; }
@@ -59,6 +71,24 @@ for (const t of TABS) {
 }
 $('pausebtn').onclick = () => gm('pause');
 $('pausebtn').parentElement.insertBefore(volumeSlider(), $('pausebtn'));
+
+// Mini jukebox — the current track and transport live in the top bar, so
+// changing the music never costs the GM their open panel.
+let curJuke = null;
+const mjName = el('span', { class: 'dfont', style: 'font-size:18px;color:var(--amber);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer' }, 'SILENCE');
+mjName.title = 'open the jukebox';
+mjName.onclick = () => { activeTab = 'Jukebox'; renderPanels(); };
+const mjPlay = el('button', { class: 'mjbtn', title: 'play / pause' }, '▶');
+mjPlay.onclick = () => {
+  if (!curJuke || !curJuke.track) { activeTab = 'Jukebox'; renderPanels(); return; }
+  if (curJuke.playing) gm('jukebox-stop');
+  else gm('jukebox-play', { file: curJuke.track });
+};
+const mjSkip = el('button', { class: 'mjbtn', title: 'skip to next queued track' }, '⏭');
+mjSkip.onclick = () => gm('jukebox-skip');
+$('pausebtn').parentElement.insertBefore(
+  el('div', { id: 'minijuke', style: 'display:flex;align-items:center;gap:6px;padding:0 10px' }, mjName, mjPlay, mjSkip),
+  $('pausebtn'));
 $('lt-create').onclick = () => setLeftMode('create');
 $('lt-party').onclick = () => setLeftMode('party');
 function setLeftMode(m) {
@@ -85,6 +115,11 @@ function render(view) {
   renderStrip(view);
   renderPanels();
   syncJukebox(view.jukebox);
+
+  curJuke = view.jukebox || null;
+  mjName.textContent = curJuke && curJuke.track ? trackName(curJuke.track) : 'SILENCE';
+  mjPlay.textContent = curJuke && curJuke.playing ? '❚❚' : '▶';
+  mjSkip.disabled = !(curJuke && curJuke.queue && curJuke.queue.length);
 }
 
 // ---------------------------------------------------------------- CREATE column
@@ -288,13 +323,30 @@ function targetPlayer(m) {
   render(App.view);
 }
 
+let eCursor = 0;
 addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
   if (e.key === 'Escape') {
     if (pendingAction) { pendingAction = null; announce('Action lowered.'); render(App.view); }
     if (pendingPilot) { pendingPilot = null; announce('Pilot action lowered.'); render(App.view); }
     $('estack').classList.remove('open');
+    return;
+  }
+  // The GM's action stack follows the same loop as the players': arrows walk
+  // the options, Enter fires. (Avatar walking pauses while a stack is open.)
+  const st = $('estack');
+  if (st.classList.contains('open')) {
+    const opts = [...st.querySelectorAll('button.eact')];
+    if (!opts.length) return;
+    if (['ArrowUp', 'ArrowLeft'].includes(e.key)) { eCursor = (eCursor - 1 + opts.length) % opts.length; e.preventDefault(); markECursor(opts); return; }
+    if (['ArrowDown', 'ArrowRight'].includes(e.key)) { eCursor = (eCursor + 1) % opts.length; e.preventDefault(); markECursor(opts); return; }
+    if (['Enter', ' '].includes(e.key)) { e.preventDefault(); (opts[eCursor] || opts[0]).click(); return; }
   }
 });
+function markECursor(opts) {
+  opts.forEach((b, i) => b.classList.toggle('kcur', i === eCursor));
+  if (opts[eCursor]) opts[eCursor].scrollIntoView({ block: 'nearest' });
+}
 
 // ---------------------------------------------------------------- FIELD
 const SLOT_POS = [
@@ -419,7 +471,25 @@ function drawStaging(view) {
   const [zb, zd, zl, zp] = zmap[view.location.zone] || zmap['Zone 1'];
   const pal = p ? { base: p.base, dark: zd, lite: p.pale, pale: p.tint } : { base: zb, dark: zd, lite: zl, pale: zp };
   const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
-  if (bgPath) {
+  if (room.imported) {
+    // Canon room: composed tilemap + the GM-only pin overlay.
+    const cr = canonRoom(room.imported, room.chipset || room.nativeChipset || 'yellow.png', () => drawStaging(App.view));
+    x.fillStyle = '#000'; x.fillRect(0, 0, room.w, room.h);
+    if (cr.ready) {
+      x.drawImage(cr.ground, 0, 0); x.drawImage(cr.overlay, 0, 0);
+      drawCanonCond(x, cr, room.condOn, 'all', true);   // GM x-ray: off groups ghosted
+    }
+    const overlayEl = $('fieldOverlay');
+    for (const p of room.pins || []) {
+      const d = el('div', {
+        style: `position:absolute;left:${(p.x * 16 + 8) * sc}px;top:${(p.y * 16 + 8) * sc}px;transform:translate(-50%,-50%);z-index:2;`
+          + `font-size:${11 * sc}px;color:${p.door ? 'var(--amber)' : '#9ad'};pointer-events:none;text-shadow:1px 1px 0 #000`,
+        title: p.door ? `${p.name} → ${p.destName}` : p.name,
+      }, p.door ? '◈' : '·');
+      if (p.door) d.append(el('span', { style: `font-size:${8 * sc}px;margin-left:2px` }, p.destName || ''));
+      overlayEl.appendChild(d);
+    }
+  } else if (bgPath) {
     // Image rooms: the art is the look; the shapes are invisible collision,
     // shown here (and only here) as a translucent overlay so the GM can edit it.
     const img = stagingImage(bgPath);
@@ -444,13 +514,165 @@ function drawStaging(view) {
     d.ondblclick = ev => { ev.stopPropagation(); room.pieces = room.pieces.filter(z => z !== piece); stagedDirty = true; drawStaging(view); };
     overlay.appendChild(d);
   }
-  // party tokens on the GM camera
+  // live sprites on the GM camera — the party and the avatar, not name tags
+  const ROWS = [2, 3, 1, 0];
   for (const [pid, pp] of Object.entries(view.positions || {})) {
-    const pm = view.party.find(z => z.id === pid);
-    if (!pm) continue;
-    const d = el('div', { style: `position:absolute;left:${pp.x * sc}px;top:${pp.y * sc}px;z-index:2;font-size:10px;font-family:var(--disp);text-transform:uppercase;color:var(--amber)` }, pm.name.slice(0, 8).toUpperCase());
-    $('fieldOverlay').appendChild(d);
+    let spritePath = null, label = '';
+    if (pid === 'GM') {
+      if (!view.gmAvatar) continue;
+      spritePath = view.gmAvatar.sprite; label = view.gmAvatar.name || 'GM';
+    } else {
+      const pm = view.party.find(z => z.id === pid);
+      if (!pm || pm.benched) continue;
+      spritePath = (partyArt(pm.klass) || {}).sprite; label = pm.name;
+    }
+    const img = spritePath ? stagingImage(spritePath) : null;
+    if (img && img.complete && img.width) {
+      const cw = Math.floor(img.width / 3), ch = Math.floor(img.height / 4);
+      x.drawImage(img, cw, ROWS[pp.facing || 0] * ch, cw, ch, Math.round(pp.x) - 4, Math.round(pp.y) - ch + 16, cw, ch);
+    } else {
+      x.fillStyle = pid === 'GM' ? '#f4f2ec' : '#f2a71b';
+      x.fillRect(Math.round(pp.x), Math.round(pp.y), 16, 16);
+    }
+    x.font = '9px monospace';
+    x.fillStyle = pid === 'GM' ? '#f4f2ec' : '#f2a71b';
+    x.fillText(label.slice(0, 10).toUpperCase(), Math.round(pp.x) - 6, Math.round(pp.y) + 24);
   }
+}
+
+// ---------------------------------------------------------------- GM walk mode
+// With the avatar on, the GM walks the map through a player-style camera —
+// arrows/WASD, client-predicted, same collision as everyone else.
+const GOW = { keys: {}, pos: null, seq: [0, 1, 2, 1], seqi: 1, animDist: 0, lastSent: null, sentAt: 0, prevT: 0 };
+let gmWalkView = true;   // avatar on → camera view; toggle back to the build view anytime
+
+function gmWalkActive() {
+  const v = App.view;
+  return v && v.mode === 'overworld' && v.gmAvatar && v.positions && v.positions.GM && gmWalkView;
+}
+
+function gmWalkable(room, x, y) {
+  if (!room) return true;
+  const w = room.w || 384, h = room.h || 288;
+  if (x < 0 || y < 0 || x >= w || y >= h) return false;
+  if (room.imported && room.grid) return room.grid[Math.floor(y / 16)]?.[Math.floor(x / 16)] === '1';
+  const UNW = { water: 1, void: 1, inkwall0: 1 };
+  let ok = false;
+  for (const f of room.floors || []) if (x >= f.x && x < f.x + f.w && y >= f.y && y < f.y + f.h) ok = !UNW[f.p];
+  for (const s of room.structs || []) if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) ok = false;
+  return ok;
+}
+
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (!gmWalkActive()) return;
+  if (e.key.startsWith('Arrow') || 'wasd'.includes(e.key)) { GOW.keys[e.key] = true; e.preventDefault(); }
+});
+addEventListener('keyup', e => { GOW.keys[e.key] = false; });
+
+function gmOwLoop(t) {
+  requestAnimationFrame(gmOwLoop);
+  const dt = Math.min(0.05, Math.max(0, (t - GOW.prevT) / 1000));
+  GOW.prevT = t;
+  const c = $('gmOw');
+  const active = gmWalkActive();
+  const rcv = $('roomcanvas'), fov = $('fieldOverlay');
+  if (rcv) rcv.style.visibility = active ? 'hidden' : '';
+  if (fov) fov.style.visibility = active ? 'hidden' : '';
+  if (!active) { if (c) c.style.display = 'none'; return; }
+  const view = App.view, room = view.room || { w: 384, h: 288 };
+  const sp = view.positions.GM;
+  if (!GOW.pos || Math.abs(sp.x - GOW.pos.x) + Math.abs(sp.y - GOW.pos.y) > 48) GOW.pos = { ...sp };
+  let { x, y, facing } = GOW.pos;
+  const spd = 88 * dt;
+  let dx = 0, dy = 0;
+  if (GOW.keys.ArrowUp || GOW.keys.w) { dy = -spd; facing = 3; }
+  else if (GOW.keys.ArrowDown || GOW.keys.s) { dy = spd; facing = 0; }
+  else if (GOW.keys.ArrowLeft || GOW.keys.a) { dx = -spd; facing = 1; }
+  else if (GOW.keys.ArrowRight || GOW.keys.d) { dx = spd; facing = 2; }
+  const moved = dx !== 0 || dy !== 0;
+  if (moved) {
+    const nx = x + dx, ny = y + dy;
+    if (gmWalkable(room, nx + 4, ny + 12) && gmWalkable(room, nx + 12, ny + 12)) { x = nx; y = ny; }
+    GOW.animDist += Math.abs(dx) + Math.abs(dy);
+    GOW.seqi = Math.floor(GOW.animDist / 11) % 4;
+  } else GOW.seqi = 1;
+  GOW.pos = { x, y, facing };
+  const rp = { x: Math.round(x), y: Math.round(y), facing };
+  const ls = GOW.lastSent;
+  if ((!ls || ls.x !== rp.x || ls.y !== rp.y || ls.facing !== rp.facing) && t - GOW.sentAt >= 90) {
+    send({ t: 'move', ...rp });
+    GOW.lastSent = rp;
+    GOW.sentAt = t;
+  }
+  drawGmWalk(view, room);
+}
+requestAnimationFrame(gmOwLoop);
+
+function drawGmWalk(view, room) {
+  const c = $('gmOw');
+  const holder = $('field');
+  if (!c || !holder) return;
+  const scale = Math.max(1, Math.floor(Math.min(holder.clientWidth / 384, holder.clientHeight / 288)));
+  c.style.display = 'block';
+  c.width = 384; c.height = 288;
+  c.style.width = `${384 * scale}px`; c.style.height = `${288 * scale}px`;
+  const x = c.getContext('2d');
+  x.imageSmoothingEnabled = false;
+  const pos = GOW.pos || view.positions.GM;
+  const camX = Math.round(Math.max(0, Math.min((room.w || 384) - 384, pos.x - 192)));
+  const camY = Math.round(Math.max(0, Math.min((room.h || 288) - 288, pos.y - 144)));
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  x.fillStyle = '#000'; x.fillRect(0, 0, 384, 288);
+  x.translate(-camX, -camY);
+  let overlay = null, walkCr = null;
+  if (room.imported) {
+    const cr = canonRoom(room.imported, room.chipset || room.nativeChipset || 'yellow.png');
+    if (cr.ready) { x.drawImage(cr.ground, 0, 0); drawCanonCond(x, cr, room.condOn, 'ground', true); overlay = cr.overlay; walkCr = cr; }
+  } else {
+    const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
+    if (bgPath) {
+      const img = stagingImage(bgPath);
+      if (img.complete && img.width) x.drawImage(img, 0, 0, room.w || 384, room.h || 288);
+    } else {
+      const pals = App.staticData.palettes;
+      const p2 = pals[room.palette];
+      const pal = p2 ? { base: p2.base, dark: '#333', lite: p2.pale, pale: p2.tint } : { base: '#333', dark: '#222', lite: '#999', pale: '#ccc' };
+      drawRoomKit(x, room, pal, phase);
+    }
+  }
+  // pieces — the GM also sees hidden ones, dimmed
+  for (const p of room.pieces || []) {
+    x.globalAlpha = p.hidden ? 0.35 : 1;
+    x.fillStyle = '#f4f2ec';
+    x.font = '14px "OFF Display"';
+    x.fillText(p.g || '◇', p.x, p.y + 12);
+    x.globalAlpha = 1;
+  }
+  const ROWS = [2, 3, 1, 0];
+  for (const [pid, pp] of Object.entries(view.positions || {})) {
+    const mine = pid === 'GM';
+    const p = mine && GOW.pos ? GOW.pos : pp;
+    let spritePath = null, label = '';
+    if (mine) { spritePath = view.gmAvatar && view.gmAvatar.sprite; label = (view.gmAvatar && view.gmAvatar.name) || 'GM'; }
+    else {
+      const pm = view.party.find(z => z.id === pid);
+      if (!pm || pm.benched || !(view.connected || []).includes(pid)) continue;
+      spritePath = (partyArt(pm.klass) || {}).sprite; label = pm.name;
+    }
+    const img = spritePath ? stagingImage(spritePath) : null;
+    const px2 = Math.round(p.x), py2 = Math.round(p.y);
+    if (img && img.complete && img.width) {
+      const cw = Math.floor(img.width / 3), ch = Math.floor(img.height / 4);
+      const col = mine ? GOW.seq[GOW.seqi] : 1;
+      x.drawImage(img, col * cw, ROWS[p.facing || 0] * ch, cw, ch, px2 - 4, py2 - ch + 16, cw, ch);
+    } else { x.fillStyle = mine ? '#f4f2ec' : '#f2a71b'; x.fillRect(px2, py2, 16, 16); }
+    x.font = '10px "OFF Display"';
+    x.fillStyle = mine ? '#f4f2ec' : '#f2a71b';
+    x.fillText(label.slice(0, 12).toUpperCase(), px2 - 6, py2 + 26);
+  }
+  if (overlay) x.drawImage(overlay, 0, 0);
+  if (walkCr) drawCanonCond(x, walkCr, room.condOn, 'above', true);
 }
 
 // staging mouse: drag rects for floors/structs, click for stamps
@@ -533,11 +755,10 @@ function enemyClicked(e) {
   if (!e.holding) { announce(`${e.name}'s gauge is still filling.`); return; }
   const st = $('estack');
   st.innerHTML = '';
+  eCursor = 0;
   st.style.left = '30%'; st.style.top = '18%';
   for (const pr of e.prompts || []) {
-    const b = el('button', { class: 'eact prompt', style: pr.ready ? '' : 'opacity:.55' },
-      (pr.ready ? '▶ ' : '') + pr.label,
-      el('small', {}, pr.ready ? 'scripted — fire it, or ignore it' : 'condition not met — yours to call early anyway'));
+    const b = el('button', { class: 'eact prompt' }, pr.label, el('small', {}, 'scripted'));
     b.onclick = () => { st.classList.remove('open'); gm('enemy-action', { enemyId: e.id, action: { kind: 'trigger', triggerId: pr.id } }); };
     st.appendChild(b);
   }
@@ -606,7 +827,9 @@ function renderStrip(view) {
     const pc = el('div', { class: 'pc' + (e.dead ? ' deadslot' : '') + (e.control === 'gm' ? ' gmown' : ''), 'data-id': e.id });
     const tag = el('span', { class: 'ctl' + (e.control === 'ai' ? ' ai' : '') }, e.control.toUpperCase());
     tag.onclick = ev => { ev.stopPropagation(); gm('toggle-control', { enemyId: e.id }); };
-    pc.appendChild(el('div', { class: 'pname' }, `${e.name} `, tag));
+    const pen = el('span', { class: 'ctl', title: 'edit HP / size' }, '✎');
+    pen.onclick = ev => { ev.stopPropagation(); instanceEditor(e); };
+    pc.appendChild(el('div', { class: 'pname' }, `${e.name} `, tag, ' ', pen));
     pc.appendChild(el('div', { class: 'nums' },
       el('div', { class: 'num' }, `${e.hp}`, el('em', {}, 'hp'), el('i', { style: `width:${Math.round(e.hp / e.maxHp * 100)}%` })),
       el('div', { class: 'num cp' }, `${e.cp == null ? '∞' : e.cp}`, el('em', {}, 'cp'))));
@@ -704,6 +927,10 @@ setInterval(() => {
 // ---------------------------------------------------------------- PANELS
 function renderPanels() {
   let host = $('panels');
+  // Never yank a field out from under the GM: state pushes arrive constantly,
+  // and rebuilding while they type (shop prices, names, stats) eats the edit.
+  const ae = document.activeElement;
+  if (ae && host.contains(ae) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName)) return;
   host.innerHTML = '';
   for (const t of TABS) $(`tab-${t}`).classList.toggle('on', activeTab === t);
   if (!activeTab || !App.view) return;
@@ -720,7 +947,118 @@ function renderPanels() {
 function renderLocation(p, view) {
   p.appendChild(el('div', { class: 'ph' }, 'LOCATION'));
   p.appendChild(el('div', { class: 'ps' }, 'STAGE A ROOM, SAVE IT, TELEPORT THE PARTY IN LATER — PLACEMENTS ARE SILENT, HIDDEN PIECES STAY HIDDEN. ONE CLICK = ONE POISON TICK.'));
-  const zones = ['Zone 0', 'Zone 1', 'Zone 2', 'Zone 3', 'The Room', 'Purified'];
+
+  // The hoisted door slot: a player standing on a canon door surfaces its
+  // destination here — one click, no scrolling.
+  for (const d of (view.room && view.room.doorsNear) || []) {
+    const row = el('div', { class: 'edsec', style: 'border-left:4px solid var(--amber);display:flex;align-items:center;gap:14px' },
+      el('span', { class: 'dfont', style: 'font-size:20px' }, `${d.player} IS AT A DOOR → ${d.destName || d.destMap}`));
+    const go = el('button', { class: 'bigbtn', style: 'font-size:17px;padding:4px 16px' }, 'TAKE THE PARTY THROUGH');
+    go.onclick = () => gm('canon-visit', { map: d.destMap, x: d.x, y: d.y });
+    row.appendChild(go);
+    p.appendChild(row);
+  }
+
+  // The GM's avatar: walk the map in person — as The Judge or anyone else.
+  {
+    const av = el('div', { class: 'edsec' }, el('h4', {}, 'GM AVATAR — WALK THE MAP'));
+    const row = el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' });
+    const active = !!(view.gmAvatar);
+    const nameI = el('input', { type: 'text', value: (view.gmAvatar && view.gmAvatar.name) || 'The Judge', style: 'width:150px' });
+    const sprSel = el('select', { style: 'max-width:220px' });
+    const tree = App.art ? App.art.tree : { sprites: { npcs: [], party: [] } };
+    const curSprite = view.gmAvatar && view.gmAvatar.sprite;
+    for (const f of [...(tree.sprites.npcs || []), ...(tree.sprites.party || [])]) {
+      const nm = f.split('/').pop().replace(/\.[a-z]+$/i, '');
+      sprSel.appendChild(el('option', { value: f, selected: curSprite === f ? '' : undefined }, nm));
+    }
+    const tog = el('button', { class: 'bigbtn' + (active ? ' red' : ''), style: 'font-size:17px;padding:4px 16px' }, active ? 'DISMISS AVATAR' : 'APPEAR ON THE MAP');
+    tog.onclick = () => gm('gm-avatar', { on: !active, sprite: sprSel.value, name: nameI.value });
+    row.append(el('span', { class: 'sl', style: 'width:auto' }, 'NAME'), nameI, el('span', { class: 'sl', style: 'width:auto' }, 'SPRITE'), sprSel, tog);
+    if (active) {
+      nameI.onchange = () => gm('gm-avatar', { name: nameI.value });
+      sprSel.onchange = () => gm('gm-avatar', { sprite: sprSel.value });
+      const viewTog = el('button', { class: 'qbtn' + (gmWalkView ? ' gmctl' : '') }, gmWalkView ? 'WALK VIEW (ARROWS MOVE YOU)' : 'BUILD VIEW');
+      viewTog.onclick = () => { gmWalkView = !gmWalkView; renderPanels(); };
+      row.appendChild(viewTog);
+    }
+    av.appendChild(row);
+    p.appendChild(av);
+  }
+
+  // Canon maps: the whole imported game, filterable, grouped by parent.
+  // ENTER opens the spawn picker: the GM clicks where the party arrives.
+  if (Object.keys(canonIndex.maps).length) {
+    p.appendChild(el('div', { class: 'dsec' }, 'CANON MAPS'));
+    const row = el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px' });
+    const filter = el('input', { type: 'text', placeholder: 'filter…', style: 'width:130px' });
+    const sel = el('select', { style: 'max-width:420px' });
+    const rebuild = () => {
+      const q = filter.value.trim().toLowerCase();
+      sel.innerHTML = '';
+      const byParent = {};
+      // A map matches if the filter hits its own name, its key, or any
+      // ancestor's name — "zone 1" surfaces every room inside Zone 1, however
+      // deeply the game files nest it.
+      const ancestors = k0 => {
+        const out = []; let cur = canonIndex.maps[k0]; let guard = 0;
+        while (cur && cur.parent && guard++ < 8) {
+          const pm = canonIndex.maps[`Map${String(cur.parent).padStart(4, '0')}`];
+          if (!pm) break;
+          out.push(pm.name); cur = pm;
+        }
+        return out;
+      };
+      for (const [k, m] of Object.entries(canonIndex.maps)) {
+        const anc = ancestors(k);
+        if (q && !(`${m.name} ${k} ${anc.join(' ')}`.toLowerCase().includes(q))) continue;
+        (byParent[anc[0] || '(top level)'] = byParent[anc[0] || '(top level)'] || []).push([k, m]);
+      }
+      for (const pname of Object.keys(byParent).sort()) {
+        const og = el('optgroup', { label: pname });
+        for (const [k, m] of byParent[pname]) og.appendChild(el('option', { value: k }, `${m.name} — ${m.w}×${m.h}${m.doorCount ? ' · ' + m.doorCount + ' doors' : ''}`));
+        sel.appendChild(og);
+      }
+    };
+    filter.oninput = rebuild;
+    rebuild();
+    const go = el('button', { class: 'bigbtn', style: 'font-size:17px;padding:4px 16px' }, 'ENTER…');
+    go.onclick = () => { if (sel.value) openSpawnPicker(sel.value); };
+    row.append(filter, sel, go);
+    // chipset reskin for the current canon room — visual only, collision is baked
+    if (view.room && view.room.imported) {
+      const cs = el('select', {});
+      cs.appendChild(el('option', { value: '' }, `native (${view.room.nativeChipset || '?'})`));
+      for (const f of canonIndex.chipsets) cs.appendChild(el('option', { value: f, selected: view.room.chipset === f ? '' : undefined }, f.replace(/\.png$/i, '')));
+      cs.onchange = () => gm('room-chipset', { chipset: cs.value || null });
+      row.append(el('span', { class: 'sl', style: 'width:auto' }, 'CHIPSET'), cs);
+    }
+    p.appendChild(row);
+
+    // Conditioned scenery: tiles the game gates behind a switch or item
+    // (the Zone 0 secret door, Enoch's corridors). Hidden from players until
+    // toggled; the GM's field view ghosts the off groups.
+    if (view.room && view.room.imported) {
+      const cr = canonRoom(view.room.imported, view.room.chipset || view.room.nativeChipset || 'yellow.png', () => renderPanels());
+      if (cr.ready && cr.evc.length) {
+        const groups = {};
+        for (const e of cr.evc) groups[e.cond] = (groups[e.cond] || 0) + 1;
+        p.appendChild(el('div', { class: 'dsec' }, 'CONDITIONED SCENERY — APPEARS WHEN YOU SAY SO'));
+        const crow = el('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px' });
+        for (const [cond, n] of Object.entries(groups)) {
+          const on = !!(view.room.condOn && view.room.condOn[cond]);
+          const b = el('button', { class: 'bigbtn' + (on ? '' : ' ghost'), style: 'font-size:15px;padding:3px 12px' },
+            `${on ? '● ' : '○ '}${cond}${n > 1 ? ` ×${n}` : ''}`);
+          b.title = on ? 'visible to players — click to hide' : 'hidden from players — click to reveal';
+          b.onclick = () => gm('canon-cond', { cond, on: !on });
+          crow.appendChild(b);
+        }
+        p.appendChild(crow);
+      }
+    }
+  }
+
+  const zones = ['Zone 1', 'Zone 2', 'Zone 3', 'The Room', 'Purified', 'Canon'];
   const roomNames = view.rooms || [];
   for (const z of zones) {
     p.appendChild(el('div', { class: 'dsec' }, z.toUpperCase()));
@@ -1213,6 +1551,46 @@ function encDetail(q, tmpl) {
 }
 
 function labeledRow(host, lbl, node) { host.appendChild(el('div', { class: 'statrow' }, el('span', { class: 'sl' }, lbl), node)); }
+
+// The spawn picker: preview the map, click where the party arrives. Nobody
+// materializes mid-map and walks back to set the scene.
+function openSpawnPicker(mapKey) {
+  const info = canonIndex.maps[mapKey];
+  if (!info) return;
+  document.getElementById('spawnPicker')?.remove();
+  const wrap = el('div', {
+    id: 'spawnPicker',
+    style: 'position:fixed;inset:0;background:rgba(0,0,0,.86);z-index:80;display:flex;flex-direction:column;align-items:center;padding:20px;overflow:auto',
+  });
+  wrap.appendChild(el('div', { class: 'dfont', style: 'font-size:24px;color:var(--amber);margin-bottom:8px' },
+    `${info.name} — CLICK WHERE THE PARTY ARRIVES`));
+  const cv = el('canvas', { style: 'image-rendering:pixelated;cursor:crosshair;border:3px solid #000;background:#000' });
+  const scale = Math.max(1, Math.min(3, Math.floor(Math.min((innerWidth - 80) / (info.w * 16), (innerHeight - 130) / (info.h * 16)))));
+  cv.width = info.w * 16; cv.height = info.h * 16;
+  cv.style.width = `${info.w * 16 * scale}px`; cv.style.height = `${info.h * 16 * scale}px`;
+  const draw = () => {
+    const cr = canonRoom(mapKey, info.chipset || 'yellow.png', draw);
+    if (!cr.ready) return;
+    const x = cv.getContext('2d');
+    x.imageSmoothingEnabled = false;
+    x.drawImage(cr.ground, 0, 0);
+    x.drawImage(cr.overlay, 0, 0);
+    drawCanonCond(x, cr, null, 'all', true);   // conditioned scenery, ghosted
+  };
+  draw();
+  cv.onclick = ev => {
+    const r = cv.getBoundingClientRect();
+    const tx = Math.floor((ev.clientX - r.left) / r.width * info.w);
+    const ty = Math.floor((ev.clientY - r.top) / r.height * info.h);
+    gm('canon-visit', { map: mapKey, x: tx, y: ty });
+    wrap.remove();
+  };
+  wrap.appendChild(cv);
+  const cancel = el('button', { class: 'bigbtn ghost', style: 'margin-top:10px' }, 'CANCEL');
+  cancel.onclick = () => wrap.remove();
+  wrap.appendChild(cancel);
+  document.body.appendChild(wrap);
+}
 
 // ---- Items
 function renderItems(p, view) {

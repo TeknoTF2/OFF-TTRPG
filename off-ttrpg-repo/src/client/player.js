@@ -2,7 +2,7 @@
 // The UI filters to legality: dead targets grey out and refuse the click,
 // the slot picker shows only legal gear, Muted disables Competence.
 
-import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
+import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
 import { drawRoomKit } from '/roomkit.js';
 
 const seat = new URLSearchParams(location.search).get('seat') || localStorage.getItem('off-seat') || 'P1';
@@ -10,6 +10,12 @@ if (!/^P[1-6]$/.test(seat)) location.href = '/';
 
 let armed = null;         // {kind:'attack'|'comp'|'item', comp?, item?, element?, targetSpec}
 let kselIdx = 0;          // keyboard target cursor within the current legal target list
+const MENU_BTNS = ['btnAttack', 'btnComp', 'btnDefend', 'btnObj'];
+let menuIdx = 0;          // action-menu cursor — every turn starts on ATTACK
+let subCursor = 0;        // competence / element submenu cursor
+let itemCursor = 0;       // Objects column cursor
+let itemRows = [];        // usable items, in rendered order
+let wasMyTurn = false;
 let lastStateAt = 0;
 let sheetOpen = false;
 const $ = id => document.getElementById(id);
@@ -95,6 +101,8 @@ function renderInventory(view) {
       (bySection['OTHER'] = bySection['OTHER'] || []).push({ name, desc: '', n: view.inventory[name] });
     }
   }
+  itemRows = [];
+  const picking = armed && armed.kind === 'item-pick';
   for (const [sec, items] of Object.entries(bySection)) {
     if (!items.some(i => i.n > 0) && sec !== 'RESTORATIVE') continue;
     list.appendChild(el('div', { class: 'isec' }, sec));
@@ -104,8 +112,14 @@ function renderInventory(view) {
         el('span', { class: 'ic' }, `×${it.n}`),
         el('span', { class: 'id' }, it.desc || ''));
       row.onclick = () => itemClicked(it.name, it.n);
+      if (it.n > 0) itemRows.push({ name: it.name, n: it.n, row });
       list.appendChild(row);
     }
+  }
+  if (picking && itemRows.length) {
+    const cur = ((itemCursor % itemRows.length) + itemRows.length) % itemRows.length;
+    itemRows[cur].row.classList.add('ksel');
+    itemRows[cur].row.scrollIntoView({ block: 'nearest' });
   }
   const inBattle = App.view.battle && App.view.mode === 'battle';
   $('inv').classList.toggle('armed', (armed && armed.kind === 'item-pick') || !inBattle);
@@ -165,7 +179,7 @@ function renderBattle(view) {
       div.appendChild(el('div', { class: 'ehpbar' }, el('i', { style: `width:${Math.round(e.hp / e.maxHp * 100)}%` })));
     }
     const icons = el('div', { class: 'eicons' });
-    if (e.revealed && e.element) icons.appendChild(el('span', { class: 'icn elem', title: `Element: ${e.element} — revealed` }, e.element.slice(0, 3).toUpperCase()));
+    if (e.revealed) icons.appendChild(el('span', { class: 'icn elem', title: `Element: ${e.element || 'none'} — revealed` }, e.element ? e.element.slice(0, 3).toUpperCase() : 'Ø'));
     if (e.elementSet && !e.revealed) icons.appendChild(el('span', { class: 'icn elem', title: `Element set to ${e.elementSet}` }, e.elementSet.slice(0, 3).toUpperCase()));
     for (const s of e.statuses) icons.appendChild(statusChip(s));
     for (const sc of e.statChanges) icons.appendChild(statChangeChip(sc));
@@ -263,7 +277,20 @@ function renderStack(view) {
   $('btnObj').disabled = !myTurn || mad || furious || itemLocked;
   if (furious && myTurn) announce(`${m.name} is FURIOUS — pick a target.`);
   if (furious && myTurn && !armed) armed = { kind: 'attack' };   // any click = the Furious act
-  if (!myTurn) { armed = null; $('subs').classList.remove('open'); $('inv').classList.remove('armed'); }
+  if (!myTurn) { armed = null; $('subs').classList.remove('open'); $('inv').classList.remove('armed'); setSel(''); }
+  // Turn start: the menu pops with the cursor on ATTACK — Enter attacks.
+  if (myTurn && !wasMyTurn) { menuIdx = 0; itemCursor = 0; }
+  if (myTurn && !armed && !$('subs').classList.contains('open')) {
+    const usable = MENU_BTNS.filter(b => !$(b).disabled);
+    setSel(usable[Math.min(menuIdx, Math.max(0, usable.length - 1))] || '');
+  }
+  wasMyTurn = !!myTurn;
+}
+
+function markSubCursor() {
+  const subs = [...$('subs').querySelectorAll('.sub')];
+  subs.forEach((s, i) => s.classList.toggle('sel', i === subCursor));
+  if (subs[subCursor]) subs[subCursor].scrollIntoView({ block: 'nearest' });
 }
 
 $('btnAttack').onclick = () => { setSel('btnAttack'); armed = { kind: 'attack' }; kselIdx = 0; $('subs').classList.remove('open'); $('inv').classList.remove('armed'); announce('Attack — choose an enemy.'); rerender(); };
@@ -290,6 +317,8 @@ function openCompDrawer() {
   }
   subs.classList.add('open');
   $('inv').classList.remove('armed');
+  subCursor = 0;
+  markSubCursor();
 }
 
 function describeComp(c) {
@@ -309,6 +338,8 @@ function pickComp(c) {
       row.onclick = () => armComp(c, elName);
       subs.appendChild(row);
     }
+    subCursor = 0;
+    markSubCursor();
     return;
   }
   armComp(c, null);
@@ -362,7 +393,7 @@ function targetClicked(t) {
 
 function showRevealCard(e) {
   const tiers = e.tiers || {};
-  announce(`${e.name}: ${e.element} · HP ${e.hp}/${e.maxHp} · DEF ${e.def} · RES ${e.res} · LCK ${e.lck} · ` +
+  announce(`${e.name}: Element ${e.element || 'none'} · HP ${e.hp}/${e.maxHp} · DEF ${e.def} · RES ${e.res} · LCK ${e.lck} · acts every ${e.gaugeS}s · ` +
     Object.entries(tiers).map(([k, v]) => `${k.slice(0, 3)}:${{ vulnerable: 'V', neutral: 'N', light_immune: 'L', strong_immune: 'S' }[v] || v}`).join(' '));
 }
 
@@ -536,19 +567,59 @@ const OW = { keys: {}, moving: false, pos: null, seq: [0, 1, 2, 1], seqi: 1, ani
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   const view = App.view;
-  // Battle targeting: arrows walk the legal targets, Enter/Space/Z strikes, Escape lowers the arm.
-  if (view && view.mode === 'battle' && armed) {
-    const list = targetList();
-    if (list.length && ['ArrowLeft', 'ArrowUp'].includes(e.key)) { kselIdx--; e.preventDefault(); rerender(); return; }
-    if (list.length && ['ArrowRight', 'ArrowDown'].includes(e.key)) { kselIdx++; e.preventDefault(); rerender(); return; }
-    if (list.length && ['Enter', ' ', 'z', 'Z'].includes(e.key)) {
-      e.preventDefault();
-      const t = kselTarget();
-      if (t) targetClicked(t);
-      rerender();
+  // The combat loop, fully keyboard-driven: gauge fills → the menu pops with
+  // ATTACK under the cursor → arrows + Enter pick the action → arrows + Enter
+  // pick the target. Escape steps back one level. Clicking works throughout.
+  if (view && view.mode === 'battle') {
+    const m = me();
+    const myTurn = m && m.holding && !m.down && !view.battle.over;
+    const subsOpen = $('subs').classList.contains('open');
+    const confirm = ['Enter', ' ', 'z', 'Z'].includes(e.key);
+    if (armed && armedMode() !== 'item-pick') {
+      // target selection
+      const list = targetList();
+      if (list.length && ['ArrowLeft', 'ArrowUp'].includes(e.key)) { kselIdx--; e.preventDefault(); rerender(); return; }
+      if (list.length && ['ArrowRight', 'ArrowDown'].includes(e.key)) { kselIdx++; e.preventDefault(); rerender(); return; }
+      if (list.length && confirm) {
+        e.preventDefault();
+        const t = kselTarget();
+        if (t) targetClicked(t);
+        rerender();
+        return;
+      }
+      if (e.key === 'Escape') { armed = null; $('subs').classList.remove('open'); rerender(); return; }
       return;
     }
-    if (e.key === 'Escape') { armed = null; $('subs').classList.remove('open'); rerender(); return; }
+    if (subsOpen && myTurn) {
+      // competence / element submenu
+      const subs = [...$('subs').querySelectorAll('.sub')];
+      if (['ArrowUp', 'ArrowLeft'].includes(e.key)) { subCursor = (subCursor - 1 + subs.length) % subs.length; e.preventDefault(); markSubCursor(); return; }
+      if (['ArrowDown', 'ArrowRight'].includes(e.key)) { subCursor = (subCursor + 1) % subs.length; e.preventDefault(); markSubCursor(); return; }
+      if (confirm && subs[subCursor]) { e.preventDefault(); subs[subCursor].click(); return; }
+      if (e.key === 'Escape') { $('subs').classList.remove('open'); rerender(); return; }
+      return;
+    }
+    if (armed && armedMode() === 'item-pick' && myTurn) {
+      // Objects: arrows walk the usable items in the column
+      if (['ArrowUp', 'ArrowLeft'].includes(e.key)) { itemCursor--; e.preventDefault(); rerender(); return; }
+      if (['ArrowDown', 'ArrowRight'].includes(e.key)) { itemCursor++; e.preventDefault(); rerender(); return; }
+      if (confirm && itemRows.length) {
+        e.preventDefault();
+        const it = itemRows[((itemCursor % itemRows.length) + itemRows.length) % itemRows.length];
+        itemClicked(it.name, it.n);
+        return;
+      }
+      if (e.key === 'Escape') { armed = null; rerender(); return; }
+      return;
+    }
+    if (myTurn) {
+      // the action menu — cursor starts on ATTACK every turn
+      const usable = MENU_BTNS.filter(b => !$(b).disabled);
+      if (['ArrowUp', 'ArrowLeft'].includes(e.key)) { menuIdx = (menuIdx - 1 + usable.length) % usable.length; e.preventDefault(); setSel(usable[menuIdx]); return; }
+      if (['ArrowDown', 'ArrowRight'].includes(e.key)) { menuIdx = (menuIdx + 1) % usable.length; e.preventDefault(); setSel(usable[menuIdx]); return; }
+      if (confirm && usable.length) { e.preventDefault(); $(usable[Math.min(menuIdx, usable.length - 1)]).click(); return; }
+      return;
+    }
   }
   if (e.key.startsWith('Arrow') || 'wasd'.includes(e.key)) { OW.keys[e.key] = true; e.preventDefault(); }
   if ((e.key === 'e' || e.key === 'E' || e.key === ' ') && view && view.mode === 'overworld') tryExamine();
@@ -568,6 +639,12 @@ function walkableAt(room, x, y) {
   if (!room) return true;
   const w = room.w || 384, h = room.h || 288;
   if (x < 0 || y < 0 || x >= w || y >= h) return false;
+  if (room.imported && room.grid) {
+    if (room.grid[Math.floor(y / 16)]?.[Math.floor(x / 16)] !== '1') return false;
+    for (const p of room.props || []) if (SOLID[p.t] && x >= p.x && x < p.x + (p.w || 24) && y >= p.y && y < p.y + 24) return false;
+    for (const s of room.structs || []) if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) return false;
+    return true;
+  }
   let ok = false;
   for (const f of room.floors || []) if (x >= f.x && x < f.x + f.w && y >= f.y && y < f.y + f.h) ok = !UNWALKABLE[f.p];
   for (const s of room.structs || []) if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) ok = false;
@@ -656,15 +733,27 @@ function drawOverworld() {
   x.setTransform(1, 0, 0, 1, 0, 0);
   x.fillStyle = '#000'; x.fillRect(0, 0, 384, 288);
   x.translate(-camX, -camY);
-  // A hot-folder room image (assets/rooms/<room name>.png) IS the room's look,
-  // stretched to the room's size; the shapes underneath become invisible
-  // collision. No image → the kit draws the shapes as before.
-  const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
-  if (bgPath) {
-    const img = owImage(bgPath);
-    if (img && img.complete && img.width) x.drawImage(img, 0, 0, room.w || 384, room.h || 288);
+  // Canon rooms blit their composed tilemap; the above-hero overlay draws
+  // after the sprites, at the end of this function.
+  let canonOverlay = null, canonCr = null;
+  if (room.imported) {
+    const cr = canonRoom(room.imported, room.chipset || room.nativeChipset || 'yellow.png');
+    if (cr.ready) {
+      x.drawImage(cr.ground, 0, 0);
+      drawCanonCond(x, cr, room.condOn, 'ground');   // GM-toggled scenery (hidden doors)
+      canonOverlay = cr.overlay; canonCr = cr;
+    }
   } else {
-    drawRoomKit(x, room, pal, owPhase);
+    // A hot-folder room image (assets/rooms/<room name>.png) IS the room's look,
+    // stretched to the room's size; the shapes underneath become invisible
+    // collision. No image → the kit draws the shapes as before.
+    const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
+    if (bgPath) {
+      const img = owImage(bgPath);
+      if (img && img.complete && img.width) x.drawImage(img, 0, 0, room.w || 384, room.h || 288);
+    } else {
+      drawRoomKit(x, room, pal, owPhase);
+    }
   }
   // staged pieces (visible only — the server already filtered hidden ones)
   for (const p of room.pieces || []) {
@@ -682,6 +771,24 @@ function drawOverworld() {
   }
   // party tokens, each client cameras on its own sprite
   for (const [pid, sp] of Object.entries(view.positions || {})) {
+    if (pid === 'GM') {
+      // The GM's avatar, walking among the party.
+      if (!view.gmAvatar) continue;
+      const gimg = view.gmAvatar.sprite ? owImage(view.gmAvatar.sprite) : null;
+      const gx2 = Math.round(sp.x), gy2 = Math.round(sp.y);
+      if (gimg && gimg.complete && gimg.width) {
+        const cw = Math.floor(gimg.width / 3), ch = Math.floor(gimg.height / 4);
+        const rowMapG = [2, 3, 1, 0];
+        x.drawImage(gimg, cw, rowMapG[sp.facing || 0] * ch, cw, ch, gx2 - 4, gy2 - ch + 16, cw, ch);
+      } else {
+        x.fillStyle = '#000'; x.fillRect(gx2 - 1, gy2 - 1, 18, 18);
+        x.fillStyle = '#f4f2ec'; x.fillRect(gx2, gy2, 16, 16);
+      }
+      x.font = '10px "OFF Display"';
+      x.fillStyle = '#f4f2ec';
+      x.fillText((view.gmAvatar.name || 'GM').slice(0, 12).toUpperCase(), gx2 - 6, gy2 + 26);
+      continue;
+    }
     const pm = view.party.find(z => z.id === pid);
     if (!pm) continue;
     // Only members actually present walk the map — no idle sprites for empty seats.
@@ -703,6 +810,8 @@ function drawOverworld() {
     x.fillStyle = pid === seat ? '#f2a71b' : '#f4f2ec';
     x.fillText(pm.name.slice(0, 10).toUpperCase(), px - 6, py + 26);
   }
+  if (canonOverlay) x.drawImage(canonOverlay, 0, 0);   // above-hero tiles cover sprites
+  if (canonCr) drawCanonCond(x, canonCr, room.condOn, 'above');
 }
 
 function paletteFor(room, pals) {
