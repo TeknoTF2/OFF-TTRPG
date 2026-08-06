@@ -177,8 +177,35 @@ export function syncJukebox(jb) {
   currentTrack = jb.track;
   musicEl.src = `/assets/${encodeURIComponent(jb.track).replace(/%2F/g, '/')}`;
   musicEl.volume = getVolume();
-  musicEl.play().catch(() => {});   // missing track plays silence — never blocks
+  if (!previewFile) musicEl.play().catch(() => {});   // a live preview keeps its duck
 }
+
+// ---------- GM-side track preview
+// Plays on this client ONLY — the table's jukebox is untouched. While a
+// preview runs, the shared track is paused locally (ducked) and resumes when
+// the preview stops. Calling with the previewing file toggles it off.
+let previewEl = null, previewFile = null;
+export function previewTrack(file) {
+  if (previewFile === file) { stopPreview(); return; }
+  ensureMusicEl();
+  musicEl.pause();
+  if (!previewEl) {
+    previewEl = new Audio();
+    previewEl.addEventListener('ended', () => stopPreview());
+    window.addEventListener('off-volume', () => { if (previewEl) previewEl.volume = getVolume(); });
+  }
+  previewFile = file;
+  previewEl.src = `/assets/${encodeURIComponent(file).replace(/%2F/g, '/')}`;
+  previewEl.volume = getVolume();
+  previewEl.play().catch(() => {});
+}
+export function stopPreview() {
+  if (!previewFile) return;
+  previewFile = null;
+  if (previewEl) previewEl.pause();
+  if (musicEl && currentTrack) musicEl.play().catch(() => {});   // un-duck the table's track
+}
+export function previewingTrack() { return previewFile; }
 
 export function playStinger(file) {
   const a = new Audio(`/assets/${encodeURIComponent(file).replace(/%2F/g, '/')}`);
