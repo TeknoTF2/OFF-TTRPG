@@ -63,7 +63,7 @@ export function shade(hex, f) {
 
 // Zone identity colors (combat mockup): flat zone-color field per zone.
 export const ZONES = {
-  'Zone 0': { field: '#a8891c', dk: '#6e5a10', tint: '#d8bf62', title: 'ZONE 0', sub: '—' },
+  'Canon': { field: '#3a3a33', dk: '#23231e', tint: '#a8a48e', title: 'OFF', sub: '—' },
   'Zone 1': { field: '#2e6d9e', dk: '#1d4b70', tint: '#7fa8c6', title: 'ZONE 1 — PENTEL', sub: 'smoke mines · alma damien shachihata' },
   'Zone 2': { field: '#c8871c', dk: '#8a5c10', tint: '#e0b56a', title: 'ZONE 2 — BISMARK', sub: 'the library · gomez galleries' },
   'Zone 3': { field: '#2f9e44', dk: '#1d6b2d', tint: '#7fc68f', title: 'ZONE 3 — VESPER', sub: 'the sugar works' },
@@ -206,6 +206,50 @@ export function volumeSlider() {
 export async function rescanAssets() {
   App.art = await (await fetch('/api/art')).json();
   return App.art;
+}
+
+// ---------- canon (imported) rooms
+// tilemap.json is a neutral render recipe: per cell either [sx,sy] (one 16×16
+// blit) or eight numbers (four 8×8 quadrant blits) — autotile shapes were
+// resolved at import, so any chipset PNG paints any map. Composed once per
+// (map, chipset) into two canvases: ground, and the above-hero overlay that
+// draws over sprites. Rendering is async; callers redraw when ready.
+const canonCanvases = new Map();
+export function canonRoom(mapKey, chipset, onReady = () => {}) {
+  const key = `${mapKey}|${chipset}`;
+  if (canonCanvases.has(key)) return canonCanvases.get(key);
+  const entry = { ready: false, ground: null, overlay: null, w: 0, h: 0 };
+  canonCanvases.set(key, entry);
+  (async () => {
+    try {
+      const tm = await (await fetch(`/api/canon/${mapKey}/tilemap.json`)).json();
+      const img = new Image();
+      img.src = `/assets/level creation/chipset/${encodeURIComponent(chipset)}`;
+      await img.decode();
+      entry.w = tm.w * 16; entry.h = tm.h * 16;
+      const mk = () => {
+        const c = document.createElement('canvas');
+        c.width = entry.w; c.height = entry.h;
+        const x = c.getContext('2d');
+        x.imageSmoothingEnabled = false;
+        return [c, x];
+      };
+      const [g, gx] = mk(), [o, ox] = mk();
+      const blit = (x, cell, dx, dy) => {
+        if (cell.length <= 3) { x.drawImage(img, cell[0], cell[1], 16, 16, dx, dy, 16, 16); return; }
+        for (let q = 0; q < 4; q++) x.drawImage(img, cell[q * 2], cell[q * 2 + 1], 8, 8, dx + (q % 2) * 8, dy + Math.floor(q / 2) * 8, 8, 8);
+      };
+      for (let y = 0; y < tm.h; y++) for (let cx = 0; cx < tm.w; cx++) {
+        const lc = tm.lower[y][cx];
+        if (lc) blit(gx, lc, cx * 16, y * 16);
+        const uc = tm.upper[y][cx];
+        if (uc) blit(uc.length === 3 ? ox : gx, uc.length === 3 ? uc.slice(0, 2) : uc, cx * 16, y * 16);
+      }
+      entry.ground = g; entry.overlay = o; entry.ready = true;
+      onReady();
+    } catch { /* missing map/chipset renders black — never blocks */ }
+  })();
+  return entry;
 }
 
 // ---------- combat action FX

@@ -2,7 +2,7 @@
 // The UI filters to legality: dead targets grey out and refuse the click,
 // the slot picker shows only legal gear, Muted disables Competence.
 
-import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
+import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
 import { drawRoomKit } from '/roomkit.js';
 
 const seat = new URLSearchParams(location.search).get('seat') || localStorage.getItem('off-seat') || 'P1';
@@ -568,6 +568,12 @@ function walkableAt(room, x, y) {
   if (!room) return true;
   const w = room.w || 384, h = room.h || 288;
   if (x < 0 || y < 0 || x >= w || y >= h) return false;
+  if (room.imported && room.grid) {
+    if (room.grid[Math.floor(y / 16)]?.[Math.floor(x / 16)] !== '1') return false;
+    for (const p of room.props || []) if (SOLID[p.t] && x >= p.x && x < p.x + (p.w || 24) && y >= p.y && y < p.y + 24) return false;
+    for (const s of room.structs || []) if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) return false;
+    return true;
+  }
   let ok = false;
   for (const f of room.floors || []) if (x >= f.x && x < f.x + f.w && y >= f.y && y < f.y + f.h) ok = !UNWALKABLE[f.p];
   for (const s of room.structs || []) if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) ok = false;
@@ -656,15 +662,23 @@ function drawOverworld() {
   x.setTransform(1, 0, 0, 1, 0, 0);
   x.fillStyle = '#000'; x.fillRect(0, 0, 384, 288);
   x.translate(-camX, -camY);
-  // A hot-folder room image (assets/rooms/<room name>.png) IS the room's look,
-  // stretched to the room's size; the shapes underneath become invisible
-  // collision. No image → the kit draws the shapes as before.
-  const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
-  if (bgPath) {
-    const img = owImage(bgPath);
-    if (img && img.complete && img.width) x.drawImage(img, 0, 0, room.w || 384, room.h || 288);
+  // Canon rooms blit their composed tilemap; the above-hero overlay draws
+  // after the sprites, at the end of this function.
+  let canonOverlay = null;
+  if (room.imported) {
+    const cr = canonRoom(room.imported, room.chipset || room.nativeChipset || 'yellow.png');
+    if (cr.ready) { x.drawImage(cr.ground, 0, 0); canonOverlay = cr.overlay; }
   } else {
-    drawRoomKit(x, room, pal, owPhase);
+    // A hot-folder room image (assets/rooms/<room name>.png) IS the room's look,
+    // stretched to the room's size; the shapes underneath become invisible
+    // collision. No image → the kit draws the shapes as before.
+    const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
+    if (bgPath) {
+      const img = owImage(bgPath);
+      if (img && img.complete && img.width) x.drawImage(img, 0, 0, room.w || 384, room.h || 288);
+    } else {
+      drawRoomKit(x, room, pal, owPhase);
+    }
   }
   // staged pieces (visible only — the server already filtered hidden ones)
   for (const p of room.pieces || []) {
@@ -703,6 +717,7 @@ function drawOverworld() {
     x.fillStyle = pid === seat ? '#f2a71b' : '#f4f2ec';
     x.fillText(pm.name.slice(0, 10).toUpperCase(), px - 6, py + 26);
   }
+  if (canonOverlay) x.drawImage(canonOverlay, 0, 0);   // above-hero tiles cover sprites
 }
 
 function paletteFor(room, pals) {

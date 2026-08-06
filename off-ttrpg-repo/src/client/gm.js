@@ -1,7 +1,11 @@
 // GM console. Organizes and suggests, never restricts: every list reachable,
 // every value editable, and nothing here ever says "you can't."
 
-import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx } from '/common.js';
+import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx } from '/common.js';
+
+// Canon map index (names, hierarchy, chipsets) — fetched once.
+let canonIndex = { maps: {}, chipsets: [] };
+fetch('/api/canon/index').then(r => r.json()).then(i => { canonIndex = i; }).catch(() => {});
 import { drawRoomKit } from '/roomkit.js';
 
 const $ = id => document.getElementById(id);
@@ -419,7 +423,22 @@ function drawStaging(view) {
   const [zb, zd, zl, zp] = zmap[view.location.zone] || zmap['Zone 1'];
   const pal = p ? { base: p.base, dark: zd, lite: p.pale, pale: p.tint } : { base: zb, dark: zd, lite: zl, pale: zp };
   const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
-  if (bgPath) {
+  if (room.imported) {
+    // Canon room: composed tilemap + the GM-only pin overlay.
+    const cr = canonRoom(room.imported, room.chipset || room.nativeChipset || 'yellow.png', () => drawStaging(App.view));
+    x.fillStyle = '#000'; x.fillRect(0, 0, room.w, room.h);
+    if (cr.ready) { x.drawImage(cr.ground, 0, 0); x.drawImage(cr.overlay, 0, 0); }
+    const overlayEl = $('fieldOverlay');
+    for (const p of room.pins || []) {
+      const d = el('div', {
+        style: `position:absolute;left:${(p.x * 16 + 8) * sc}px;top:${(p.y * 16 + 8) * sc}px;transform:translate(-50%,-50%);z-index:2;`
+          + `font-size:${11 * sc}px;color:${p.door ? 'var(--amber)' : '#9ad'};pointer-events:none;text-shadow:1px 1px 0 #000`,
+        title: p.door ? `${p.name} → ${p.destName}` : p.name,
+      }, p.door ? '◈' : '·');
+      if (p.door) d.append(el('span', { style: `font-size:${8 * sc}px;margin-left:2px` }, p.destName || ''));
+      overlayEl.appendChild(d);
+    }
+  } else if (bgPath) {
     // Image rooms: the art is the look; the shapes are invisible collision,
     // shown here (and only here) as a translucent overlay so the GM can edit it.
     const img = stagingImage(bgPath);
@@ -722,7 +741,48 @@ function renderPanels() {
 function renderLocation(p, view) {
   p.appendChild(el('div', { class: 'ph' }, 'LOCATION'));
   p.appendChild(el('div', { class: 'ps' }, 'STAGE A ROOM, SAVE IT, TELEPORT THE PARTY IN LATER — PLACEMENTS ARE SILENT, HIDDEN PIECES STAY HIDDEN. ONE CLICK = ONE POISON TICK.'));
-  const zones = ['Zone 0', 'Zone 1', 'Zone 2', 'Zone 3', 'The Room', 'Purified'];
+
+  // The hoisted door slot: a player standing on a canon door surfaces its
+  // destination here — one click, no scrolling.
+  for (const d of (view.room && view.room.doorsNear) || []) {
+    const row = el('div', { class: 'edsec', style: 'border-left:4px solid var(--amber);display:flex;align-items:center;gap:14px' },
+      el('span', { class: 'dfont', style: 'font-size:20px' }, `${d.player} IS AT A DOOR → ${d.destName || d.destMap}`));
+    const go = el('button', { class: 'bigbtn', style: 'font-size:17px;padding:4px 16px' }, 'TAKE THE PARTY THROUGH');
+    go.onclick = () => gm('canon-visit', { map: d.destMap, x: d.x, y: d.y });
+    row.appendChild(go);
+    p.appendChild(row);
+  }
+
+  // Canon maps: the whole imported game, grouped by parent, one click to enter.
+  if (Object.keys(canonIndex.maps).length) {
+    p.appendChild(el('div', { class: 'dsec' }, 'CANON MAPS'));
+    const row = el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px' });
+    const sel = el('select', { style: 'max-width:420px' });
+    const byParent = {};
+    for (const [k, m] of Object.entries(canonIndex.maps)) {
+      const pname = m.parent && canonIndex.maps[`Map${String(m.parent).padStart(4, '0')}`]?.name || '(top level)';
+      (byParent[pname] = byParent[pname] || []).push([k, m]);
+    }
+    for (const pname of Object.keys(byParent).sort()) {
+      const og = el('optgroup', { label: pname });
+      for (const [k, m] of byParent[pname]) og.appendChild(el('option', { value: k }, `${m.name} — ${m.w}×${m.h}${m.doorCount ? ' · ' + m.doorCount + ' doors' : ''}`));
+      sel.appendChild(og);
+    }
+    const go = el('button', { class: 'bigbtn', style: 'font-size:17px;padding:4px 16px' }, 'ENTER');
+    go.onclick = () => gm('canon-visit', { map: sel.value });
+    row.append(sel, go);
+    // chipset reskin for the current canon room — visual only, collision is baked
+    if (view.room && view.room.imported) {
+      const cs = el('select', {});
+      cs.appendChild(el('option', { value: '' }, `native (${view.room.nativeChipset || '?'})`));
+      for (const f of canonIndex.chipsets) cs.appendChild(el('option', { value: f, selected: view.room.chipset === f ? '' : undefined }, f.replace(/\.png$/i, '')));
+      cs.onchange = () => gm('room-chipset', { chipset: cs.value || null });
+      row.append(el('span', { class: 'sl', style: 'width:auto' }, 'CHIPSET'), cs);
+    }
+    p.appendChild(row);
+  }
+
+  const zones = ['Zone 1', 'Zone 2', 'Zone 3', 'The Room', 'Purified', 'Canon'];
   const roomNames = view.rooms || [];
   for (const z of zones) {
     p.appendChild(el('div', { class: 'dsec' }, z.toUpperCase()));
