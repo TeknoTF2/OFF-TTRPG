@@ -75,6 +75,7 @@ function campaign() {
   c.sceneMusic = c.sceneMusic || {};
   c.rooms = c.rooms || {};
   c.notes = c.notes || {};
+  c.gmAvatar = c.gmAvatar || { on: false, sprite: null, name: 'The Judge' };
   // Retire the old PNG-based Zone 0 built-ins — canon maps replace them.
   for (const name of Object.keys(c.rooms)) {
     if ((c.notes[`builtinver:${name}`] || 0) && !c.rooms[name].imported) {
@@ -337,6 +338,7 @@ function viewFor(seat) {
     scene: sceneRun && !sceneRun.state.done ? (gm ? sceneRun.gmView([...seats.keys()]) : sceneRun.viewFor(seat)) : null,
     jukebox: { track: c.jukebox.track, playing: c.jukebox.playing, queue: gm ? c.jukebox.queue : undefined },
     connected: [...seats.keys()],   // presence: absent members simply don't render
+    gmAvatar: c.gmAvatar && c.gmAvatar.on ? { name: c.gmAvatar.name, sprite: c.gmAvatar.sprite } : null,
   };
   if (gm) {
     view.templates = Object.keys(c.templates);
@@ -623,14 +625,15 @@ function handlePlayer(seat, msg) {
     }
     case 'move': {
       if (c.mode !== 'overworld') return;
+      if (seat === 'GM' && !(c.gmAvatar && c.gmAvatar.on)) return;   // the GM walks only as an avatar
       const room = currentRoom();
       const pos = (c.positions = c.positions || {})[seat] || { x: 48, y: 48, facing: 0 };
       const { x, y, facing } = msg;
       if (typeof x !== 'number' || typeof y !== 'number') return;
       if (Math.abs(x - pos.x) + Math.abs(y - pos.y) > 24) return;  // one step at a time
-      if (walkableAt(room, x + 4, y + 12, me.inVehicle) && walkableAt(room, x + 12, y + 12, me.inVehicle)) {
+      if (walkableAt(room, x + 4, y + 12, me && me.inVehicle) && walkableAt(room, x + 12, y + 12, me && me.inVehicle)) {
         c.positions[seat] = { x, y, facing: facing | 0 };
-        checkPieceContact(seat, x, y);
+        if (seat !== 'GM') checkPieceContact(seat, x, y);   // triggers never fire on the avatar
         stateDirtyView = true;
         store.markDirty();
       }
@@ -790,6 +793,22 @@ function handleGm(msg) {
       c.rooms[name].spawn = { x: sx * 16, y: sy * 16 - 12 };
       setLocation('Canon', name);
       break;
+    }
+    case 'gm-avatar': {
+      // The GM walks the map in person — any sprite, any name, The Judge included.
+      if ('sprite' in msg) c.gmAvatar.sprite = msg.sprite || null;
+      if ('name' in msg) c.gmAvatar.name = String(msg.name || 'The Judge').slice(0, 40);
+      if ('on' in msg) {
+        c.gmAvatar.on = !!msg.on;
+        c.positions = c.positions || {};
+        if (c.gmAvatar.on) {
+          const room = currentRoom();
+          const near = Object.values(c.positions)[0];
+          const spawn = near ? { x: near.x + 20, y: near.y } : (room && room.spawn ? room.spawn : { x: 48, y: 48 });
+          c.positions.GM = { x: spawn.x, y: spawn.y, facing: 0 };
+        } else delete c.positions.GM;
+      }
+      touch(); break;
     }
     case 'room-chipset': {
       const room = currentRoom();

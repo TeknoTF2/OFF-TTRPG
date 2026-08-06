@@ -256,7 +256,7 @@ export function canonRoom(mapKey, chipset, onReady = () => {}) {
       if (tm.pano) {
         try {
           const pano = new Image();
-          pano.src = `/assets/level creation/panorama/${encodeURIComponent(tm.pano)}.png`;
+          pano.src = `/assets/level creation/Panorama/${encodeURIComponent(tm.pano)}.png`;
           await pano.decode();
           for (let py = 0; py < entry.h; py += pano.height) {
             for (let px2 = 0; px2 < entry.w; px2 += pano.width) gx.drawImage(pano, px2, py);

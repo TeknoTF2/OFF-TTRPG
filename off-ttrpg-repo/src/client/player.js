@@ -696,6 +696,24 @@ function drawOverworld() {
   }
   // party tokens, each client cameras on its own sprite
   for (const [pid, sp] of Object.entries(view.positions || {})) {
+    if (pid === 'GM') {
+      // The GM's avatar, walking among the party.
+      if (!view.gmAvatar) continue;
+      const gimg = view.gmAvatar.sprite ? owImage(view.gmAvatar.sprite) : null;
+      const gx2 = Math.round(sp.x), gy2 = Math.round(sp.y);
+      if (gimg && gimg.complete && gimg.width) {
+        const cw = Math.floor(gimg.width / 3), ch = Math.floor(gimg.height / 4);
+        const rowMapG = [2, 3, 1, 0];
+        x.drawImage(gimg, cw, rowMapG[sp.facing || 0] * ch, cw, ch, gx2 - 4, gy2 - ch + 16, cw, ch);
+      } else {
+        x.fillStyle = '#000'; x.fillRect(gx2 - 1, gy2 - 1, 18, 18);
+        x.fillStyle = '#f4f2ec'; x.fillRect(gx2, gy2, 16, 16);
+      }
+      x.font = '10px "OFF Display"';
+      x.fillStyle = '#f4f2ec';
+      x.fillText((view.gmAvatar.name || 'GM').slice(0, 12).toUpperCase(), gx2 - 6, gy2 + 26);
+      continue;
+    }
     const pm = view.party.find(z => z.id === pid);
     if (!pm) continue;
     // Only members actually present walk the map — no idle sprites for empty seats.

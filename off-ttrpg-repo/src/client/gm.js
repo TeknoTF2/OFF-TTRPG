@@ -463,13 +463,164 @@ function drawStaging(view) {
     d.ondblclick = ev => { ev.stopPropagation(); room.pieces = room.pieces.filter(z => z !== piece); stagedDirty = true; drawStaging(view); };
     overlay.appendChild(d);
   }
-  // party tokens on the GM camera
+  // live sprites on the GM camera — the party and the avatar, not name tags
+  const ROWS = [2, 3, 1, 0];
   for (const [pid, pp] of Object.entries(view.positions || {})) {
-    const pm = view.party.find(z => z.id === pid);
-    if (!pm) continue;
-    const d = el('div', { style: `position:absolute;left:${pp.x * sc}px;top:${pp.y * sc}px;z-index:2;font-size:10px;font-family:var(--disp);text-transform:uppercase;color:var(--amber)` }, pm.name.slice(0, 8).toUpperCase());
-    $('fieldOverlay').appendChild(d);
+    let spritePath = null, label = '';
+    if (pid === 'GM') {
+      if (!view.gmAvatar) continue;
+      spritePath = view.gmAvatar.sprite; label = view.gmAvatar.name || 'GM';
+    } else {
+      const pm = view.party.find(z => z.id === pid);
+      if (!pm || pm.benched) continue;
+      spritePath = (partyArt(pm.klass) || {}).sprite; label = pm.name;
+    }
+    const img = spritePath ? stagingImage(spritePath) : null;
+    if (img && img.complete && img.width) {
+      const cw = Math.floor(img.width / 3), ch = Math.floor(img.height / 4);
+      x.drawImage(img, cw, ROWS[pp.facing || 0] * ch, cw, ch, Math.round(pp.x) - 4, Math.round(pp.y) - ch + 16, cw, ch);
+    } else {
+      x.fillStyle = pid === 'GM' ? '#f4f2ec' : '#f2a71b';
+      x.fillRect(Math.round(pp.x), Math.round(pp.y), 16, 16);
+    }
+    x.font = '9px monospace';
+    x.fillStyle = pid === 'GM' ? '#f4f2ec' : '#f2a71b';
+    x.fillText(label.slice(0, 10).toUpperCase(), Math.round(pp.x) - 6, Math.round(pp.y) + 24);
   }
+}
+
+// ---------------------------------------------------------------- GM walk mode
+// With the avatar on, the GM walks the map through a player-style camera —
+// arrows/WASD, client-predicted, same collision as everyone else.
+const GOW = { keys: {}, pos: null, seq: [0, 1, 2, 1], seqi: 1, animDist: 0, lastSent: null, sentAt: 0, prevT: 0 };
+let gmWalkView = true;   // avatar on → camera view; toggle back to the build view anytime
+
+function gmWalkActive() {
+  const v = App.view;
+  return v && v.mode === 'overworld' && v.gmAvatar && v.positions && v.positions.GM && gmWalkView;
+}
+
+function gmWalkable(room, x, y) {
+  if (!room) return true;
+  const w = room.w || 384, h = room.h || 288;
+  if (x < 0 || y < 0 || x >= w || y >= h) return false;
+  if (room.imported && room.grid) return room.grid[Math.floor(y / 16)]?.[Math.floor(x / 16)] === '1';
+  const UNW = { water: 1, void: 1, inkwall0: 1 };
+  let ok = false;
+  for (const f of room.floors || []) if (x >= f.x && x < f.x + f.w && y >= f.y && y < f.y + f.h) ok = !UNW[f.p];
+  for (const s of room.structs || []) if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) ok = false;
+  return ok;
+}
+
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if (!gmWalkActive()) return;
+  if (e.key.startsWith('Arrow') || 'wasd'.includes(e.key)) { GOW.keys[e.key] = true; e.preventDefault(); }
+});
+addEventListener('keyup', e => { GOW.keys[e.key] = false; });
+
+function gmOwLoop(t) {
+  requestAnimationFrame(gmOwLoop);
+  const dt = Math.min(0.05, Math.max(0, (t - GOW.prevT) / 1000));
+  GOW.prevT = t;
+  const c = $('gmOw');
+  const active = gmWalkActive();
+  const rcv = $('roomcanvas'), fov = $('fieldOverlay');
+  if (rcv) rcv.style.visibility = active ? 'hidden' : '';
+  if (fov) fov.style.visibility = active ? 'hidden' : '';
+  if (!active) { if (c) c.style.display = 'none'; return; }
+  const view = App.view, room = view.room || { w: 384, h: 288 };
+  const sp = view.positions.GM;
+  if (!GOW.pos || Math.abs(sp.x - GOW.pos.x) + Math.abs(sp.y - GOW.pos.y) > 48) GOW.pos = { ...sp };
+  let { x, y, facing } = GOW.pos;
+  const spd = 88 * dt;
+  let dx = 0, dy = 0;
+  if (GOW.keys.ArrowUp || GOW.keys.w) { dy = -spd; facing = 3; }
+  else if (GOW.keys.ArrowDown || GOW.keys.s) { dy = spd; facing = 0; }
+  else if (GOW.keys.ArrowLeft || GOW.keys.a) { dx = -spd; facing = 1; }
+  else if (GOW.keys.ArrowRight || GOW.keys.d) { dx = spd; facing = 2; }
+  const moved = dx !== 0 || dy !== 0;
+  if (moved) {
+    const nx = x + dx, ny = y + dy;
+    if (gmWalkable(room, nx + 4, ny + 12) && gmWalkable(room, nx + 12, ny + 12)) { x = nx; y = ny; }
+    GOW.animDist += Math.abs(dx) + Math.abs(dy);
+    GOW.seqi = Math.floor(GOW.animDist / 11) % 4;
+  } else GOW.seqi = 1;
+  GOW.pos = { x, y, facing };
+  const rp = { x: Math.round(x), y: Math.round(y), facing };
+  const ls = GOW.lastSent;
+  if ((!ls || ls.x !== rp.x || ls.y !== rp.y || ls.facing !== rp.facing) && t - GOW.sentAt >= 90) {
+    send({ t: 'move', ...rp });
+    GOW.lastSent = rp;
+    GOW.sentAt = t;
+  }
+  drawGmWalk(view, room);
+}
+requestAnimationFrame(gmOwLoop);
+
+function drawGmWalk(view, room) {
+  const c = $('gmOw');
+  const holder = $('field');
+  if (!c || !holder) return;
+  const scale = Math.max(1, Math.floor(Math.min(holder.clientWidth / 384, holder.clientHeight / 288)));
+  c.style.display = 'block';
+  c.width = 384; c.height = 288;
+  c.style.width = `${384 * scale}px`; c.style.height = `${288 * scale}px`;
+  const x = c.getContext('2d');
+  x.imageSmoothingEnabled = false;
+  const pos = GOW.pos || view.positions.GM;
+  const camX = Math.round(Math.max(0, Math.min((room.w || 384) - 384, pos.x - 192)));
+  const camY = Math.round(Math.max(0, Math.min((room.h || 288) - 288, pos.y - 144)));
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  x.fillStyle = '#000'; x.fillRect(0, 0, 384, 288);
+  x.translate(-camX, -camY);
+  let overlay = null;
+  if (room.imported) {
+    const cr = canonRoom(room.imported, room.chipset || room.nativeChipset || 'yellow.png');
+    if (cr.ready) { x.drawImage(cr.ground, 0, 0); overlay = cr.overlay; }
+  } else {
+    const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
+    if (bgPath) {
+      const img = stagingImage(bgPath);
+      if (img.complete && img.width) x.drawImage(img, 0, 0, room.w || 384, room.h || 288);
+    } else {
+      const pals = App.staticData.palettes;
+      const p2 = pals[room.palette];
+      const pal = p2 ? { base: p2.base, dark: '#333', lite: p2.pale, pale: p2.tint } : { base: '#333', dark: '#222', lite: '#999', pale: '#ccc' };
+      drawRoomKit(x, room, pal, phase);
+    }
+  }
+  // pieces — the GM also sees hidden ones, dimmed
+  for (const p of room.pieces || []) {
+    x.globalAlpha = p.hidden ? 0.35 : 1;
+    x.fillStyle = '#f4f2ec';
+    x.font = '14px "OFF Display"';
+    x.fillText(p.g || '◇', p.x, p.y + 12);
+    x.globalAlpha = 1;
+  }
+  const ROWS = [2, 3, 1, 0];
+  for (const [pid, pp] of Object.entries(view.positions || {})) {
+    const mine = pid === 'GM';
+    const p = mine && GOW.pos ? GOW.pos : pp;
+    let spritePath = null, label = '';
+    if (mine) { spritePath = view.gmAvatar && view.gmAvatar.sprite; label = (view.gmAvatar && view.gmAvatar.name) || 'GM'; }
+    else {
+      const pm = view.party.find(z => z.id === pid);
+      if (!pm || pm.benched || !(view.connected || []).includes(pid)) continue;
+      spritePath = (partyArt(pm.klass) || {}).sprite; label = pm.name;
+    }
+    const img = spritePath ? stagingImage(spritePath) : null;
+    const px2 = Math.round(p.x), py2 = Math.round(p.y);
+    if (img && img.complete && img.width) {
+      const cw = Math.floor(img.width / 3), ch = Math.floor(img.height / 4);
+      const col = mine ? GOW.seq[GOW.seqi] : 1;
+      x.drawImage(img, col * cw, ROWS[p.facing || 0] * ch, cw, ch, px2 - 4, py2 - ch + 16, cw, ch);
+    } else { x.fillStyle = mine ? '#f4f2ec' : '#f2a71b'; x.fillRect(px2, py2, 16, 16); }
+    x.font = '10px "OFF Display"';
+    x.fillStyle = mine ? '#f4f2ec' : '#f2a71b';
+    x.fillText(label.slice(0, 12).toUpperCase(), px2 - 6, py2 + 26);
+  }
+  if (overlay) x.drawImage(overlay, 0, 0);
 }
 
 // staging mouse: drag rects for floors/structs, click for stamps
@@ -751,6 +902,33 @@ function renderLocation(p, view) {
     go.onclick = () => gm('canon-visit', { map: d.destMap, x: d.x, y: d.y });
     row.appendChild(go);
     p.appendChild(row);
+  }
+
+  // The GM's avatar: walk the map in person — as The Judge or anyone else.
+  {
+    const av = el('div', { class: 'edsec' }, el('h4', {}, 'GM AVATAR — WALK THE MAP'));
+    const row = el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' });
+    const active = !!(view.gmAvatar);
+    const nameI = el('input', { type: 'text', value: (view.gmAvatar && view.gmAvatar.name) || 'The Judge', style: 'width:150px' });
+    const sprSel = el('select', { style: 'max-width:220px' });
+    const tree = App.art ? App.art.tree : { sprites: { npcs: [], party: [] } };
+    const curSprite = view.gmAvatar && view.gmAvatar.sprite;
+    for (const f of [...(tree.sprites.npcs || []), ...(tree.sprites.party || [])]) {
+      const nm = f.split('/').pop().replace(/\.[a-z]+$/i, '');
+      sprSel.appendChild(el('option', { value: f, selected: curSprite === f ? '' : undefined }, nm));
+    }
+    const tog = el('button', { class: 'bigbtn' + (active ? ' red' : ''), style: 'font-size:17px;padding:4px 16px' }, active ? 'DISMISS AVATAR' : 'APPEAR ON THE MAP');
+    tog.onclick = () => gm('gm-avatar', { on: !active, sprite: sprSel.value, name: nameI.value });
+    row.append(el('span', { class: 'sl', style: 'width:auto' }, 'NAME'), nameI, el('span', { class: 'sl', style: 'width:auto' }, 'SPRITE'), sprSel, tog);
+    if (active) {
+      nameI.onchange = () => gm('gm-avatar', { name: nameI.value });
+      sprSel.onchange = () => gm('gm-avatar', { sprite: sprSel.value });
+      const viewTog = el('button', { class: 'qbtn' + (gmWalkView ? ' gmctl' : '') }, gmWalkView ? 'WALK VIEW (ARROWS MOVE YOU)' : 'BUILD VIEW');
+      viewTog.onclick = () => { gmWalkView = !gmWalkView; renderPanels(); };
+      row.appendChild(viewTog);
+    }
+    av.appendChild(row);
+    p.appendChild(av);
   }
 
   // Canon maps: the whole imported game, grouped by parent, one click to enter.
