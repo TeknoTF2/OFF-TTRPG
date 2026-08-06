@@ -183,6 +183,18 @@ export class Battle {
       firedTriggers: [], sprite: tmpl.sprite || null, portrait: tmpl.portrait || null,
     };
     if (inst.slot == null) inst.slot = this.freeEnemySlot();
+    // Duplicates get letter suffixes so the table can call its targets:
+    // the second "Common Spectre" renames the first to "Common Spectre A"
+    // and becomes "Common Spectre B"; later spawns continue the lettering.
+    if (!q.name) {
+      this.nameCounts = this.nameCounts || {};
+      const n = (this.nameCounts[tmplName] = (this.nameCounts[tmplName] || 0) + 1);
+      if (n === 2) {
+        const first = this.enemies.find(x => x.template === tmplName && x.name === tmplName);
+        if (first) first.name = `${tmplName} A`;
+      }
+      if (n > 1) inst.name = `${tmplName} ${String.fromCharCode(64 + n)}`;
+    }
     // Compound/phase fights: no top-level gauge_s means take the first phase's.
     if (inst.gaugeS == null && tmpl.gauge_phases) inst.gaugeS = Object.values(tmpl.gauge_phases)[0];
     if (inst.gaugeS == null) inst.gaugeS = 5.0;

@@ -38,6 +38,7 @@ App.onEvent = e => {
 };
 
 let wasBattle = false;
+let autoOpened = null;   // enemy id whose stack auto-popped this hold
 App.onState = view => {
   lastStateAt = performance.now();
   document.body.classList.toggle('paused', !!view.paused);
@@ -46,6 +47,13 @@ App.onState = view => {
   if (!inBattle && wasBattle) setLeftMode('create');
   wasBattle = inBattle;
   render(view);
+  // The GM's loop mirrors the players': a GM-controlled gauge fills → its
+  // action stack pops on its own. Escape dismisses; it won't re-pop that hold.
+  if (inBattle && !$('estack').classList.contains('open') && !pendingAction && !pendingPilot) {
+    const ready = view.battle.enemies.find(x => x.control === 'gm' && x.holding && !x.dead);
+    if (ready && autoOpened !== ready.id) { autoOpened = ready.id; enemyClicked(ready); }
+    if (!ready) autoOpened = null;
+  }
 };
 
 function announce(t) { $('announce').textContent = t; }
@@ -63,6 +71,24 @@ for (const t of TABS) {
 }
 $('pausebtn').onclick = () => gm('pause');
 $('pausebtn').parentElement.insertBefore(volumeSlider(), $('pausebtn'));
+
+// Mini jukebox — the current track and transport live in the top bar, so
+// changing the music never costs the GM their open panel.
+let curJuke = null;
+const mjName = el('span', { class: 'dfont', style: 'font-size:18px;color:var(--amber);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer' }, 'SILENCE');
+mjName.title = 'open the jukebox';
+mjName.onclick = () => { activeTab = 'Jukebox'; renderPanels(); };
+const mjPlay = el('button', { class: 'mjbtn', title: 'play / pause' }, '▶');
+mjPlay.onclick = () => {
+  if (!curJuke || !curJuke.track) { activeTab = 'Jukebox'; renderPanels(); return; }
+  if (curJuke.playing) gm('jukebox-stop');
+  else gm('jukebox-play', { file: curJuke.track });
+};
+const mjSkip = el('button', { class: 'mjbtn', title: 'skip to next queued track' }, '⏭');
+mjSkip.onclick = () => gm('jukebox-skip');
+$('pausebtn').parentElement.insertBefore(
+  el('div', { id: 'minijuke', style: 'display:flex;align-items:center;gap:6px;padding:0 10px' }, mjName, mjPlay, mjSkip),
+  $('pausebtn'));
 $('lt-create').onclick = () => setLeftMode('create');
 $('lt-party').onclick = () => setLeftMode('party');
 function setLeftMode(m) {
@@ -89,6 +115,11 @@ function render(view) {
   renderStrip(view);
   renderPanels();
   syncJukebox(view.jukebox);
+
+  curJuke = view.jukebox || null;
+  mjName.textContent = curJuke && curJuke.track ? trackName(curJuke.track) : 'SILENCE';
+  mjPlay.textContent = curJuke && curJuke.playing ? '❚❚' : '▶';
+  mjSkip.disabled = !(curJuke && curJuke.queue && curJuke.queue.length);
 }
 
 // ---------------------------------------------------------------- CREATE column
@@ -292,13 +323,30 @@ function targetPlayer(m) {
   render(App.view);
 }
 
+let eCursor = 0;
 addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
   if (e.key === 'Escape') {
     if (pendingAction) { pendingAction = null; announce('Action lowered.'); render(App.view); }
     if (pendingPilot) { pendingPilot = null; announce('Pilot action lowered.'); render(App.view); }
     $('estack').classList.remove('open');
+    return;
+  }
+  // The GM's action stack follows the same loop as the players': arrows walk
+  // the options, Enter fires. (Avatar walking pauses while a stack is open.)
+  const st = $('estack');
+  if (st.classList.contains('open')) {
+    const opts = [...st.querySelectorAll('button.eact')];
+    if (!opts.length) return;
+    if (['ArrowUp', 'ArrowLeft'].includes(e.key)) { eCursor = (eCursor - 1 + opts.length) % opts.length; e.preventDefault(); markECursor(opts); return; }
+    if (['ArrowDown', 'ArrowRight'].includes(e.key)) { eCursor = (eCursor + 1) % opts.length; e.preventDefault(); markECursor(opts); return; }
+    if (['Enter', ' '].includes(e.key)) { e.preventDefault(); (opts[eCursor] || opts[0]).click(); return; }
   }
 });
+function markECursor(opts) {
+  opts.forEach((b, i) => b.classList.toggle('kcur', i === eCursor));
+  if (opts[eCursor]) opts[eCursor].scrollIntoView({ block: 'nearest' });
+}
 
 // ---------------------------------------------------------------- FIELD
 const SLOT_POS = [
@@ -703,6 +751,7 @@ function enemyClicked(e) {
   if (!e.holding) { announce(`${e.name}'s gauge is still filling.`); return; }
   const st = $('estack');
   st.innerHTML = '';
+  eCursor = 0;
   st.style.left = '30%'; st.style.top = '18%';
   for (const pr of e.prompts || []) {
     const b = el('button', { class: 'eact prompt' }, pr.label, el('small', {}, 'scripted'));
@@ -774,7 +823,9 @@ function renderStrip(view) {
     const pc = el('div', { class: 'pc' + (e.dead ? ' deadslot' : '') + (e.control === 'gm' ? ' gmown' : ''), 'data-id': e.id });
     const tag = el('span', { class: 'ctl' + (e.control === 'ai' ? ' ai' : '') }, e.control.toUpperCase());
     tag.onclick = ev => { ev.stopPropagation(); gm('toggle-control', { enemyId: e.id }); };
-    pc.appendChild(el('div', { class: 'pname' }, `${e.name} `, tag));
+    const pen = el('span', { class: 'ctl', title: 'edit HP / size' }, '✎');
+    pen.onclick = ev => { ev.stopPropagation(); instanceEditor(e); };
+    pc.appendChild(el('div', { class: 'pname' }, `${e.name} `, tag, ' ', pen));
     pc.appendChild(el('div', { class: 'nums' },
       el('div', { class: 'num' }, `${e.hp}`, el('em', {}, 'hp'), el('i', { style: `width:${Math.round(e.hp / e.maxHp * 100)}%` })),
       el('div', { class: 'num cp' }, `${e.cp == null ? '∞' : e.cp}`, el('em', {}, 'cp'))));
@@ -931,24 +982,33 @@ function renderLocation(p, view) {
     p.appendChild(av);
   }
 
-  // Canon maps: the whole imported game, grouped by parent, one click to enter.
+  // Canon maps: the whole imported game, filterable, grouped by parent.
+  // ENTER opens the spawn picker: the GM clicks where the party arrives.
   if (Object.keys(canonIndex.maps).length) {
     p.appendChild(el('div', { class: 'dsec' }, 'CANON MAPS'));
     const row = el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px' });
+    const filter = el('input', { type: 'text', placeholder: 'filter…', style: 'width:130px' });
     const sel = el('select', { style: 'max-width:420px' });
-    const byParent = {};
-    for (const [k, m] of Object.entries(canonIndex.maps)) {
-      const pname = m.parent && canonIndex.maps[`Map${String(m.parent).padStart(4, '0')}`]?.name || '(top level)';
-      (byParent[pname] = byParent[pname] || []).push([k, m]);
-    }
-    for (const pname of Object.keys(byParent).sort()) {
-      const og = el('optgroup', { label: pname });
-      for (const [k, m] of byParent[pname]) og.appendChild(el('option', { value: k }, `${m.name} — ${m.w}×${m.h}${m.doorCount ? ' · ' + m.doorCount + ' doors' : ''}`));
-      sel.appendChild(og);
-    }
-    const go = el('button', { class: 'bigbtn', style: 'font-size:17px;padding:4px 16px' }, 'ENTER');
-    go.onclick = () => gm('canon-visit', { map: sel.value });
-    row.append(sel, go);
+    const rebuild = () => {
+      const q = filter.value.trim().toLowerCase();
+      sel.innerHTML = '';
+      const byParent = {};
+      for (const [k, m] of Object.entries(canonIndex.maps)) {
+        if (q && !(`${m.name} ${k}`.toLowerCase().includes(q))) continue;
+        const pname = m.parent && canonIndex.maps[`Map${String(m.parent).padStart(4, '0')}`]?.name || '(top level)';
+        (byParent[pname] = byParent[pname] || []).push([k, m]);
+      }
+      for (const pname of Object.keys(byParent).sort()) {
+        const og = el('optgroup', { label: pname });
+        for (const [k, m] of byParent[pname]) og.appendChild(el('option', { value: k }, `${m.name} — ${m.w}×${m.h}${m.doorCount ? ' · ' + m.doorCount + ' doors' : ''}`));
+        sel.appendChild(og);
+      }
+    };
+    filter.oninput = rebuild;
+    rebuild();
+    const go = el('button', { class: 'bigbtn', style: 'font-size:17px;padding:4px 16px' }, 'ENTER…');
+    go.onclick = () => { if (sel.value) openSpawnPicker(sel.value); };
+    row.append(filter, sel, go);
     // chipset reskin for the current canon room — visual only, collision is baked
     if (view.room && view.room.imported) {
       const cs = el('select', {});
@@ -1453,6 +1513,45 @@ function encDetail(q, tmpl) {
 }
 
 function labeledRow(host, lbl, node) { host.appendChild(el('div', { class: 'statrow' }, el('span', { class: 'sl' }, lbl), node)); }
+
+// The spawn picker: preview the map, click where the party arrives. Nobody
+// materializes mid-map and walks back to set the scene.
+function openSpawnPicker(mapKey) {
+  const info = canonIndex.maps[mapKey];
+  if (!info) return;
+  document.getElementById('spawnPicker')?.remove();
+  const wrap = el('div', {
+    id: 'spawnPicker',
+    style: 'position:fixed;inset:0;background:rgba(0,0,0,.86);z-index:80;display:flex;flex-direction:column;align-items:center;padding:20px;overflow:auto',
+  });
+  wrap.appendChild(el('div', { class: 'dfont', style: 'font-size:24px;color:var(--amber);margin-bottom:8px' },
+    `${info.name} — CLICK WHERE THE PARTY ARRIVES`));
+  const cv = el('canvas', { style: 'image-rendering:pixelated;cursor:crosshair;border:3px solid #000;background:#000' });
+  const scale = Math.max(1, Math.min(3, Math.floor(Math.min((innerWidth - 80) / (info.w * 16), (innerHeight - 130) / (info.h * 16)))));
+  cv.width = info.w * 16; cv.height = info.h * 16;
+  cv.style.width = `${info.w * 16 * scale}px`; cv.style.height = `${info.h * 16 * scale}px`;
+  const draw = () => {
+    const cr = canonRoom(mapKey, info.chipset || 'yellow.png', draw);
+    if (!cr.ready) return;
+    const x = cv.getContext('2d');
+    x.imageSmoothingEnabled = false;
+    x.drawImage(cr.ground, 0, 0);
+    x.drawImage(cr.overlay, 0, 0);
+  };
+  draw();
+  cv.onclick = ev => {
+    const r = cv.getBoundingClientRect();
+    const tx = Math.floor((ev.clientX - r.left) / r.width * info.w);
+    const ty = Math.floor((ev.clientY - r.top) / r.height * info.h);
+    gm('canon-visit', { map: mapKey, x: tx, y: ty });
+    wrap.remove();
+  };
+  wrap.appendChild(cv);
+  const cancel = el('button', { class: 'bigbtn ghost', style: 'margin-top:10px' }, 'CANCEL');
+  cancel.onclick = () => wrap.remove();
+  wrap.appendChild(cancel);
+  document.body.appendChild(wrap);
+}
 
 // ---- Items
 function renderItems(p, view) {

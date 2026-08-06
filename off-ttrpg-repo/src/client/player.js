@@ -10,6 +10,12 @@ if (!/^P[1-6]$/.test(seat)) location.href = '/';
 
 let armed = null;         // {kind:'attack'|'comp'|'item', comp?, item?, element?, targetSpec}
 let kselIdx = 0;          // keyboard target cursor within the current legal target list
+const MENU_BTNS = ['btnAttack', 'btnComp', 'btnDefend', 'btnObj'];
+let menuIdx = 0;          // action-menu cursor — every turn starts on ATTACK
+let subCursor = 0;        // competence / element submenu cursor
+let itemCursor = 0;       // Objects column cursor
+let itemRows = [];        // usable items, in rendered order
+let wasMyTurn = false;
 let lastStateAt = 0;
 let sheetOpen = false;
 const $ = id => document.getElementById(id);
@@ -95,6 +101,8 @@ function renderInventory(view) {
       (bySection['OTHER'] = bySection['OTHER'] || []).push({ name, desc: '', n: view.inventory[name] });
     }
   }
+  itemRows = [];
+  const picking = armed && armed.kind === 'item-pick';
   for (const [sec, items] of Object.entries(bySection)) {
     if (!items.some(i => i.n > 0) && sec !== 'RESTORATIVE') continue;
     list.appendChild(el('div', { class: 'isec' }, sec));
@@ -104,8 +112,14 @@ function renderInventory(view) {
         el('span', { class: 'ic' }, `×${it.n}`),
         el('span', { class: 'id' }, it.desc || ''));
       row.onclick = () => itemClicked(it.name, it.n);
+      if (it.n > 0) itemRows.push({ name: it.name, n: it.n, row });
       list.appendChild(row);
     }
+  }
+  if (picking && itemRows.length) {
+    const cur = ((itemCursor % itemRows.length) + itemRows.length) % itemRows.length;
+    itemRows[cur].row.classList.add('ksel');
+    itemRows[cur].row.scrollIntoView({ block: 'nearest' });
   }
   const inBattle = App.view.battle && App.view.mode === 'battle';
   $('inv').classList.toggle('armed', (armed && armed.kind === 'item-pick') || !inBattle);
@@ -263,7 +277,20 @@ function renderStack(view) {
   $('btnObj').disabled = !myTurn || mad || furious || itemLocked;
   if (furious && myTurn) announce(`${m.name} is FURIOUS — pick a target.`);
   if (furious && myTurn && !armed) armed = { kind: 'attack' };   // any click = the Furious act
-  if (!myTurn) { armed = null; $('subs').classList.remove('open'); $('inv').classList.remove('armed'); }
+  if (!myTurn) { armed = null; $('subs').classList.remove('open'); $('inv').classList.remove('armed'); setSel(''); }
+  // Turn start: the menu pops with the cursor on ATTACK — Enter attacks.
+  if (myTurn && !wasMyTurn) { menuIdx = 0; itemCursor = 0; }
+  if (myTurn && !armed && !$('subs').classList.contains('open')) {
+    const usable = MENU_BTNS.filter(b => !$(b).disabled);
+    setSel(usable[Math.min(menuIdx, Math.max(0, usable.length - 1))] || '');
+  }
+  wasMyTurn = !!myTurn;
+}
+
+function markSubCursor() {
+  const subs = [...$('subs').querySelectorAll('.sub')];
+  subs.forEach((s, i) => s.classList.toggle('sel', i === subCursor));
+  if (subs[subCursor]) subs[subCursor].scrollIntoView({ block: 'nearest' });
 }
 
 $('btnAttack').onclick = () => { setSel('btnAttack'); armed = { kind: 'attack' }; kselIdx = 0; $('subs').classList.remove('open'); $('inv').classList.remove('armed'); announce('Attack — choose an enemy.'); rerender(); };
@@ -290,6 +317,8 @@ function openCompDrawer() {
   }
   subs.classList.add('open');
   $('inv').classList.remove('armed');
+  subCursor = 0;
+  markSubCursor();
 }
 
 function describeComp(c) {
@@ -309,6 +338,8 @@ function pickComp(c) {
       row.onclick = () => armComp(c, elName);
       subs.appendChild(row);
     }
+    subCursor = 0;
+    markSubCursor();
     return;
   }
   armComp(c, null);
@@ -536,19 +567,59 @@ const OW = { keys: {}, moving: false, pos: null, seq: [0, 1, 2, 1], seqi: 1, ani
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   const view = App.view;
-  // Battle targeting: arrows walk the legal targets, Enter/Space/Z strikes, Escape lowers the arm.
-  if (view && view.mode === 'battle' && armed) {
-    const list = targetList();
-    if (list.length && ['ArrowLeft', 'ArrowUp'].includes(e.key)) { kselIdx--; e.preventDefault(); rerender(); return; }
-    if (list.length && ['ArrowRight', 'ArrowDown'].includes(e.key)) { kselIdx++; e.preventDefault(); rerender(); return; }
-    if (list.length && ['Enter', ' ', 'z', 'Z'].includes(e.key)) {
-      e.preventDefault();
-      const t = kselTarget();
-      if (t) targetClicked(t);
-      rerender();
+  // The combat loop, fully keyboard-driven: gauge fills → the menu pops with
+  // ATTACK under the cursor → arrows + Enter pick the action → arrows + Enter
+  // pick the target. Escape steps back one level. Clicking works throughout.
+  if (view && view.mode === 'battle') {
+    const m = me();
+    const myTurn = m && m.holding && !m.down && !view.battle.over;
+    const subsOpen = $('subs').classList.contains('open');
+    const confirm = ['Enter', ' ', 'z', 'Z'].includes(e.key);
+    if (armed && armedMode() !== 'item-pick') {
+      // target selection
+      const list = targetList();
+      if (list.length && ['ArrowLeft', 'ArrowUp'].includes(e.key)) { kselIdx--; e.preventDefault(); rerender(); return; }
+      if (list.length && ['ArrowRight', 'ArrowDown'].includes(e.key)) { kselIdx++; e.preventDefault(); rerender(); return; }
+      if (list.length && confirm) {
+        e.preventDefault();
+        const t = kselTarget();
+        if (t) targetClicked(t);
+        rerender();
+        return;
+      }
+      if (e.key === 'Escape') { armed = null; $('subs').classList.remove('open'); rerender(); return; }
       return;
     }
-    if (e.key === 'Escape') { armed = null; $('subs').classList.remove('open'); rerender(); return; }
+    if (subsOpen && myTurn) {
+      // competence / element submenu
+      const subs = [...$('subs').querySelectorAll('.sub')];
+      if (['ArrowUp', 'ArrowLeft'].includes(e.key)) { subCursor = (subCursor - 1 + subs.length) % subs.length; e.preventDefault(); markSubCursor(); return; }
+      if (['ArrowDown', 'ArrowRight'].includes(e.key)) { subCursor = (subCursor + 1) % subs.length; e.preventDefault(); markSubCursor(); return; }
+      if (confirm && subs[subCursor]) { e.preventDefault(); subs[subCursor].click(); return; }
+      if (e.key === 'Escape') { $('subs').classList.remove('open'); rerender(); return; }
+      return;
+    }
+    if (armed && armedMode() === 'item-pick' && myTurn) {
+      // Objects: arrows walk the usable items in the column
+      if (['ArrowUp', 'ArrowLeft'].includes(e.key)) { itemCursor--; e.preventDefault(); rerender(); return; }
+      if (['ArrowDown', 'ArrowRight'].includes(e.key)) { itemCursor++; e.preventDefault(); rerender(); return; }
+      if (confirm && itemRows.length) {
+        e.preventDefault();
+        const it = itemRows[((itemCursor % itemRows.length) + itemRows.length) % itemRows.length];
+        itemClicked(it.name, it.n);
+        return;
+      }
+      if (e.key === 'Escape') { armed = null; rerender(); return; }
+      return;
+    }
+    if (myTurn) {
+      // the action menu — cursor starts on ATTACK every turn
+      const usable = MENU_BTNS.filter(b => !$(b).disabled);
+      if (['ArrowUp', 'ArrowLeft'].includes(e.key)) { menuIdx = (menuIdx - 1 + usable.length) % usable.length; e.preventDefault(); setSel(usable[menuIdx]); return; }
+      if (['ArrowDown', 'ArrowRight'].includes(e.key)) { menuIdx = (menuIdx + 1) % usable.length; e.preventDefault(); setSel(usable[menuIdx]); return; }
+      if (confirm && usable.length) { e.preventDefault(); $(usable[Math.min(menuIdx, usable.length - 1)]).click(); return; }
+      return;
+    }
   }
   if (e.key.startsWith('Arrow') || 'wasd'.includes(e.key)) { OW.keys[e.key] = true; e.preventDefault(); }
   if ((e.key === 'e' || e.key === 'E' || e.key === ' ') && view && view.mode === 'overworld') tryExamine();
