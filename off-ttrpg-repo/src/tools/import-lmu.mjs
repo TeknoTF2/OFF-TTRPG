@@ -72,6 +72,8 @@ function parseLmu(buf) {
     if (id === 0x01) map.chipsetId = body.varint();
     else if (id === 0x02) map.w = body.varint();
     else if (id === 0x03) map.h = body.varint();
+    else if (id === 0x1f) map.panoFlag = !!body.varint();
+    else if (id === 0x20) map.pano = body.str(len).trim();
     else if (id === 0x47) map.lower = readI16(body.b, len);
     else if (id === 0x48) map.upper = readI16(body.b, len);
     else if (id === 0x51) {
@@ -81,7 +83,15 @@ function parseLmu(buf) {
         if (f[0x02]) ev.x = f[0x02].body.varint();
         if (f[0x03]) ev.y = f[0x03].body.varint();
         if (f[0x05]) {
-          lcfArray(f[0x05].body, (_pageId, pf) => {
+          lcfArray(f[0x05].body, (pageId, pf) => {
+            // First page: if its graphic is a chipset tile (empty charset name),
+            // bake it as static scenery — doors, ladders, signs live here.
+            if (pageId === 1) {
+              const charset = pf[0x15] ? pf[0x15].body.str(pf[0x15].len).trim() : '';
+              const tileIdx = pf[0x16] ? pf[0x16].body.varint() : 0;
+              const layer = pf[0x22] ? pf[0x22].body.varint() : 0;
+              if (!charset && tileIdx > 0) ev.tile = { idx: tileIdx, above: layer === 2 };
+            }
             if (!pf[0x34]) return;
             for (const c of parseCommands(pf[0x34].body)) {
               if (c.code === 10810 && c.params.length >= 3) {
@@ -347,9 +357,23 @@ for (const mf of mapFiles) {
     }));
 
     const nativeChip = chipFiles.find(f => f.replace(/\.png$/i, '').toLowerCase() === (cs.name || '').toLowerCase()) || null;
+    // Static scenery from tile-graphic events (ladders, doors, signs): the
+    // upper-tile source rect at the event's cell. Visual only — no behavior.
+    const evTiles = [];
+    for (const ev of m.events) {
+      if (!ev.tile) continue;
+      const cell = upperCell(10000 + ev.tile.idx);
+      if (!cell) continue;
+      if (ev.tile.above) cell.push(1);
+      evTiles.push({ x: ev.x, y: ev.y, c: cell });
+    }
+
     const dir = path.join(OUT, mapKey);
     mkdirSync(dir, { recursive: true });
-    writeFileSync(path.join(dir, 'tilemap.json'), JSON.stringify({ w: m.w, h: m.h, tile: 16, lower, upper }));
+    writeFileSync(path.join(dir, 'tilemap.json'), JSON.stringify({
+      w: m.w, h: m.h, tile: 16, lower, upper, ev: evTiles,
+      pano: m.panoFlag && m.pano ? m.pano : null,       // panorama shows through keyed-transparent cells
+    }));
     writeFileSync(path.join(dir, 'collision.json'), JSON.stringify({ width: m.w, height: m.h, grid }));
     writeFileSync(path.join(dir, 'pins.json'), JSON.stringify(pins));
 
@@ -362,6 +386,7 @@ for (const mf of mapFiles) {
       doorsTo: [...new Set(m.events.flatMap(ev => ev.doors.map(d => `Map${String(d.map).padStart(4, '0')}`)))],
       pinCount: pins.length,
       doorCount: pins.filter(p => p.door).length,
+      pano: m.panoFlag && m.pano ? m.pano : null,
     };
     done++;
   } catch (err) {

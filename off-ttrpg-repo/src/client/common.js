@@ -223,9 +223,25 @@ export function canonRoom(mapKey, chipset, onReady = () => {}) {
   (async () => {
     try {
       const tm = await (await fetch(`/api/canon/${mapKey}/tilemap.json`)).json();
-      const img = new Image();
-      img.src = `/assets/level creation/chipset/${encodeURIComponent(chipset)}`;
-      await img.decode();
+      const raw = new Image();
+      raw.src = `/assets/level creation/chipset/${encodeURIComponent(chipset)}`;
+      await raw.decode();
+      // RM2k chipsets key transparency to a palette color, stored literally in
+      // the PNG. The blank upper tile (F0) is pure key — sample it and knock
+      // that exact color out, or every overlay tile carries its backing color.
+      const kc = document.createElement('canvas');
+      kc.width = raw.width; kc.height = raw.height;
+      const kx = kc.getContext('2d');
+      kx.drawImage(raw, 0, 0);
+      const idat = kx.getImageData(0, 0, kc.width, kc.height);
+      const d = idat.data;
+      const ki = (128 + 8) * kc.width * 4 + (288 + 8) * 4;   // center of blank F0
+      const kr = d[ki], kg = d[ki + 1], kb = d[ki + 2];
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i] === kr && d[i + 1] === kg && d[i + 2] === kb) d[i + 3] = 0;
+      }
+      kx.putImageData(idat, 0, 0);
+      const img = kc;
       entry.w = tm.w * 16; entry.h = tm.h * 16;
       const mk = () => {
         const c = document.createElement('canvas');
@@ -235,6 +251,18 @@ export function canonRoom(mapKey, chipset, onReady = () => {}) {
         return [c, x];
       };
       const [g, gx] = mk(), [o, ox] = mk();
+      // Panorama (if the map declares one and the file has been dropped into
+      // the hot folder) tiles behind everything; keyed cells show through.
+      if (tm.pano) {
+        try {
+          const pano = new Image();
+          pano.src = `/assets/level creation/panorama/${encodeURIComponent(tm.pano)}.png`;
+          await pano.decode();
+          for (let py = 0; py < entry.h; py += pano.height) {
+            for (let px2 = 0; px2 < entry.w; px2 += pano.width) gx.drawImage(pano, px2, py);
+          }
+        } catch { /* not uploaded yet — keyed cells show black */ }
+      }
       const blit = (x, cell, dx, dy) => {
         if (cell.length <= 3) { x.drawImage(img, cell[0], cell[1], 16, 16, dx, dy, 16, 16); return; }
         for (let q = 0; q < 4; q++) x.drawImage(img, cell[q * 2], cell[q * 2 + 1], 8, 8, dx + (q % 2) * 8, dy + Math.floor(q / 2) * 8, 8, 8);
@@ -244,6 +272,10 @@ export function canonRoom(mapKey, chipset, onReady = () => {}) {
         if (lc) blit(gx, lc, cx * 16, y * 16);
         const uc = tm.upper[y][cx];
         if (uc) blit(uc.length === 3 ? ox : gx, uc.length === 3 ? uc.slice(0, 2) : uc, cx * 16, y * 16);
+      }
+      // static scenery baked from tile-graphic events (ladders, doors, signs)
+      for (const e of tm.ev || []) {
+        blit(e.c.length === 3 ? ox : gx, e.c.length === 3 ? e.c.slice(0, 2) : e.c, e.x * 16, e.y * 16);
       }
       entry.ground = g; entry.overlay = o; entry.ready = true;
       onReady();
