@@ -993,11 +993,22 @@ function renderLocation(p, view) {
       const q = filter.value.trim().toLowerCase();
       sel.innerHTML = '';
       const byParent = {};
+      // A map matches if the filter hits its own name, its key, or any
+      // ancestor's name — "zone 1" surfaces every room inside Zone 1, however
+      // deeply the game files nest it.
+      const ancestors = k0 => {
+        const out = []; let cur = canonIndex.maps[k0]; let guard = 0;
+        while (cur && cur.parent && guard++ < 8) {
+          const pm = canonIndex.maps[`Map${String(cur.parent).padStart(4, '0')}`];
+          if (!pm) break;
+          out.push(pm.name); cur = pm;
+        }
+        return out;
+      };
       for (const [k, m] of Object.entries(canonIndex.maps)) {
-        const pname = m.parent && canonIndex.maps[`Map${String(m.parent).padStart(4, '0')}`]?.name || '(top level)';
-        // match the parent's name too: "zone 0" surfaces the pièces inside it
-        if (q && !(`${m.name} ${k} ${pname}`.toLowerCase().includes(q))) continue;
-        (byParent[pname] = byParent[pname] || []).push([k, m]);
+        const anc = ancestors(k);
+        if (q && !(`${m.name} ${k} ${anc.join(' ')}`.toLowerCase().includes(q))) continue;
+        (byParent[anc[0] || '(top level)'] = byParent[anc[0] || '(top level)'] || []).push([k, m]);
       }
       for (const pname of Object.keys(byParent).sort()) {
         const og = el('optgroup', { label: pname });
