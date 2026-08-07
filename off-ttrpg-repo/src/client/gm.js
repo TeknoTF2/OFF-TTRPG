@@ -1146,7 +1146,9 @@ function trackName(f) { return f.split('/').pop().replace(/\.[a-z0-9]+$/i, ''); 
 
 function musicSelect(cur, onchange) {
   const s = el('select', { style: 'flex:1;min-width:0' });
-  s.appendChild(el('option', { value: '' }, '(none)'));
+  // The default assigns nothing: entering this room/encounter/scene leaves the
+  // jukebox exactly as it is — no change, no restart. Seamless corridors.
+  s.appendChild(el('option', { value: '' }, '(keep current music)'));
   const { byHeading, order } = musicLibrary();
   for (const heading of order) {
     const og = el('optgroup', { label: heading });
