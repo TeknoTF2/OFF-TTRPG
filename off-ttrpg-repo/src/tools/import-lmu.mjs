@@ -306,15 +306,17 @@ function lowerPassIndex(id) {
 }
 
 function cellWalkable(lowId, upId, cs) {
-  const li = lowerPassIndex(lowId);
-  const lbits = li != null && cs.lower && li < cs.lower.length ? cs.lower[li] : 0x0f;
-  if ((lbits & 0x0f) === 0) return false;
+  // RM2k rule: a present upper (F) tile REPLACES the lower tile's passability
+  // entirely — unless it's above-hero (star), which never blocks and defers to
+  // the lower tile. Ladders and walkways are passable upper tiles laid over
+  // impassable wall/void tiles; requiring both layers broke every ladder.
   if (upId > 10000 && upId < 10144 && cs.upper) {   // 10000 itself = blank
     const ubits = cs.upper[upId - 10000] ?? 0x0f;
-    if (ubits & 0x10) return true;       // above-hero never blocks
-    if ((ubits & 0x0f) === 0) return false;
+    if (!(ubits & 0x10)) return (ubits & 0x0f) !== 0;
   }
-  return true;
+  const li = lowerPassIndex(lowId);
+  const lbits = li != null && cs.lower && li < cs.lower.length ? cs.lower[li] : 0x0f;
+  return (lbits & 0x0f) !== 0;
 }
 
 function upperAbove(upId, cs) {
@@ -376,6 +378,14 @@ for (const mf of mapFiles) {
         row += cellWalkable(m.lower[y * m.w + x], m.upper ? m.upper[y * m.w + x] : 0, cs) ? '1' : '0';
       }
       grid.push(row);
+    }
+    // A below-hero tile-graphic event overrides the tile's passability with its
+    // own tile's — how the game lays walkable doors over solid walls.
+    for (const ev of m.events) {
+      if (!ev.tile || ev.tile.above) continue;
+      if (ev.y >= m.h || ev.x >= m.w || !cs.upper) continue;
+      const ubits = cs.upper[ev.tile.idx] ?? 0x0f;
+      grid[ev.y] = grid[ev.y].slice(0, ev.x) + ((ubits & 0x0f) !== 0 ? '1' : '0') + grid[ev.y].slice(ev.x + 1);
     }
 
     // pins: every event; doors carry their Transfer Player destination

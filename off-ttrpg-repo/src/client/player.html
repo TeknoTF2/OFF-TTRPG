@@ -42,7 +42,9 @@ body { display: grid; grid-template-rows: 64px 1fr; grid-template-columns: 280px
 .rail { position: absolute; left: 8px; top: 66px; bottom: 140px; display: flex; flex-direction: column; justify-content: space-between; font-family: var(--disp); text-transform: uppercase; font-size: 30px; letter-spacing: 2px; pointer-events: none; z-index: 2; }
 .rail span { writing-mode: vertical-lr; transform: rotate(180deg); }
 .field { flex: 1; display: flex; align-items: center; position: relative; padding: 16px 26px; z-index: 1; }
-.field.backdrop { background-size: cover; background-position: center; }
+/* Battle artwork fills the field edge-to-edge like the original 320×240
+   stretch — the whole painting is always visible. */
+.field.backdrop { background-size: 100% 100%; background-position: center; }
 
 .enemies { display: flex; gap: 30px; align-items: flex-end; margin-left: 46px; flex-wrap: wrap; max-width: 55%; }
 .enemy { text-align: center; cursor: default; position: relative; min-width: 130px; }
