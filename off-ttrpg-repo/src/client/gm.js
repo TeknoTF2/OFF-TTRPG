@@ -1035,7 +1035,7 @@ function renderLocation(p, view) {
       };
       for (const [k, m] of Object.entries(canonIndex.maps)) {
         const anc = ancestors(k);
-        if (q && !(`${m.name} ${k} ${anc.join(' ')}`.toLowerCase().includes(q))) continue;
+        if (q && !(`${m.name} ${m.nameFr || ''} ${k} ${anc.join(' ')}`.toLowerCase().includes(q))) continue;
         (byParent[anc[0] || '(top level)'] = byParent[anc[0] || '(top level)'] || []).push([k, m]);
       }
       for (const pname of Object.keys(byParent).sort()) {
