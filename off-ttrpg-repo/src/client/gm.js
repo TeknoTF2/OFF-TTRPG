@@ -1,7 +1,7 @@
 // GM console. Organizes and suggests, never restricts: every list reachable,
 // every value editable, and nothing here ever says "you can't."
 
-import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx } from '/common.js';
+import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx, previewTrack, stopPreview, previewingTrack } from '/common.js';
 
 // Canon map index (names, hierarchy, chipsets) — fetched once.
 let canonIndex = { maps: {}, chipsets: [] };
@@ -82,7 +82,7 @@ const mjPlay = el('button', { class: 'mjbtn', title: 'play / pause' }, '▶');
 mjPlay.onclick = () => {
   if (!curJuke || !curJuke.track) { activeTab = 'Jukebox'; renderPanels(); return; }
   if (curJuke.playing) gm('jukebox-stop');
-  else gm('jukebox-play', { file: curJuke.track });
+  else { stopPreview(); gm('jukebox-play', { file: curJuke.track }); }
 };
 const mjSkip = el('button', { class: 'mjbtn', title: 'skip to next queued track' }, '⏭');
 mjSkip.onclick = () => gm('jukebox-skip');
@@ -1145,8 +1145,10 @@ function musicLibrary() {
 function trackName(f) { return f.split('/').pop().replace(/\.[a-z0-9]+$/i, ''); }
 
 function musicSelect(cur, onchange) {
-  const s = el('select', {});
-  s.appendChild(el('option', { value: '' }, '(none)'));
+  const s = el('select', { style: 'flex:1;min-width:0' });
+  // The default assigns nothing: entering this room/encounter/scene leaves the
+  // jukebox exactly as it is — no change, no restart. Seamless corridors.
+  s.appendChild(el('option', { value: '' }, '(keep current music)'));
   const { byHeading, order } = musicLibrary();
   for (const heading of order) {
     const og = el('optgroup', { label: heading });
@@ -1158,7 +1160,16 @@ function musicSelect(cur, onchange) {
     s.appendChild(og);
   }
   s.onchange = () => onchange(s.value);
-  return s;
+  // 🎧 auditions the selected track on the GM's client only — pick with
+  // confidence, the players hear nothing until it's assigned or played.
+  const prev = el('button', { class: 'qbtn', title: 'preview — only you hear this' }, '🎧');
+  prev.onclick = ev => {
+    ev.stopPropagation();
+    if (!s.value) return;
+    previewTrack(s.value);
+    prev.textContent = previewingTrack() === s.value ? '■' : '🎧';
+  };
+  return el('span', { style: 'display:inline-flex;gap:6px;align-items:center;max-width:100%;flex:1 1 140px;min-width:0' }, s, prev);
 }
 
 function noteBox(key, view) {
@@ -1797,6 +1808,14 @@ function renderJukebox(p, view) {
   rescan.onclick = async () => { await rescanAssets(); announce('Hot folders re-scanned — new tracks and art are in.'); renderPanels(); };
   bar.appendChild(rescan);
   now.appendChild(bar);
+  if (previewingTrack()) {
+    const prow = el('div', { style: 'display:flex;gap:10px;align-items:center;margin-top:8px' },
+      el('span', { style: 'font-size:13px;letter-spacing:1px;color:#7fa8c6' }, `🎧 PREVIEWING ${trackName(previewingTrack()).toUpperCase()} — ONLY YOU HEAR THIS`));
+    const stopP = el('button', { class: 'qbtn' }, 'STOP PREVIEW');
+    stopP.onclick = () => { stopPreview(); renderPanels(); };
+    prow.appendChild(stopP);
+    now.appendChild(prow);
+  }
   const q = view.jukebox.queue || [];
   now.appendChild(el('h4', { style: 'margin-top:12px' }, `QUEUE${q.length ? ` — ${q.length}` : ''}`));
   if (!q.length) now.appendChild(el('div', { style: 'font-size:13px;color:#777' }, 'empty — the current track loops'));
@@ -1820,9 +1839,11 @@ function renderJukebox(p, view) {
     p.appendChild(el('div', { class: 'dsec' }, heading.toUpperCase()));
     for (const f of byHeading[heading]) {
       const row = el('div', { class: 'trackrow' + (view.jukebox.track === f ? '' : '') });
-      row.appendChild(el('span', { class: 'tn2', style: view.jukebox.track === f ? 'color:var(--amber)' : '' }, trackName(f)));
+      row.appendChild(el('span', { class: 'tn2', style: view.jukebox.track === f ? 'color:var(--amber)' : previewingTrack() === f ? 'color:#7fa8c6' : '' }, trackName(f)));
+      const prevB = el('button', { class: 'qbtn' + (previewingTrack() === f ? ' mod' : ''), title: 'preview — only you hear this' }, previewingTrack() === f ? '■ 🎧' : '🎧');
+      prevB.onclick = () => { previewTrack(f); renderPanels(); };
       const play = el('button', { class: 'qbtn' }, 'PLAY');
-      play.onclick = () => gm('jukebox-play', { file: f });
+      play.onclick = () => { stopPreview(); gm('jukebox-play', { file: f }); };
       const queueB = el('button', { class: 'qbtn' }, 'QUEUE');
       queueB.onclick = () => gm('jukebox-queue-add', { file: f });
       const cur = (view.musicZones || {})[f] || null;
@@ -1832,7 +1853,7 @@ function renderJukebox(p, view) {
         const next = cycle[(cycle.indexOf(cur) + 1) % cycle.length];
         gm('music-zone', { file: f, zone: next });
       };
-      row.append(play, queueB, zoneB);
+      row.append(prevB, play, queueB, zoneB);
       p.appendChild(row);
     }
   }
