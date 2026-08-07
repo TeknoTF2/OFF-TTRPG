@@ -348,7 +348,7 @@ export function playCombatFx(e, scopeSel = '') {
     return 520;
   }
   if (e.style === 'item') {
-    for (const t of targets) flashOver(t, 'rgba(255,255,255,.7)');
+    for (const t of targets) flashOver(t, 'item');
     return 420;
   }
   if ((e.style === 'melee' || e.style === 'heal') && actor && t0 && actor !== t0) {
@@ -360,7 +360,7 @@ export function playCombatFx(e, scopeSel = '') {
     actor.style.zIndex = 40;
     actor.style.transform = `translate(${Math.round(dx * 0.8)}px, ${Math.round(dy * 0.8)}px)`;
     setTimeout(() => {
-      for (const t of targets) flashOver(t, e.style === 'heal' ? 'rgba(90,225,120,.8)' : 'rgba(255,255,255,.85)');
+      for (const t of targets) flashOver(t, e.style === 'heal' ? 'heal' : 'hit');
       actor.style.transition = 'transform .22s ease-out';
       actor.style.transform = '';
       setTimeout(() => { actor.style.transition = ''; actor.style.zIndex = prevZ; }, 260);
@@ -369,20 +369,25 @@ export function playCombatFx(e, scopeSel = '') {
   }
   // no travel possible (self-target, missing node): flash what we have
   for (const t of (targets.length ? targets : actor ? [actor] : [])) {
-    flashOver(t, e.style === 'heal' ? 'rgba(90,225,120,.8)' : 'rgba(255,255,255,.8)');
+    flashOver(t, e.style === 'heal' ? 'heal' : 'hit');
   }
   return 420;
 }
 
-function flashOver(t, color) {
-  const r = t.getBoundingClientRect();
-  const f = el('div', {
-    style: `position:fixed;left:${r.left - 6}px;top:${r.top - 6}px;width:${r.width + 12}px;height:${r.height + 12}px;`
-      + `background:${color};border-radius:10px;pointer-events:none;z-index:60;opacity:.95;transition:opacity .3s`,
-  });
-  document.body.appendChild(f);
-  requestAnimationFrame(() => requestAnimationFrame(() => { f.style.opacity = '0'; }));
-  setTimeout(() => f.remove(), 380);
+// The classic RPG hit blink: the sprite's own pixels flash, twice — no
+// rectangle overlay washing the artwork grey.
+const FLASH_FILTERS = {
+  hit: 'brightness(2.6) contrast(1.15)',
+  heal: 'brightness(1.7) sepia(1) hue-rotate(70deg) saturate(3.5)',
+  item: 'brightness(1.9)',
+};
+function flashOver(t, kind) {
+  const f = FLASH_FILTERS[kind] || FLASH_FILTERS.hit;
+  const prev = t.style.filter;
+  t.style.filter = f;
+  setTimeout(() => { t.style.filter = prev; }, 130);
+  setTimeout(() => { t.style.filter = f; }, 240);
+  setTimeout(() => { t.style.filter = prev; }, 370);
 }
 
 function crosshairOver(t) {

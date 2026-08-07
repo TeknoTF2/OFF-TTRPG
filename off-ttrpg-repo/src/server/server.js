@@ -352,6 +352,9 @@ function viewFor(seat) {
     view.scenes = ['intro', ...Object.keys(c.scenes)];
     view.musicZones = c.musicZones;
     view.sceneMusic = c.sceneMusic;
+    // Full avatar config even while off — the panel round-trips name/sprite
+    // choices instead of resetting them on every rebuild.
+    view.gmAvatarCfg = { on: !!c.gmAvatar.on, name: c.gmAvatar.name, sprite: c.gmAvatar.sprite };
   }
   return view;
 }

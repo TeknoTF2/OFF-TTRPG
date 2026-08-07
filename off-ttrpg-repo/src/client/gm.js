@@ -113,7 +113,7 @@ function render(view) {
   renderPartyCol(view);
   renderField(view);
   renderStrip(view);
-  renderPanels();
+  renderPanelsFromState();
   syncJukebox(view.jukebox);
 
   curJuke = view.jukebox || null;
@@ -925,15 +925,34 @@ setInterval(() => {
 }, 120);
 
 // ---------------------------------------------------------------- PANELS
-function renderPanels() {
-  let host = $('panels');
-  // Never yank a field out from under the GM: state pushes arrive constantly,
-  // and rebuilding while they type (shop prices, names, stats) eats the edit.
+// State pushes arrive every ~180ms in battle: a naive rebuild resets scroll,
+// closes dropdown popups, and clobbers half-made choices. Three defenses:
+// a focused field always blocks the rebuild, any interaction inside the panel
+// buys a grace period (covers the pick-option-then-click-button race), and
+// scroll position survives the rebuilds that do happen. Local UI actions call
+// renderPanels() directly and always rebuild.
+let lastPanelInteract = 0;
+for (const evt of ['pointerdown', 'keydown', 'wheel', 'change']) {
+  document.addEventListener(evt, e => {
+    const host = document.getElementById('panels');
+    if (host && e.target instanceof Node && host.contains(e.target)) lastPanelInteract = performance.now();
+  }, true);
+}
+function renderPanelsFromState() {
+  const host = $('panels');
   const ae = document.activeElement;
   if (ae && host.contains(ae) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName)) return;
+  if (performance.now() - lastPanelInteract < 1500) return;
+  renderPanels();
+}
+function renderPanels() {
+  let host = $('panels');
+  const prevPanel = host.querySelector('.gmpanel');   // .gmpanel is the scroller
+  const scroll = prevPanel ? prevPanel.scrollTop : 0;
+  const prevTab = host.dataset.tab;
   host.innerHTML = '';
   for (const t of TABS) $(`tab-${t}`).classList.toggle('on', activeTab === t);
-  if (!activeTab || !App.view) return;
+  if (!activeTab || !App.view) { delete host.dataset.tab; return; }
   const panel = el('div', { class: 'gmpanel open' });
   host.appendChild(panel);
   ({
@@ -941,6 +960,8 @@ function renderPanels() {
     Items: renderItems, Players: renderPlayers, Shop: renderShopGate,
     Jukebox: renderJukebox, Stingers: renderStingers, Cutscene: renderCutscene, System: renderSystem,
   })[activeTab](panel, App.view);
+  host.dataset.tab = activeTab;
+  if (prevTab === activeTab) panel.scrollTop = scroll;   // same tab: stay put
 }
 
 // ---- Location
@@ -963,11 +984,12 @@ function renderLocation(p, view) {
   {
     const av = el('div', { class: 'edsec' }, el('h4', {}, 'GM AVATAR — WALK THE MAP'));
     const row = el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap' });
-    const active = !!(view.gmAvatar);
-    const nameI = el('input', { type: 'text', value: (view.gmAvatar && view.gmAvatar.name) || 'The Judge', style: 'width:150px' });
+    const cfg = view.gmAvatarCfg || { on: !!view.gmAvatar, name: view.gmAvatar && view.gmAvatar.name, sprite: view.gmAvatar && view.gmAvatar.sprite };
+    const active = !!cfg.on;
+    const nameI = el('input', { type: 'text', value: cfg.name || 'The Judge', style: 'width:150px' });
     const sprSel = el('select', { style: 'max-width:220px' });
     const tree = App.art ? App.art.tree : { sprites: { npcs: [], party: [] } };
-    const curSprite = view.gmAvatar && view.gmAvatar.sprite;
+    const curSprite = cfg.sprite;
     for (const f of [...(tree.sprites.npcs || []), ...(tree.sprites.party || [])]) {
       const nm = f.split('/').pop().replace(/\.[a-z]+$/i, '');
       sprSel.appendChild(el('option', { value: f, selected: curSprite === f ? '' : undefined }, nm));
@@ -975,9 +997,11 @@ function renderLocation(p, view) {
     const tog = el('button', { class: 'bigbtn' + (active ? ' red' : ''), style: 'font-size:17px;padding:4px 16px' }, active ? 'DISMISS AVATAR' : 'APPEAR ON THE MAP');
     tog.onclick = () => gm('gm-avatar', { on: !active, sprite: sprSel.value, name: nameI.value });
     row.append(el('span', { class: 'sl', style: 'width:auto' }, 'NAME'), nameI, el('span', { class: 'sl', style: 'width:auto' }, 'SPRITE'), sprSel, tog);
+    // Persist name/sprite the moment they change — even before the avatar is
+    // on, so a state rebuild can never reset a half-made choice.
+    nameI.onchange = () => gm('gm-avatar', { name: nameI.value });
+    sprSel.onchange = () => gm('gm-avatar', { sprite: sprSel.value });
     if (active) {
-      nameI.onchange = () => gm('gm-avatar', { name: nameI.value });
-      sprSel.onchange = () => gm('gm-avatar', { sprite: sprSel.value });
       const viewTog = el('button', { class: 'qbtn' + (gmWalkView ? ' gmctl' : '') }, gmWalkView ? 'WALK VIEW (ARROWS MOVE YOU)' : 'BUILD VIEW');
       viewTog.onclick = () => { gmWalkView = !gmWalkView; renderPanels(); };
       row.appendChild(viewTog);
