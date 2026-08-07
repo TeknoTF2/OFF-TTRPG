@@ -1,7 +1,7 @@
 // GM console. Organizes and suggests, never restricts: every list reachable,
 // every value editable, and nothing here ever says "you can't."
 
-import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx, previewTrack, stopPreview, previewingTrack } from '/common.js';
+import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, owLabel, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx, previewTrack, stopPreview, previewingTrack } from '/common.js';
 
 // Canon map index (names, hierarchy, chipsets) — fetched once.
 let canonIndex = { maps: {}, chipsets: [] };
@@ -205,6 +205,7 @@ function saveRoom() {
 // ---------------------------------------------------------------- PARTY column
 function renderPartyCol(view) {
   const col = $('partycol');
+  const scroll = col.scrollTop;   // rebuilt every push — the scroll must survive
   col.innerHTML = '';
   col.classList.toggle('targeting', !!pendingAction);
   // Only present members: in battle that's the roster; otherwise connected, un-benched
@@ -234,6 +235,7 @@ function renderPartyCol(view) {
     };
     col.appendChild(pm);
   }
+  col.scrollTop = scroll;
 }
 
 // ---------------------------------------------------------------- piloting an absent character
@@ -534,9 +536,7 @@ function drawStaging(view) {
       x.fillStyle = pid === 'GM' ? '#f4f2ec' : '#f2a71b';
       x.fillRect(Math.round(pp.x), Math.round(pp.y), 16, 16);
     }
-    x.font = '9px monospace';
-    x.fillStyle = pid === 'GM' ? '#f4f2ec' : '#f2a71b';
-    x.fillText(label.slice(0, 10).toUpperCase(), Math.round(pp.x) - 6, Math.round(pp.y) + 24);
+    owLabel(x, label, Math.round(pp.x) + 8, Math.round(pp.y) + 24, pid !== 'GM');
   }
 }
 
@@ -667,9 +667,7 @@ function drawGmWalk(view, room) {
       const col = mine ? GOW.seq[GOW.seqi] : 1;
       x.drawImage(img, col * cw, ROWS[p.facing || 0] * ch, cw, ch, px2 - 4, py2 - ch + 16, cw, ch);
     } else { x.fillStyle = mine ? '#f4f2ec' : '#f2a71b'; x.fillRect(px2, py2, 16, 16); }
-    x.font = '10px "OFF Display"';
-    x.fillStyle = mine ? '#f4f2ec' : '#f2a71b';
-    x.fillText(label.slice(0, 12).toUpperCase(), px2 - 6, py2 + 26);
+    owLabel(x, label, px2 + 8, py2 + 26, !mine);
   }
   if (overlay) x.drawImage(overlay, 0, 0);
   if (walkCr) drawCanonCond(x, walkCr, room.condOn, 'above', true);
@@ -816,6 +814,7 @@ function enemyClicked(e) {
 // ---------------------------------------------------------------- STRIP (enemy seats)
 function renderStrip(view) {
   const strip = $('strip');
+  const scroll = strip.scrollLeft;
   strip.innerHTML = '';
   if (!view.battle) {
     strip.appendChild(el('div', { style: 'padding:12px 16px;font-size:14px;color:#666;letter-spacing:2px' },
@@ -874,6 +873,7 @@ function renderStrip(view) {
   endBtn.onclick = () => gm('end-encounter');
   endCell.appendChild(endBtn);
   strip.appendChild(endCell);
+  strip.scrollLeft = scroll;
 }
 
 function instanceEditor(e) {

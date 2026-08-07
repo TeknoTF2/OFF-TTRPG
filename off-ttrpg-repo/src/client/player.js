@@ -2,7 +2,7 @@
 // The UI filters to legality: dead targets grey out and refuse the click,
 // the slot picker shows only legal gear, Muted disables Competence.
 
-import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
+import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, owLabel, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
 import { drawRoomKit } from '/roomkit.js';
 
 const seat = new URLSearchParams(location.search).get('seat') || localStorage.getItem('off-seat') || 'P1';
@@ -89,6 +89,7 @@ function render(view) {
 // ---------------------------------------------------------------- inventory
 function renderInventory(view) {
   const list = $('ilist');
+  const scroll = list.scrollTop;   // rebuilt every push — reading mustn't reset
   list.innerHTML = '';
   const cat = App.staticData.items.catalog;
   const bySection = {};
@@ -116,6 +117,7 @@ function renderInventory(view) {
       list.appendChild(row);
     }
   }
+  list.scrollTop = scroll;
   if (picking && itemRows.length) {
     const cur = ((itemCursor % itemRows.length) + itemRows.length) % itemRows.length;
     itemRows[cur].row.classList.add('ksel');
@@ -784,9 +786,7 @@ function drawOverworld() {
         x.fillStyle = '#000'; x.fillRect(gx2 - 1, gy2 - 1, 18, 18);
         x.fillStyle = '#f4f2ec'; x.fillRect(gx2, gy2, 16, 16);
       }
-      x.font = '10px "OFF Display"';
-      x.fillStyle = '#f4f2ec';
-      x.fillText((view.gmAvatar.name || 'GM').slice(0, 12).toUpperCase(), gx2 - 6, gy2 + 26);
+      owLabel(x, view.gmAvatar.name || 'GM', gx2 + 8, gy2 + 26);
       continue;
     }
     const pm = view.party.find(z => z.id === pid);
@@ -806,9 +806,7 @@ function drawOverworld() {
       x.fillStyle = '#000'; x.fillRect(px - 1, py - 1, 18, 18);
       x.fillStyle = pid === seat ? '#f2a71b' : '#f4f2ec'; x.fillRect(px, py, 16, 16);
     }
-    x.font = '10px "OFF Display"';
-    x.fillStyle = pid === seat ? '#f2a71b' : '#f4f2ec';
-    x.fillText(pm.name.slice(0, 10).toUpperCase(), px - 6, py + 26);
+    owLabel(x, pm.name, px + 8, py + 26, pid === seat);
   }
   if (canonOverlay) x.drawImage(canonOverlay, 0, 0);   // above-hero tiles cover sprites
   if (canonCr) drawCanonCond(x, canonCr, room.condOn, 'above');

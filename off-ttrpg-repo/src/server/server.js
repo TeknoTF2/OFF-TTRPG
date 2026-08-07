@@ -594,7 +594,9 @@ function computeReloadDiff() {
 function handlePlayer(seat, msg) {
   const c = campaign();
   const me = c.party.find(m => m.id === seat);
-  if (!me) return;
+  // The GM seat has no party member but still walks the map as an avatar —
+  // 'move' handles GM legality itself. Everything else needs a character.
+  if (!me && msg.t !== 'move') return;
   switch (msg.t) {
     case 'action': {
       if (!battle) return;
@@ -1218,7 +1220,10 @@ wss.on('connection', ws => {
     }
     if (!seat) return;
     if (seat === 'GM' && msg.t === 'gm') { handleGm(msg); return; }
-    if (seat !== 'GM') handlePlayer(seat, msg);
+    // The GM's avatar walks through the same move pipeline as everyone else;
+    // all other player verbs stay player-only.
+    if (seat === 'GM') { if (msg.t === 'move') handlePlayer(seat, msg); return; }
+    handlePlayer(seat, msg);
   });
   ws.on('close', () => {
     if (seat && seats.get(seat) === ws) { seats.delete(seat); stateDirtyView = true; }
