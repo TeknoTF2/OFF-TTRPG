@@ -317,6 +317,19 @@ export function canonRoom(mapKey, chipset, onReady = () => {}) {
 // behind a switch/item, drawn only when the GM has toggled their group on.
 // layer 'ground' draws under sprites, 'above' over them. ghostInactive shows
 // the off groups faintly — the GM's x-ray; players never pass it.
+// Overworld nametag: clean bold monospace on a dark plate, centered under the
+// sprite — readable on any map. cx = sprite center x, y = label baseline.
+export function owLabel(x, text, cx, y, accent = false) {
+  const t = String(text || '').slice(0, 12).toUpperCase();
+  if (!t) return;
+  x.font = 'bold 8px ui-monospace, Menlo, Consolas, monospace';
+  const w = Math.ceil(x.measureText(t).width);
+  x.fillStyle = 'rgba(0,0,0,.72)';
+  x.fillRect(cx - w / 2 - 3, y - 8, w + 6, 11);
+  x.fillStyle = accent ? '#f2a71b' : '#ffffff';
+  x.fillText(t, cx - w / 2, y);
+}
+
 export function drawCanonCond(x, entry, condOn, layer = 'all', ghostInactive = false) {
   if (!entry.ready || !entry.evc.length) return;
   for (const e of entry.evc) {
