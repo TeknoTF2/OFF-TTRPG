@@ -1929,7 +1929,7 @@ function renderCutscene(p, view) {
   const cards = el('div', { class: 'cards' });
   for (const id of view.scenes || ['intro']) {
     const c = el('div', { class: 'card' }, el('div', { class: 'cn' }, id === 'intro' ? 'The Birthday (Intro)' : id), el('div', { class: 'cs' }, id === 'intro' ? 'interactive · choice gates · the sparkle protocol' : 'authored scene'));
-    c.onclick = () => gm('scene-start', { id });
+    c.onclick = () => { lastPanelInteract = 0; gm('scene-start', { id }); };
     const musicRow = el('div', { class: 'statrow', style: 'margin-top:8px' }, el('span', { class: 'sl', style: 'width:auto' }, 'MUSIC'));
     const sel = musicSelect((view.sceneMusic || {})[id] || null, v => gm('scene-music', { id, file: v || null }));
     sel.style.cssText = 'flex:1 1 140px;min-width:0;max-width:100%';
@@ -1948,10 +1948,12 @@ function renderConductor(p, view) {
   const sc = view.scene;
   p.appendChild(el('div', { class: 'ph' }, `CONDUCTOR — ${sc.name || sc.sceneId}`));
   const bar = el('div', { style: 'display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap' });
+  // These clear the interaction grace: the whole point of the click is the
+  // state change it causes, so the very next push must repaint the script.
   const cont = el('button', { class: 'bigbtn' }, 'CONTINUE ▸');
-  cont.onclick = () => gm('scene-continue');
+  cont.onclick = () => { lastPanelInteract = 0; gm('scene-continue'); };
   const end = el('button', { class: 'bigbtn ghost' }, 'END SCENE');
-  end.onclick = () => gm('scene-end');
+  end.onclick = () => { lastPanelInteract = 0; gm('scene-end'); };
   bar.append(cont, end);
   p.appendChild(bar);
 
@@ -1998,7 +2000,7 @@ function renderConductor(p, view) {
     const row = el('div', { class: 'beatrow' + (b.index === sc.beatIndex ? ' cur' : '') },
       el('span', { class: 'bt2' }, `${b.index} · ${b.type}`), el('span', {}, (b.label || '').slice(0, 70)));
     row.style.cursor = 'pointer';
-    row.onclick = () => gm('scene-jump', { index: b.index });
+    row.onclick = () => { lastPanelInteract = 0; gm('scene-jump', { index: b.index }); };
     beats.appendChild(row);
   });
   grid.appendChild(beats);
