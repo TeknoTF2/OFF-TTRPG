@@ -796,6 +796,11 @@ function handleGm(msg) {
         }
       }
       c.rooms[name].spawn = { x: sx * 16, y: sy * 16 - 12 };
+      // Chipset chosen in the spawn picker rides along — set before anyone
+      // renders a frame of the room. null/absent keeps the room's current skin.
+      if ('chipset' in msg && (msg.chipset == null || canonIndex.chipsets.includes(msg.chipset))) {
+        c.rooms[name].chipset = msg.chipset || null;
+      }
       setLocation('Canon', name);
       break;
     }

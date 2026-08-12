@@ -1,7 +1,7 @@
 // GM console. Organizes and suggests, never restricts: every list reachable,
 // every value editable, and nothing here ever says "you can't."
 
-import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, owLabel, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx, previewTrack, stopPreview, previewingTrack } from '/common.js';
+import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, owLabels, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx, previewTrack, stopPreview, previewingTrack } from '/common.js';
 
 // Canon map index (names, hierarchy, chipsets) — fetched once.
 let canonIndex = { maps: {}, chipsets: [] };
@@ -483,12 +483,13 @@ function drawStaging(view) {
     }
     const overlayEl = $('fieldOverlay');
     for (const p of room.pins || []) {
+      // Just the glyph — destinations live in the hover tooltip and the
+      // hoisted door row, so clustered doors can't pile text on the map.
       const d = el('div', {
         style: `position:absolute;left:${(p.x * 16 + 8) * sc}px;top:${(p.y * 16 + 8) * sc}px;transform:translate(-50%,-50%);z-index:2;`
-          + `font-size:${11 * sc}px;color:${p.door ? 'var(--amber)' : '#9ad'};pointer-events:none;text-shadow:1px 1px 0 #000`,
+          + `font-size:${11 * sc}px;color:${p.door ? 'var(--amber)' : '#9ad'};cursor:${p.door ? 'help' : 'default'};text-shadow:1px 1px 0 #000`,
         title: p.door ? `${p.name} → ${p.destName}` : p.name,
       }, p.door ? '◈' : '·');
-      if (p.door) d.append(el('span', { style: `font-size:${8 * sc}px;margin-left:2px` }, p.destName || ''));
       overlayEl.appendChild(d);
     }
   } else if (bgPath) {
@@ -516,8 +517,10 @@ function drawStaging(view) {
     d.ondblclick = ev => { ev.stopPropagation(); room.pieces = room.pieces.filter(z => z !== piece); stagedDirty = true; drawStaging(view); };
     overlay.appendChild(d);
   }
-  // live sprites on the GM camera — the party and the avatar, not name tags
+  // live sprites on the GM camera — the party and the avatar; nametags drawn
+  // together at the end so clustered plates stagger instead of piling up.
   const ROWS = [2, 3, 1, 0];
+  const tags = [];
   for (const [pid, pp] of Object.entries(view.positions || {})) {
     let spritePath = null, label = '';
     if (pid === 'GM') {
@@ -536,8 +539,9 @@ function drawStaging(view) {
       x.fillStyle = pid === 'GM' ? '#f4f2ec' : '#f2a71b';
       x.fillRect(Math.round(pp.x), Math.round(pp.y), 16, 16);
     }
-    owLabel(x, label, Math.round(pp.x) + 8, Math.round(pp.y) + 24, pid !== 'GM');
+    tags.push({ text: label, cx: Math.round(pp.x) + 8, y: Math.round(pp.y) + 24, accent: pid !== 'GM' });
   }
+  owLabels(x, tags);
 }
 
 // ---------------------------------------------------------------- GM walk mode
@@ -650,6 +654,7 @@ function drawGmWalk(view, room) {
     x.globalAlpha = 1;
   }
   const ROWS = [2, 3, 1, 0];
+  const tags = [];
   for (const [pid, pp] of Object.entries(view.positions || {})) {
     const mine = pid === 'GM';
     const p = mine && GOW.pos ? GOW.pos : pp;
@@ -667,8 +672,9 @@ function drawGmWalk(view, room) {
       const col = mine ? GOW.seq[GOW.seqi] : 1;
       x.drawImage(img, col * cw, ROWS[p.facing || 0] * ch, cw, ch, px2 - 4, py2 - ch + 16, cw, ch);
     } else { x.fillStyle = mine ? '#f4f2ec' : '#f2a71b'; x.fillRect(px2, py2, 16, 16); }
-    owLabel(x, label, px2 + 8, py2 + 26, !mine);
+    tags.push({ text: label, cx: px2 + 8, y: py2 + 26, accent: !mine });
   }
+  owLabels(x, tags);
   if (overlay) x.drawImage(overlay, 0, 0);
   if (walkCr) drawCanonCond(x, walkCr, room.condOn, 'above', true);
 }
@@ -1020,10 +1026,8 @@ function renderLocation(p, view) {
     const rebuild = () => {
       const q = filter.value.trim().toLowerCase();
       sel.innerHTML = '';
-      const byParent = {};
-      // A map matches if the filter hits its own name, its key, or any
-      // ancestor's name — "zone 1" surfaces every room inside Zone 1, however
-      // deeply the game files nest it.
+      // A map matches if the filter hits its own name (English or French), its
+      // key, or any ancestor's name — "zone 1" surfaces every room inside it.
       const ancestors = k0 => {
         const out = []; let cur = canonIndex.maps[k0]; let guard = 0;
         while (cur && cur.parent && guard++ < 8) {
@@ -1033,14 +1037,24 @@ function renderLocation(p, view) {
         }
         return out;
       };
+      // Group by top-level zone (Zone 0, Zone 1, …) in canon map order, all of
+      // a zone's rooms under one header, sub-areas shown as a prefix — the list
+      // reads like the game's own table of contents, not an alphabet.
+      const byZone = {};
       for (const [k, m] of Object.entries(canonIndex.maps)) {
         const anc = ancestors(k);
         if (q && !(`${m.name} ${m.nameFr || ''} ${k} ${anc.join(' ')}`.toLowerCase().includes(q))) continue;
-        (byParent[anc[0] || '(top level)'] = byParent[anc[0] || '(top level)'] || []).push([k, m]);
+        const zone = anc.length ? anc[anc.length - 1] : m.name;   // top-level ancestor (or self)
+        const sub = anc.length > 1 ? anc[0] : null;               // immediate parent inside the zone
+        (byZone[zone] = byZone[zone] || { minId: m.id, rows: [] }).rows.push([k, m, sub]);
+        byZone[zone].minId = Math.min(byZone[zone].minId, m.id);
       }
-      for (const pname of Object.keys(byParent).sort()) {
-        const og = el('optgroup', { label: pname });
-        for (const [k, m] of byParent[pname]) og.appendChild(el('option', { value: k }, `${m.name} — ${m.w}×${m.h}${m.doorCount ? ' · ' + m.doorCount + ' doors' : ''}`));
+      for (const zone of Object.keys(byZone).sort((a, b) => byZone[a].minId - byZone[b].minId)) {
+        const og = el('optgroup', { label: zone });
+        for (const [k, m, sub] of byZone[zone].rows.sort((a, b) => a[1].id - b[1].id)) {
+          og.appendChild(el('option', { value: k },
+            `${sub ? sub + ' · ' : ''}${m.name} — ${m.w}×${m.h}${m.doorCount ? ' · ' + m.doorCount + ' doors' : ''}`));
+        }
         sel.appendChild(og);
       }
     };
@@ -1597,27 +1611,37 @@ function openSpawnPicker(mapKey) {
     id: 'spawnPicker',
     style: 'position:fixed;inset:0;background:rgba(0,0,0,.86);z-index:80;display:flex;flex-direction:column;align-items:center;padding:20px;overflow:auto',
   });
-  wrap.appendChild(el('div', { class: 'dfont', style: 'font-size:24px;color:var(--amber);margin-bottom:8px' },
+  const head = el('div', { style: 'display:flex;gap:14px;align-items:center;margin-bottom:8px;flex-wrap:wrap;justify-content:center' });
+  head.appendChild(el('span', { class: 'dfont', style: 'font-size:24px;color:var(--amber)' },
     `${info.name} — CLICK WHERE THE PARTY ARRIVES`));
+  // Pick the chipset here, before anyone loads in — the preview repaints live
+  // and the choice rides along with the visit.
+  const csSel = el('select', {});
+  csSel.appendChild(el('option', { value: '' }, `native (${(info.chipset || '?').replace(/\.png$/i, '')})`));
+  for (const f of canonIndex.chipsets) csSel.appendChild(el('option', { value: f }, f.replace(/\.png$/i, '')));
+  head.append(el('span', { class: 'sl', style: 'width:auto' }, 'CHIPSET'), csSel);
+  wrap.appendChild(head);
   const cv = el('canvas', { style: 'image-rendering:pixelated;cursor:crosshair;border:3px solid #000;background:#000' });
   const scale = Math.max(1, Math.min(3, Math.floor(Math.min((innerWidth - 80) / (info.w * 16), (innerHeight - 130) / (info.h * 16)))));
   cv.width = info.w * 16; cv.height = info.h * 16;
   cv.style.width = `${info.w * 16 * scale}px`; cv.style.height = `${info.h * 16 * scale}px`;
   const draw = () => {
-    const cr = canonRoom(mapKey, info.chipset || 'yellow.png', draw);
+    const cr = canonRoom(mapKey, csSel.value || info.chipset || 'yellow.png', draw);
     if (!cr.ready) return;
     const x = cv.getContext('2d');
     x.imageSmoothingEnabled = false;
+    x.fillStyle = '#000'; x.fillRect(0, 0, cv.width, cv.height);
     x.drawImage(cr.ground, 0, 0);
     x.drawImage(cr.overlay, 0, 0);
     drawCanonCond(x, cr, null, 'all', true);   // conditioned scenery, ghosted
   };
   draw();
+  csSel.onchange = draw;
   cv.onclick = ev => {
     const r = cv.getBoundingClientRect();
     const tx = Math.floor((ev.clientX - r.left) / r.width * info.w);
     const ty = Math.floor((ev.clientY - r.top) / r.height * info.h);
-    gm('canon-visit', { map: mapKey, x: tx, y: ty });
+    gm('canon-visit', { map: mapKey, x: tx, y: ty, chipset: csSel.value || null });
     wrap.remove();
   };
   wrap.appendChild(cv);
