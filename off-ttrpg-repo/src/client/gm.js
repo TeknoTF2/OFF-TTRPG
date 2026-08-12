@@ -944,14 +944,27 @@ for (const evt of ['pointerdown', 'keydown', 'wheel', 'change']) {
     if (host && e.target instanceof Node && host.contains(e.target)) lastPanelInteract = performance.now();
   }, true);
 }
+let panelRetry = 0;
 function renderPanelsFromState() {
+  // A suppressed rebuild is deferred, never dropped: player choices and other
+  // pushes that land mid-grace still paint the moment the GM's hands are still.
   const host = $('panels');
   const ae = document.activeElement;
-  if (ae && host.contains(ae) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName)) return;
-  if (performance.now() - lastPanelInteract < 1500) return;
+  if (ae && host.contains(ae) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName)) {
+    clearTimeout(panelRetry);
+    panelRetry = setTimeout(renderPanelsFromState, 800);
+    return;
+  }
+  const left = 1500 - (performance.now() - lastPanelInteract);
+  if (left > 0) {
+    clearTimeout(panelRetry);
+    panelRetry = setTimeout(renderPanelsFromState, left + 60);
+    return;
+  }
   renderPanels();
 }
 function renderPanels() {
+  clearTimeout(panelRetry);
   let host = $('panels');
   const prevPanel = host.querySelector('.gmpanel');   // .gmpanel is the scroller
   const scroll = prevPanel ? prevPanel.scrollTop : 0;
