@@ -2,7 +2,7 @@
 // The UI filters to legality: dead targets grey out and refuse the click,
 // the slot picker shows only legal gear, Muted disables Competence.
 
-import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, owLabel, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
+import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, owLabels, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
 import { drawRoomKit } from '/roomkit.js';
 
 const seat = new URLSearchParams(location.search).get('seat') || localStorage.getItem('off-seat') || 'P1';
@@ -771,7 +771,9 @@ function drawOverworld() {
     x.font = '16px "OFF Display"';
     x.fillText(p.g || '◇', p.x, p.y + 12);
   }
-  // party tokens, each client cameras on its own sprite
+  // party tokens, each client cameras on its own sprite; nametags collect and
+  // draw together after the sprites so clustered plates stagger, not pile.
+  const tags = [];
   for (const [pid, sp] of Object.entries(view.positions || {})) {
     if (pid === 'GM') {
       // The GM's avatar, walking among the party.
@@ -786,7 +788,7 @@ function drawOverworld() {
         x.fillStyle = '#000'; x.fillRect(gx2 - 1, gy2 - 1, 18, 18);
         x.fillStyle = '#f4f2ec'; x.fillRect(gx2, gy2, 16, 16);
       }
-      owLabel(x, view.gmAvatar.name || 'GM', gx2 + 8, gy2 + 26);
+      tags.push({ text: view.gmAvatar.name || 'GM', cx: gx2 + 8, y: gy2 + 26 });
       continue;
     }
     const pm = view.party.find(z => z.id === pid);
@@ -806,8 +808,9 @@ function drawOverworld() {
       x.fillStyle = '#000'; x.fillRect(px - 1, py - 1, 18, 18);
       x.fillStyle = pid === seat ? '#f2a71b' : '#f4f2ec'; x.fillRect(px, py, 16, 16);
     }
-    owLabel(x, pm.name, px + 8, py + 26, pid === seat);
+    tags.push({ text: pm.name, cx: px + 8, y: py + 26, accent: pid === seat });
   }
+  owLabels(x, tags);
   if (canonOverlay) x.drawImage(canonOverlay, 0, 0);   // above-hero tiles cover sprites
   if (canonCr) drawCanonCond(x, canonCr, room.condOn, 'above');
 }

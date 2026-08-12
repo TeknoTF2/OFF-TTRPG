@@ -320,14 +320,27 @@ export function canonRoom(mapKey, chipset, onReady = () => {}) {
 // Overworld nametag: clean bold monospace on a dark plate, centered under the
 // sprite — readable on any map. cx = sprite center x, y = label baseline.
 export function owLabel(x, text, cx, y, accent = false) {
-  const t = String(text || '').slice(0, 12).toUpperCase();
-  if (!t) return;
+  owLabels(x, [{ text, cx, y, accent }]);
+}
+
+// A frame's worth of nametags at once: plates that would overlap get bumped
+// down a row each, so a clustered party reads as a tidy stack instead of an
+// unreadable pile.
+export function owLabels(x, items) {
+  const placed = [];
   x.font = 'bold 8px ui-monospace, Menlo, Consolas, monospace';
-  const w = Math.ceil(x.measureText(t).width);
-  x.fillStyle = 'rgba(0,0,0,.72)';
-  x.fillRect(cx - w / 2 - 3, y - 8, w + 6, 11);
-  x.fillStyle = accent ? '#f2a71b' : '#ffffff';
-  x.fillText(t, cx - w / 2, y);
+  for (const it of items) {
+    const t = String(it.text || '').slice(0, 12).toUpperCase();
+    if (!t) continue;
+    const w = Math.ceil(x.measureText(t).width) + 6;
+    let y = it.y, guard = 0;
+    while (guard++ < 12 && placed.some(r => Math.abs(r.y - y) < 11 && Math.abs(r.cx - it.cx) < (r.w + w) / 2)) y += 12;
+    placed.push({ cx: it.cx, y, w });
+    x.fillStyle = 'rgba(0,0,0,.72)';
+    x.fillRect(it.cx - w / 2, y - 8, w, 11);
+    x.fillStyle = it.accent ? '#f2a71b' : '#ffffff';
+    x.fillText(t, it.cx - w / 2 + 3, y);
+  }
 }
 
 export function drawCanonCond(x, entry, condOn, layer = 'all', ghostInactive = false) {
