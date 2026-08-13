@@ -158,8 +158,7 @@ function renderBattle(view) {
   if (performance.now() < fxLockUntil && $('enemies').children.length) { renderStack(view); return; }
   if (b.backdrop) {
     field.classList.add('backdrop');
-    field.style.backgroundImage = `url('/assets/backdrops/${b.backdrop}')`;
-    if (b.palette) applyPalette(b.palette);
+    field.style.backgroundImage = `url('/assets/backdrops/${encodeURIComponent(b.backdrop).replace(/%2F/g, '/')}')`;
   }
   // enemies — sprite, name, visible effect icons; stats/HP only when revealed
   const wrap = $('enemies');

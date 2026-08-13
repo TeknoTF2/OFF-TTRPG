@@ -50,9 +50,12 @@ App.onState = view => {
   // The GM's loop mirrors the players': a GM-controlled gauge fills → its
   // action stack pops on its own. Escape dismisses; it won't re-pop that hold.
   if (inBattle && !$('estack').classList.contains('open') && !pendingAction && !pendingPilot) {
-    const ready = view.battle.enemies.find(x => x.control === 'gm' && x.holding && !x.dead);
+    // With several GM creatures holding at once, prefer one whose stack hasn't
+    // been shown this hold — dismissing A must not stop B from popping.
+    const holdingGm = view.battle.enemies.filter(x => x.control === 'gm' && x.holding && !x.dead);
+    const ready = holdingGm.find(x => x.id !== autoOpened) || holdingGm[0];
     if (ready && autoOpened !== ready.id) { autoOpened = ready.id; enemyClicked(ready); }
-    if (!ready) autoOpened = null;
+    if (!holdingGm.length) autoOpened = null;
   }
 };
 
@@ -369,7 +372,7 @@ function renderField(view) {
     field.classList.remove('building');
     if (view.battle.backdrop) {
       field.classList.add('backdrop');
-      field.style.backgroundImage = `url('/assets/backdrops/${view.battle.backdrop}')`;
+      field.style.backgroundImage = `url('/assets/backdrops/${encodeURIComponent(view.battle.backdrop).replace(/%2F/g, '/')}')`;
       if (view.battle.palette) applyPalette(view.battle.palette);
     }
     // slot markers render on the GM's field only
@@ -897,6 +900,15 @@ function instanceEditor(e) {
   for (const s of ENC_SIZES) szSel.appendChild(el('option', { value: String(s), selected: (e.size || 1) === s ? '' : undefined }, `×${s}`));
   box.appendChild(mkRow('SIZE', szSel));
   const bar = el('div', { style: 'display:flex;gap:8px;transform:skewX(4deg)' });
+  // Control lives here too — a second, unmissable place to flip AI ⇄ GM.
+  const ctl = el('button', { class: 'qbtn' + (e.control === 'gm' ? ' gmctl' : '') }, e.control === 'gm' ? 'CONTROL: GM' : 'CONTROL: AI');
+  ctl.onclick = () => {
+    gm('toggle-control', { enemyId: e.id });
+    e.control = e.control === 'gm' ? 'ai' : 'gm';
+    ctl.textContent = e.control === 'gm' ? 'CONTROL: GM' : 'CONTROL: AI';
+    ctl.classList.toggle('gmctl', e.control === 'gm');
+  };
+  bar.appendChild(ctl);
   const apply = el('button', { class: 'qbtn gmctl' }, 'APPLY');
   apply.onclick = () => {
     gm('edit-instance', { enemyId: e.id, patch: { hp: Math.max(0, +hpI.value || 0), size: +szSel.value } });
@@ -944,14 +956,27 @@ for (const evt of ['pointerdown', 'keydown', 'wheel', 'change']) {
     if (host && e.target instanceof Node && host.contains(e.target)) lastPanelInteract = performance.now();
   }, true);
 }
+let panelRetry = 0;
 function renderPanelsFromState() {
+  // A suppressed rebuild is deferred, never dropped: player choices and other
+  // pushes that land mid-grace still paint the moment the GM's hands are still.
   const host = $('panels');
   const ae = document.activeElement;
-  if (ae && host.contains(ae) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName)) return;
-  if (performance.now() - lastPanelInteract < 1500) return;
+  if (ae && host.contains(ae) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName)) {
+    clearTimeout(panelRetry);
+    panelRetry = setTimeout(renderPanelsFromState, 800);
+    return;
+  }
+  const left = 1500 - (performance.now() - lastPanelInteract);
+  if (left > 0) {
+    clearTimeout(panelRetry);
+    panelRetry = setTimeout(renderPanelsFromState, left + 60);
+    return;
+  }
   renderPanels();
 }
 function renderPanels() {
+  clearTimeout(panelRetry);
   let host = $('panels');
   const prevPanel = host.querySelector('.gmpanel');   // .gmpanel is the scroller
   const scroll = prevPanel ? prevPanel.scrollTop : 0;
@@ -1389,7 +1414,6 @@ function renderEncounter(p, view) {
     s.onchange = () => enc.backdrop = s.value || null;
     return s;
   })());
-  labeledRow(right, 'Palette', paletteSelect(enc.palette, v => enc.palette = v || null));
   labeledRow(right, 'Music', musicSelect(enc.music, v => enc.music = v || null));
 
   enc.waves.forEach((w, wi) => {
