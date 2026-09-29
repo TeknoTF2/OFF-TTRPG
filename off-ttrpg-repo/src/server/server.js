@@ -12,8 +12,9 @@ import { loadAll, ASSETS_DIR } from './dataload.js';
 import { Store, newCampaign } from './state.js';
 import { Battle } from './engine/battle.js';
 import { SceneRun } from './scenes.js';
-import { memberBase, gearEffects, validateEquip, findGearItem, statsAt } from './engine/members.js';
+import { memberBase, gearEffects, validateEquip, findGearItem, statsAt, resetOnDown } from './engine/members.js';
 import { currentElement } from './engine/formulas.js';
+import { RING, elementMult } from '../shared/constants.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT_DIR = path.join(here, '..', 'client');
@@ -233,6 +234,8 @@ function enemyPublicView(e) {
   };
   if (revealed) {
     v.element = currentElement(e);
+    // What the Check reads: the ring element that doubles against it (none for Sugar).
+    v.weakTo = RING.find(a => elementMult(a, v.element) > 1) || null;
     v.hp = e.hp; v.maxHp = e.maxHp;
     v.def = e.def; v.res = e.res; v.lck = e.lck;
     v.tiers = e.statusTiers;
@@ -245,6 +248,7 @@ function enemyGmView(e) {
   return {
     ...enemyPublicView(e),
     element: currentElement(e), nativeElement: e.element,
+    weakTo: RING.find(a => elementMult(a, currentElement(e)) > 1) || null,
     hp: e.hp, maxHp: e.maxHp, def: e.def, res: e.res, lck: e.lck,
     tiers: e.statusTiers, gauge: e.gauge, gaugeS: e.gaugeS, dpa: e.dpa,
     holding: e.holding, critCharged: e.critCharged, control: e.control,
@@ -500,7 +504,7 @@ function setLocation(zone, name) {
     const maxHp = memberBase(data, m).hp;
     m.hp = Math.max(0, m.hp - Math.round(maxHp / 10));
     emit({ kind: 'float', targetId: m.id, text: `${Math.round(maxHp / 10)}`, style: 'dmg' });
-    if (m.hp === 0) { m.down = true; emit({ kind: 'announce', text: `${m.name} succumbs to poison!` }); }
+    if (m.hp === 0) { m.down = true; resetOnDown(m); emit({ kind: 'announce', text: `${m.name} succumbs to poison!` }); }
   }
   const room = currentRoom();
   c.positions = {};
@@ -1056,13 +1060,19 @@ function handleGm(msg) {
         m.klass = p.klass; m.element = data.classKits.classes[p.klass].element;
         const s = statsAt(data, p.klass, m.level); m.hp = Math.min(m.hp, s.hp) || s.hp; m.cp = Math.min(m.cp, s.cp) || s.cp;
       }
+      const wasDown = m.down;
       if ('down' in p) {
         m.down = !!p.down;
         if (!m.down && m.hp <= 0) m.hp = 1;
-        if (m.down) { m.hp = 0; m.holding = false; m.gauge = 0; }
+        if (m.down) m.hp = 0;
       }
       if (m.hp === 0 && !('down' in p)) m.down = true;
       if (m.hp > 0 && m.down && 'hp' in p) m.down = false;
+      // Going down resets status (ruling) and, mid-fight, counts as a fall.
+      if (m.down && !wasDown) {
+        if (battle && battle.party().includes(m)) { m.down = false; battle.downPlayer(m); }
+        else resetOnDown(m);
+      }
       touch(); break;
     }
     case 'player-bench': {

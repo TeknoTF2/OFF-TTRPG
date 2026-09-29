@@ -4,8 +4,8 @@
     "vocabulary": {
       "moveEffects": "status | statuses[] | statChange | drainCp[lo,hi] | hits | cpCost | lifesteal | selfDamage | selfHeal | selfHealPctMax | selfRandomElement | healAlly{amount,cureStatus} | allyStatChange | allyStatus | allyCureAll | allyStripDown | plusCurrentHpPct | ignoresDef | forceElement | randomElement | attackElementOwnWeakness | attackElementBestVsTarget | setElementRandom | summon{name,count,realCount} | availableBelowHpPct | formOnly[] | oncePerFight | scripted",
       "triggers.when": "turn | hpPctLte | orTurn | everySeconds (repeating) | allyDied | watchAgeGte (repeating while a watch mark exists)",
-      "triggers.action": "summon | selfStatus | statChanges[] | selfHealBonus | setForm | castMove | blast | partyStatus | mark | resolveWatch | addMove | addMoveEffect | announce | flee | forfeitDrop | die",
-      "passives": "selfHealPerAction | purification | sacredMission | chainMastery"
+      "triggers.action": "summon | selfStatus | statChanges[] | selfHealBonus | setForm | castMove | blast | partyStatus | mark | resolveWatch | addMove | addMoveEffect | announce | setElement (ring element | random) | flee | forfeitDrop | die",
+      "passives": "selfHealPerAction | purification | sacredMission | chainMastery | startElement"
     },
     "flags": [
       "Gilles de Rais's optional 2008 martial-check trait is dropped, per its own data note ('drop if schema purity wins').",
@@ -13,6 +13,7 @@
       "Critic-burnt's HELP self-buffs 'ESP/DEF/AGI'; ESP is not a stat-change type in the system, so the buffs land as ATK/DEF/AGI Up.",
       "Pastel-burnt's sequential head spawns (~every 18s) and kill-heads-kills-body win condition are GM-assembled from the unit templates below (waves + manual spawns + Players-panel edits); the timing hand is yours.",
       "Carnival's four Games and the bidirectional prize-tempo system are GM-run: the moves below all resolve, Game transitions announce at 75/50/25%, but phase move-pools and prize gauge-fills are your calls (pilot him).",
+      "Carnival's element follows the Game (GM ruling: Sugar is the only neutral element). Derived from each Game's borrowed boss: Leo = Meat (Source), Cancer = a random ring element (Maldicion's instability), Pisces = Smoke (the liars), Aquarius = Plastic (Justus).",
       "Ballman's set-piece minigame is a GM call per canon; straight-fodder stats work as data."
     ]
   },
@@ -546,8 +547,7 @@
         "healAlly": {
           "amount": 150
         }
-      },
-      "Wide Angle": {}
+      }
     },
     "Alpha (Add-On)": {
       "Open Bracket": {
@@ -1002,7 +1002,8 @@
           "hpPctLte": 75
         },
         "action": {
-          "announce": "The Game changes: CANCER. (Maldicion's rules — condition: elemental attacks.)"
+          "announce": "The Game changes: CANCER. (Maldicion's rules — condition: elemental attacks.)",
+          "setElement": "random"
         },
         "label": "Game 2: Cancer"
       },
@@ -1012,7 +1013,8 @@
           "hpPctLte": 50
         },
         "action": {
-          "announce": "The Game changes: PISCES. (The liars' rules — condition: being hit.)"
+          "announce": "The Game changes: PISCES. (The liars' rules — condition: being hit.)",
+          "setElement": "Smoke"
         },
         "label": "Game 3: Pisces"
       },
@@ -1022,7 +1024,8 @@
           "hpPctLte": 25
         },
         "action": {
-          "announce": "The Game changes: AQUARIUS. (Justus's rules — condition: any competence.)"
+          "announce": "The Game changes: AQUARIUS. (Justus's rules — condition: any competence.)",
+          "setElement": "Plastic"
         },
         "label": "Game 4: Aquarius"
       }
@@ -1111,6 +1114,9 @@
     },
     "Alpha (Add-On)": {
       "chainMastery": true
+    },
+    "Carnival": {
+      "startElement": "Meat"
     }
   },
   "unitTemplates": {

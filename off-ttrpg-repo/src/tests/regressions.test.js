@@ -308,32 +308,35 @@ test('healing never lowers HP that sits above max', () => {
 });
 
 // ---------- Maldicion ----------
-test("Maldicion's reroll can land on any ring element except the one he has", () => {
+// A small deterministic stream, so a run of rerolls explores the whole ring.
+function lcg(seed = 7) { let s = seed; return () => ((s = (s * 1103515245 + 12345) % 2147483648) / 2147483648); }
+
+test("Maldicion's reroll always changes his element and can land on every ring element", () => {
+  const { b } = makeBattle({ enemies: [{ template: 'Maldicion', control: 'gm' }], rng: lcg() });
+  const e = b.enemies[0];
+  const piety = e.moves.find(m => m.n === 'Entropic Piety');
   const seen = new Set();
-  for (const r of [0.0, 0.3, 0.6, 0.9]) {
-    const { b } = makeBattle({ enemies: [{ template: 'Maldicion', control: 'gm' }], rng: () => r });
-    const e = b.enemies[0];
-    const piety = e.moves.find(m => m.n === 'Entropic Piety');
+  for (let i = 0; i < 40; i++) {
+    const before = currentElement(e);
     b.resolveEnemyMove(e, piety, [e]);
-    const first = currentElement(e);
-    seen.add(first);
-    b.resolveEnemyMove(e, piety, [e]);
-    assert.notEqual(currentElement(e), first, 'a reroll always changes the element');
+    assert.notEqual(currentElement(e), before, 'a reroll always changes the element');
+    seen.add(currentElement(e));
   }
   assert.deepEqual([...seen].sort(), ['Meat', 'Metal', 'Plastic', 'Smoke']);
 });
 
-test('Clamor Claws before any reroll: no weakness yet, so a random ring element — not always Smoke', () => {
-  const dmgAt = r => {
-    const { b, campaign } = makeBattle({ enemies: [{ template: 'Maldicion', control: 'gm' }], rng: () => r });
+test('Clamor Claws strikes in the element he is currently weak to', () => {
+  const dmgAs = element => {
+    const { b, campaign } = makeBattle({ enemies: [{ template: 'Maldicion', control: 'gm' }], rng: mid });
     const e = b.enemies[0];
+    e.element = element; e.elementSet = null;
     const p = seatOf(campaign, 'Purifier');               // Metal
     p.hp = 99999; e.critCharged = false; e.holding = true;
     b.gmEnemyAction(e, { kind: 'move', move: 'Clamor Claws' });
     return 99999 - p.hp;
   };
-  // r 0.1 → Plastic (2× vs Metal); r 0.6 → Smoke (0.5× vs Metal)
-  assert.ok(dmgAt(0.1) > 2 * dmgAt(0.6));
+  // Metal is weak to Plastic (2× vs the Metal Purifier); Meat is weak to Smoke (0.5× vs Metal).
+  assert.ok(dmgAs('Metal') > 2 * dmgAs('Meat'));
 });
 
 // ---------- passives ----------
@@ -355,4 +358,91 @@ test('passives come from the member who has them: duplicates and the bench', () 
   p.holding = true;
   b2.playerAction(p, { kind: 'item', item: 'Luck Ticket', targetId: p.id });
   assert.equal(c2.inventory['Luck Ticket'], 0, 'a benched Bandit saves nothing');
+});
+
+// ---------- GM rulings (session 3) ----------
+test('Sugar is the only neutral element: descriptive bestiary strings resolve to real ones', () => {
+  const ring = ['Plastic', 'Metal', 'Smoke', 'Meat'];
+  const { b } = makeBattle({ enemies: [{ template: 'Maldicion' }, { template: 'Psalmanazar & Herodotus' }, { template: 'Carnival' }], rng: lcg(3) });
+  const [mald, ph, carn] = b.enemies;
+  assert.ok(ring.includes(mald.element), `Maldicion spawns on the ring (got ${mald.element})`);
+  assert.equal(ph.element, 'Smoke', "'Smoke (both)' is Smoke");
+  assert.equal(carn.element, 'Meat', "Carnival's first Game (Leo, Source's rules) is Meat");
+});
+
+test("Carnival's Games change his element: Cancer rerolls, Pisces is Smoke, Aquarius is Plastic", () => {
+  const { b } = makeBattle({ enemies: [{ template: 'Carnival', control: 'gm' }], rng: mid });
+  const e = b.enemies[0];
+  const fire = id => b.gmEnemyAction(e, { kind: 'trigger', triggerId: id });
+  fire('game-cancer');
+  assert.ok(['Plastic', 'Metal', 'Smoke'].includes(e.element), 'Cancer: a ring element other than Meat');
+  fire('game-pisces');
+  assert.equal(e.element, 'Smoke');
+  fire('game-aquarius');
+  assert.equal(e.element, 'Plastic');
+});
+
+test('a Muted enemy can only Attack until its cure check lands — same lock as players', () => {
+  for (const status of ['Muted', 'Vilified', 'Corrupted']) {
+    const { b, logs } = makeBattle({ enemies: [{ template: 'Psalmanazar', control: 'ai' }], rng: mid });
+    const e = b.enemies[0];
+    e.statuses.push({ name: status, turnsAfflicted: 0 });
+    for (let i = 0; i < 6; i++) { e.holding = true; b.aiAct(e); }
+    assert.equal(logs.filter(l => l.ev === 'enemy-move' && l.who === e.id).length, 0, `${status}: no competence used`);
+    assert.equal(logs.filter(l => l.ev === 'attack' && l.who === e.id).length + logs.filter(l => l.ev === 'miss' && l.who === e.id).length, 6, `${status}: it attacks instead`);
+  }
+  // An enemy that owns an Attack move uses that one.
+  const { b, logs } = makeBattle({ enemies: [{ template: 'Common Spectre', control: 'ai' }], rng: mid });
+  const e = b.enemies[0];
+  e.statuses.push({ name: 'Muted', turnsAfflicted: 0 });
+  e.holding = true; b.aiAct(e);
+  assert.equal(logs.filter(l => l.who === e.id && (l.ev === 'enemy-move' || l.ev === 'attack' || l.ev === 'miss')).length >= 1, true);
+});
+
+test('items land on the side they are made for: heals on allies, damage on enemies', () => {
+  const { b, campaign } = makeBattle({ enemies: [{ template: 'Common Spectre', control: 'gm' }], rng: mid });
+  const p = seatOf(campaign, 'Purifier');
+  const e = b.enemies[0];
+  campaign.inventory = { 'Luck Ticket': 5, Inspiration: 5 };
+  p.gauge = 1; b.onGaugeFill(p);
+  assert.equal(b.playerAction(p, { kind: 'item', item: 'Luck Ticket', targetId: e.id }).refuse, true, 'no healing the enemy');
+  assert.equal(b.playerAction(p, { kind: 'item', item: 'Inspiration', targetId: seatOf(campaign, 'Alpha').id }).refuse, true, 'no damage items on allies');
+  assert.equal(b.playerAction(p, { kind: 'item', item: 'Inspiration', targetId: e.id }).refuse, undefined, 'damage items hit enemies');
+
+  // The enemy side: a pool Joker can't revive a downed player; a pool Luck Ticket can't heal one.
+  const { b: b2, campaign: c2 } = makeBattle({ enemies: [{ template: 'Common Spectre', control: 'gm' }], rng: mid });
+  const d = b2.enemies[0];
+  b2.pool = { Joker: 1, 'Luck Ticket': 1 };
+  const downed = seatOf(c2, 'Alpha');
+  b2.downPlayer(downed);
+  d.holding = true;
+  assert.equal(b2.gmEnemyAction(d, { kind: 'pool-item', item: 'Joker', targetId: downed.id }).refuse, true);
+  assert.equal(b2.gmEnemyAction(d, { kind: 'pool-item', item: 'Luck Ticket', targetId: seatOf(c2, 'Omega').id }).refuse, true);
+  assert.equal(downed.down, true);
+});
+
+test('going down resets status: statuses, stat and element changes are gone on revive', () => {
+  const { b, campaign } = makeBattle({ rng: mid });
+  const p = seatOf(campaign, 'Purifier');
+  p.statuses.push({ name: 'Poisoned', turnsAfflicted: 1 }, { name: 'Hasty', turnsAfflicted: 0 });
+  p.statChanges.push({ stat: 'ATK', dir: 'down', amount: 15, turnsLeft: 2 });
+  b.applyElementSet(p, 'Smoke', null);
+  p.hastySecond = true;
+  b.downPlayer(p);
+  assert.deepEqual([p.statuses, p.statChanges, p.elementSet, p.hastySecond], [[], [], null, false]);
+  b.revive(p, 35);
+  assert.equal(p.statuses.length, 0);
+});
+
+test('Wide Angle / Eye: the reveal opens the CHECK card for whoever looked', () => {
+  const { b, campaign, events } = makeBattle({ enemies: [{ template: 'Common Spectre', control: 'gm' }], rng: mid });
+  const p = seatOf(campaign, 'Purifier');
+  campaign.inventory = { Eye: 1 };
+  p.gauge = 1; b.onGaugeFill(p);
+  b.playerAction(p, { kind: 'item', item: 'Eye', targetId: b.enemies[0].id });
+  const chk = events.find(e => e.kind === 'check');
+  assert.ok(chk, 'a check event fires');
+  assert.equal(chk.by, p.id);
+  assert.equal(chk.targetId, b.enemies[0].id);
+  assert.ok(b.revealed.has(b.enemies[0].id), 'and the reveal is party-wide as before');
 });

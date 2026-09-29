@@ -819,6 +819,10 @@ function enemyClicked(e) {
   st.innerHTML = '';
   eCursor = 0;
   st.style.left = '30%'; st.style.top = '18%';
+  // Muted / Vilified / Corrupted: the AI would only Attack. Shown, never enforced.
+  const lock = (e.statuses || []).map(s => s.name).find(n => ['Muted', 'Vilified', 'Corrupted'].includes(n));
+  if (lock) st.appendChild(el('div', { class: 'eact', style: 'cursor:default;border-left-color:var(--amber);color:var(--amber)' },
+    `${lock.toUpperCase()} — COMPETENCES LOCKED`, el('small', {}, 'on its own it would only Attack · your hand is free')));
   for (const pr of e.prompts || []) {
     const b = el('button', { class: 'eact prompt' }, pr.label, el('small', {}, 'scripted'));
     b.onclick = () => { st.classList.remove('open'); gm('enemy-action', { enemyId: e.id, action: { kind: 'trigger', triggerId: pr.id } }); };
@@ -827,7 +831,8 @@ function enemyClicked(e) {
   for (const mv of e.moves) {
     const fx = (App.staticData.scripts.moveEffects[e.template] || {})[mv.n] || {};
     if (fx.scripted) continue;
-    const b = el('button', { class: 'eact' }, mv.n, el('small', {}, `${mv.t} · MP ${mv.mp} · acc ${mv.acc ?? '—'}${mv.fx ? ' · ' + mv.fx : ''}`));
+    const b = el('button', { class: 'eact', style: lock && mv.n !== 'Attack' ? 'opacity:.55' : '' }, mv.n,
+      el('small', {}, `${mv.t} · MP ${mv.mp} · acc ${mv.acc ?? '—'}${mv.fx ? ' · ' + mv.fx : ''}${lock && mv.n !== 'Attack' ? ' · locked' : ''}`));
     b.onclick = () => {
       st.classList.remove('open');
       if (mv.t === 'one') {

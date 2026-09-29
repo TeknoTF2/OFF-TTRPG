@@ -45,6 +45,7 @@ App.onEvent = e => {
   if (e.kind === 'your-turn' && e.playerId === seat) { /* stack appears via state render */ }
   if (e.kind === 'private' && e.hover) { sceneHover = e.hover; const h = $('hoverline'); if (h) h.textContent = e.hover; }
   if (e.kind === 'sparkle-pulse') pulseSparkle();
+  if (e.kind === 'check' && e.by === seat) openCheck(e.targetId);   // my Wide Angle / Eye
 };
 
 App.onState = view => {
@@ -96,6 +97,7 @@ function render(view) {
   if (view.mode === 'shop' && view.shop) renderShop(view);
   else if (shopShown) { shopShown = false; shopMode = null; shopSel = null; shopBubble = null; sigs.shop = null; }
   if (sheetOpen) renderSheet();
+  renderCheck(view);
   syncJukebox(view.jukebox);
 }
 
@@ -202,13 +204,17 @@ function renderBattle(view) {
       div.appendChild(el('div', { class: 'ehpbar' }, el('i', { style: `width:${Math.round(e.hp / e.maxHp * 100)}%` })));
     }
     const icons = el('div', { class: 'eicons' });
-    if (e.revealed) icons.appendChild(el('span', { class: 'icn elem', title: `Element: ${e.element || 'none'} — revealed` }, e.element ? e.element.slice(0, 3).toUpperCase() : 'Ø'));
+    if (e.revealed) {
+      const chk = el('span', { class: 'icn elem', style: 'cursor:help', title: `Element: ${e.element || 'none'} — click to CHECK` }, e.element ? e.element.slice(0, 3).toUpperCase() : 'Ø');
+      chk.onclick = ev => { ev.stopPropagation(); openCheck(e.id); };
+      icons.appendChild(chk);
+    }
     if (e.elementSet && !e.revealed) icons.appendChild(el('span', { class: 'icn elem', title: `Element set to ${e.elementSet}` }, e.elementSet.slice(0, 3).toUpperCase()));
     for (const s of e.statuses) icons.appendChild(statusChip(s));
     for (const sc of e.statChanges) icons.appendChild(statChangeChip(sc));
     div.appendChild(icons);
     div.onclick = () => { if (!e.dead) targetClicked({ kind: 'enemy', id: e.id }); };
-    if (e.revealed) { div.oncontextmenu = ev => { ev.preventDefault(); showRevealCard(e); }; div.title = 'right-click: reveal card'; }
+    if (e.revealed) { div.oncontextmenu = ev => { ev.preventDefault(); openCheck(e.id); }; div.title = 'right-click: CHECK'; }
     wrap.appendChild(div);
   }
   // allies in the Batter-and-rings arrangement (randomized per encounter)
@@ -412,10 +418,41 @@ function targetClicked(t) {
   }
 }
 
-function showRevealCard(e) {
-  const tiers = e.tiers || {};
-  announce(`${e.name}: Element ${e.element || 'none'} · HP ${e.hp}/${e.maxHp} · DEF ${e.def} · RES ${e.res} · LCK ${e.lck} · acts every ${e.gaugeS}s · ` +
-    Object.entries(tiers).map(([k, v]) => `${k.slice(0, 3)}:${{ vulnerable: 'V', neutral: 'N', light_immune: 'L', strong_immune: 'S' }[v] || v}`).join(' '));
+// The CHECK card — what Wide Angle and the Eye tell the party, held on screen
+// until dismissed instead of flashing past in the announce line. Reads the live
+// view, so HP and a rerolled weakness stay current while it's open.
+let checkId = null;
+const TIER_WORDS = { vulnerable: 'weak', neutral: 'normal', light_immune: 'resists', strong_immune: 'immune' };
+function openCheck(id) { checkId = id; if (App.view) renderCheck(App.view); }
+function closeCheck() { checkId = null; if (App.view) renderCheck(App.view); }
+function renderCheck(view) {
+  let card = $('checkCard');
+  const e = checkId && view.battle && view.mode === 'battle' ? view.battle.enemies.find(x => x.id === checkId) : null;
+  if (!e) checkId = null;   // the fight or the creature is gone
+  // The check event lands a push ahead of the reveal itself: wait for it, don't drop it.
+  if (!e || !e.revealed) { if (card) card.remove(); return; }
+  if (!card) {
+    card = el('div', { id: 'checkCard', style: 'position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:9;min-width:300px;max-width:min(92vw,440px);'
+      + 'background:var(--blk);color:var(--wht);border:3px solid var(--wht);padding:14px 18px;font-size:15px;line-height:1.6;box-shadow:6px 6px 0 rgba(0,0,0,.4)' });
+    document.body.appendChild(card);
+  }
+  const sig = JSON.stringify(e);
+  if (card.dataset.sig === sig) return;
+  card.dataset.sig = sig;
+  card.innerHTML = '';
+  const row = (k, v) => el('div', { style: 'display:flex;gap:10px' }, el('span', { style: 'color:#999;width:92px' }, k), el('span', {}, v));
+  card.appendChild(el('div', { class: 'dfont', style: 'font-size:24px;margin-bottom:6px' }, `* ${e.name.toUpperCase()}`));
+  card.appendChild(row('HP', `${e.hp} / ${e.maxHp}`));
+  card.appendChild(row('ELEMENT', `${e.element || 'none'}${e.weakTo ? ` · weak to ${e.weakTo}` : ' · no weakness'}`));
+  card.appendChild(row('DEF · RES', `${e.def} · ${e.res}`));
+  card.appendChild(row('LUCK', `${e.lck}`));
+  card.appendChild(row('SPEED', `acts every ${e.gaugeS}s`));
+  const tiers = Object.entries(e.tiers || {}).filter(([, v]) => v !== 'neutral');
+  if (tiers.length) card.appendChild(row('STATUSES', tiers.map(([k, v]) => `${k} ${TIER_WORDS[v] || v}`).join(' · ')));
+  if (e.statuses.length) card.appendChild(row('AFFLICTED', e.statuses.map(s => s.name).join(' · ')));
+  const close = el('button', { style: 'margin-top:10px;font-family:var(--disp);font-size:18px;padding:2px 18px;background:var(--wht);color:var(--blk);border:0;cursor:pointer' }, 'OK');
+  close.onclick = closeCheck;
+  card.appendChild(close);
 }
 
 function showFloat(targetId, text, style) {
@@ -608,6 +645,7 @@ const clearKeys = () => { OW.keys = {}; };
 addEventListener('keydown', e => {
   if (App.dead) return;
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
+  if (e.key === 'Escape' && checkId) { closeCheck(); return; }   // the CHECK card closes first
   const k = keyName(e);
   if (e.repeat && !MOVE_KEYS.has(k)) return;   // a held Enter must not chain menu → attack → confirm
   const view = App.view;

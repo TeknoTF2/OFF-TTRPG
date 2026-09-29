@@ -26,7 +26,7 @@ import {
   playerRaw, enemyRaw, finalDamage, accuracyRoll, statusLandingChance, cureChance,
   rollVariance,
 } from './formulas.js';
-import { memberBase, gearEffects } from './members.js';
+import { memberBase, gearEffects, resetOnDown } from './members.js';
 
 let seq = 0;
 const uid = p => `${p}${++seq}`;
@@ -173,6 +173,19 @@ export class Battle {
     return true;
   }
 
+  // Sugar is the only neutral element (GM ruling): descriptive bestiary strings
+  // resolve to a real one. 'Smoke (both)' → Smoke; 'rotating …' starts on a
+  // random ring element (Maldicion rerolls from there; Carnival's Games set
+  // theirs, starting from the template passive startElement).
+  spawnElement(inst, raw) {
+    const start = this.templatePassives(inst).startElement;
+    if (start) return start;
+    if (raw === 'Sugar' || RING.includes(raw)) return raw;
+    const named = [...RING, 'Sugar'].find(x => String(raw || '').includes(x));
+    if (named) return named;
+    return RING[Math.floor(this.rng() * RING.length)];
+  }
+
   spawnInstance(q, waveIdx) {
     const tmplName = q.template;
     const tmpl = own(this.campaign.templates, tmplName) || own(this.data.enemiesByName, tmplName);
@@ -183,7 +196,7 @@ export class Battle {
       template: tmplName,
       scriptKey: this.resolveScriptKey(tmpl, tmplName),
       name: q.name || tmplName,
-      element: o.element ?? tmpl.element,
+      element: null,                // set below: always a ring element or Sugar
       elementSet: null,
       maxHp: o.hp ?? tmpl.hp, hp: o.hp ?? tmpl.hp,
       def: o.def ?? tmpl.def ?? 0,
@@ -204,6 +217,7 @@ export class Battle {
       turnCount: 0, hastySecond: false, dead: false,
       firedTriggers: [], sprite: tmpl.sprite || null, portrait: tmpl.portrait || null,
     };
+    inst.element = o.element ?? this.spawnElement(inst, tmpl.element);
     // Summons are capped by the slots (fireSummon checks first); a GM-built wave is never refused.
     if (inst.slot == null) inst.slot = this.freeEnemySlot() ?? ((this.enemies.length % ENEMY_SLOTS) + 1);
     // Duplicates get letter suffixes so the table can call its targets:
@@ -478,7 +492,8 @@ export class Battle {
   }
 
   downPlayer(p) {
-    p.down = true; p.holding = false; p.gauge = 0; p.critCharged = false; p.defending = false;
+    p.down = true;
+    resetOnDown(p);
     this.announce(`${p.name} falls!`);
     this.log({ ev: 'death', who: p.id });
     this.onApplierDeath(p.id);
@@ -921,7 +936,7 @@ export class Battle {
     const pBase = { ...p, base: memberBase(this.data, p) };
 
     for (const target of targets) {
-      if (rider.kind === 'reveal') { this.reveal(target); continue; }
+      if (rider.kind === 'reveal') { this.reveal(target, p); continue; }
       if (rider.kind === 'revive') {
         this.revive(target, rider.revive.hpPct);
         for (const e of rider.effects || []) if (e.type === 'cureAllStatuses') this.cureAllStatuses(target, p);
@@ -1023,9 +1038,11 @@ export class Battle {
     return true;
   }
 
-  reveal(enemy) {
+  reveal(enemy, by = null) {
     if (enemy.kind !== 'enemy') return;
     this.revealed.add(enemy.id);   // party-wide, lasts the encounter
+    // The Check card opens on the looker's screen; everyone else can open it too.
+    this.emit({ kind: 'check', targetId: enemy.id, by: by ? by.id : null });
     // The analysis itself: the announce carries what the party just learned.
     const el = currentElement(enemy) || 'no element';
     const st = enemy.statuses && enemy.statuses.length ? ` · ${enemy.statuses.map(s => s.name).join(', ')}` : '';
@@ -1056,6 +1073,13 @@ export class Battle {
   applyItemEffect(user, item, targetId, { taunt = null, byEnemy = null } = {}) {
     const fx = item.effect;
     const target = targetId ? this.find(targetId) : null;
+    // Items land on the side they're made for (GM ruling): healing, cures and
+    // revives on the user's own side; damage and reveals on the other side.
+    if (target && fx.target) {
+      const ownSide = target.kind === user.kind;
+      if (fx.target.includes('ally') && !ownSide) return { ok: false, refuse: true };
+      if (fx.target.includes('enemy') && ownSide) return { ok: false, refuse: true };
+    }
     switch (fx.type) {
       case 'healHp': {
         if (!target || this.dead(target)) return { ok: false, refuse: true };
@@ -1094,7 +1118,7 @@ export class Battle {
       case 'reveal': {
         if (!target || target.kind !== 'enemy' || target.dead) return { ok: false, refuse: true };
         this.announce(`${this.dispName(user)} uses ${item.name}!`);
-        this.reveal(target);
+        this.reveal(target, user);
         return { ok: true };
       }
       case 'attack': {
@@ -1176,6 +1200,12 @@ export class Battle {
     const a = trigger.action;
     this.log({ ev: 'trigger', who: e.id, id: trigger.id });
     if (a.announce) this.announce(a.announce);
+    if (a.setElement) {
+      // A new native element (Carnival's Games). A running element change keeps its course.
+      const pool = RING.filter(x => x !== e.element);
+      e.element = a.setElement === 'random' ? pool[Math.floor(this.rng() * pool.length)] : a.setElement;
+      this.announce(`${e.name}'s element is now ${e.element}.`);
+    }
     if (a.addMove) {
       if (!e.moves.some(m => m.n === a.addMove.n)) e.moves.push({ ...a.addMove });
     }
@@ -1264,6 +1294,8 @@ export class Battle {
     return { ...base, ...overlay };
   }
 
+  competenceLocked(c) { return hasStatus(c, 'Muted') || hasStatus(c, 'Vilified') || hasStatus(c, 'Corrupted'); }
+
   legalMoves(e) {
     return e.moves.filter(m => {
       const fx = this.moveFx(e, m);
@@ -1289,6 +1321,18 @@ export class Battle {
       // A telegraphed trigger announces this turn and fires the next.
       if (this.telegraphPending(e, t)) { /* fall through to a normal action */ }
       else { this.fireTrigger(e, t); return; }
+    }
+    // Muted / Vilified / Corrupted lock competences for enemies as for players
+    // (GM ruling): until the cure check lands, it can only Attack.
+    if (this.competenceLocked(e)) {
+      const atk = e.moves.find(m => m.n === 'Attack');
+      if (atk) this.resolveEnemyMove(e, atk, this.pickEnemyTargets(e, atk, null));
+      else {
+        const [t] = this.pickEnemyTargets(e, { n: 'Attack', t: 'one' }, null);
+        if (t) this.resolveBasicAttack(e, t);
+      }
+      if (!e.dead) this.spendTurn(e);
+      return;
     }
     const moves = this.legalMoves(e);
     if (!moves.length) { this.spendTurn(e); return; }

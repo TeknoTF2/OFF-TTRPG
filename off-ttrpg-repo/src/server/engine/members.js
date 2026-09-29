@@ -3,6 +3,14 @@
 
 import { CLASSES } from '../../shared/constants.js';
 
+// Going down resets a character's status (GM ruling): statuses, stat and
+// element changes, and any held turn are gone — a revive starts clean.
+export function resetOnDown(m) {
+  m.statuses = []; m.statChanges = []; m.elementSet = null;
+  m.hastySecond = false; m.holding = false; m.gauge = 0;
+  m.critCharged = false; m.defending = false;
+}
+
 export function makeMember(data, klass, level = 1) {
   const base = statsAt(data, klass, level);
   return {

@@ -11,7 +11,7 @@ stock checklists, per-leg quantities, and rest placement are nowhere in this cod
 cd off-ttrpg-repo/src
 npm install
 npm start          # http://localhost:8420
-npm test           # 82 engine rule tests
+npm test           # 88 engine rule tests
 ```
 
 Open the URL: the lobby offers six player seats and the Judge's seat (GM console).
@@ -91,7 +91,7 @@ server/engine/    formulas.js · members.js · battle.js — the rules, tested
 server/data/      transcription tables (see below) + the intro scene
 server/           dataload · state/persistence · scenes · server (HTTP+WS)
 client/           index (seats) · player.* · gm.* · common.* · roomkit.js
-tests/            82 rule tests, each named for the doc sentence or bug it locks
+tests/            88 rule tests, each named for the doc sentence or bug it locks
 ```
 
 The three transcription tables are the only place doc prose was converted to data, each
@@ -128,6 +128,29 @@ effects, scripted triggers, rotations, passives, and compound-fight unit templat
   status that acts in the overworld" stands. Say the word if double-tick should travel.
 - **Impure re-rolling the weakness the target already has** fizzles (one-instance:
   reapplying an existing state does nothing).
+
+## GM rulings received and implemented (session 3)
+
+1. **Muted / Vilified / Corrupted lock enemy competences** exactly as for players, until
+   the cure check lands: an AI enemy can only Attack (its own Attack move if it has one,
+   else a basic attack). GM-piloted creatures show the lock but are never restricted.
+2. **Items land on the side they're made for.** Healing, CP, cures and revives target
+   the user's own side; damage items and the Eye target the other side. An enemy's
+   pool Joker can no longer revive a player.
+3. **Going down resets status**: statuses, stat changes, element changes and a pending
+   Hasty action are cleared the moment a character falls (in battle, to poison, or by
+   GM edit), so a revive starts clean.
+4. **Sugar is the only neutral element.** Descriptive bestiary strings resolve at spawn:
+   `Smoke (both)` → Smoke; `rotating (Impure)` → a random ring element that Entropic
+   Piety rerolls. Carnival's element follows the Game, derived from each Game's borrowed
+   boss (flagged in `enemy-scripts.json`): Leo = Meat (Source), Cancer = random ring
+   (Maldicion), Pisces = Smoke (the liars), Aquarius = Plastic (Justus).
+5. **Facade** may be used more than once per fight (unchanged, confirmed).
+6. **Wide Angle and the Eye are a CHECK**: the reveal opens a card on the looker's
+   screen — HP, element and current weakness, DEF/RES/LCK, speed, status resistances,
+   afflictions — live until dismissed. Anyone can reopen it by clicking a revealed
+   enemy's element icon (or right-click). The Batter's stale empty "Wide Angle" move
+   entry is removed; his scouting stays cosmetic, as the bestiary says.
 
 ## Standing rulings from build 1 (unchanged)
 
