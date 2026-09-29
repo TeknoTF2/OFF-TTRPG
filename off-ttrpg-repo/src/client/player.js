@@ -2,11 +2,11 @@
 // The UI filters to legality: dead targets grey out and refuse the click,
 // the slot picker shows only legal gear, Muted disables Competence.
 
-import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, owLabels, artEl, syncJukebox, volumeSlider, playCombatFx } from '/common.js';
+import { App, connect, send, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, owLabels, artEl, syncJukebox, volumeSlider, playCombatFx, assetUrl } from '/common.js';
 import { drawRoomKit } from '/roomkit.js';
 
 const seat = new URLSearchParams(location.search).get('seat') || localStorage.getItem('off-seat') || 'P1';
-if (!/^P[1-6]$/.test(seat)) location.href = '/';
+if (!/^P[1-6]$/.test(seat)) { location.href = '/'; throw new Error(`not a player seat: ${seat}`); }   // never connect as it
 
 let armed = null;         // {kind:'attack'|'comp'|'item', comp?, item?, element?, targetSpec}
 let kselIdx = 0;          // keyboard target cursor within the current legal target list
@@ -18,6 +18,16 @@ let itemRows = [];        // usable items, in rendered order
 let wasMyTurn = false;
 let lastStateAt = 0;
 let sheetOpen = false;
+// State pushes arrive every ~180ms in battle; each panel rebuilds only when the
+// slice it draws (plus local UI state) changed, so clicks, hovers, open pickers
+// and typed text survive pushes that don't concern them.
+const sigs = {};
+function changed(key, data) {
+  const sig = JSON.stringify(data);
+  if (sigs[key] === sig) return false;
+  sigs[key] = sig;
+  return true;
+}
 const $ = id => document.getElementById(id);
 
 await loadStaticData();
@@ -33,7 +43,7 @@ App.onEvent = e => {
   if (e.kind === 'victory') announce(e.got && e.got.length ? `You got: ${e.got.join(', ')}` : 'Victory.');
   if (e.kind === 'defeat') announce('THE PARTY HAS FALLEN.');
   if (e.kind === 'your-turn' && e.playerId === seat) { /* stack appears via state render */ }
-  if (e.kind === 'private' && e.hover) { const h = $('hoverline'); if (h) h.textContent = e.hover; }
+  if (e.kind === 'private' && e.hover) { sceneHover = e.hover; const h = $('hoverline'); if (h) h.textContent = e.hover; }
   if (e.kind === 'sparkle-pulse') pulseSparkle();
 };
 
@@ -64,14 +74,16 @@ function render(view) {
   $('zname').textContent = z.title;
   $('zsub').textContent = view.location.name === 'lobby' ? '' : view.location.name;
   $('credits').textContent = `${view.credits} CREDITS`;
+  const inBattle = !!view.battle && view.mode === 'battle';
+  // A battle-only pick can't outlive its battle; an out-of-combat pick can't enter one.
+  if (armed && (inBattle ? armed.kind === 'ooc-item' : armed.kind !== 'ooc-item')) { armed = null; $('subs').classList.remove('open'); }
   renderInventory(view);
   renderStrip(view);
 
   const inScene = !!view.scene || view.mode === 'lobby' || view.mode === 'scene';
   $('sceneWrap').style.display = inScene ? 'block' : 'none';
-  if (inScene) renderScene(view.scene);
+  if (inScene) renderScene(view.scene); else sigs.scene = null;
 
-  const inBattle = !!view.battle && view.mode === 'battle';
   $('rail').style.display = inBattle ? 'flex' : 'none';
   $('stack').style.display = inBattle ? 'flex' : 'none';
   $('enemies').style.display = inBattle ? 'flex' : 'none';
@@ -80,16 +92,22 @@ function render(view) {
   $('shopWrap').style.display = view.mode === 'shop' && view.shop ? 'block' : 'none';
 
   if (inBattle) renderBattle(view);
-  else { $('field').classList.remove('backdrop'); $('field').style.backgroundImage = ''; }
+  else { $('field').classList.remove('backdrop'); $('field').style.backgroundImage = ''; sigs.battle = null; }
   if (view.mode === 'shop' && view.shop) renderShop(view);
+  else if (shopShown) { shopShown = false; shopMode = null; shopSel = null; shopBubble = null; sigs.shop = null; }
   if (sheetOpen) renderSheet();
   syncJukebox(view.jukebox);
 }
 
 // ---------------------------------------------------------------- inventory
+let lastItemCur = null;
 function renderInventory(view) {
+  const inBattle = view.battle && view.mode === 'battle';
+  const picking = armed && armed.kind === 'item-pick';
+  $('inv').classList.toggle('armed', picking || !inBattle);
+  if (!changed('inv', [view.inventory, picking, picking && itemCursor])) return;
   const list = $('ilist');
-  const scroll = list.scrollTop;   // rebuilt every push — reading mustn't reset
+  const scroll = list.scrollTop;   // a rebuild mustn't move the reader
   list.innerHTML = '';
   const cat = App.staticData.items.catalog;
   const bySection = {};
@@ -103,7 +121,6 @@ function renderInventory(view) {
     }
   }
   itemRows = [];
-  const picking = armed && armed.kind === 'item-pick';
   for (const [sec, items] of Object.entries(bySection)) {
     if (!items.some(i => i.n > 0) && sec !== 'RESTORATIVE') continue;
     list.appendChild(el('div', { class: 'isec' }, sec));
@@ -118,13 +135,14 @@ function renderInventory(view) {
     }
   }
   list.scrollTop = scroll;
+  let cur = null;
   if (picking && itemRows.length) {
-    const cur = ((itemCursor % itemRows.length) + itemRows.length) % itemRows.length;
+    cur = ((itemCursor % itemRows.length) + itemRows.length) % itemRows.length;
     itemRows[cur].row.classList.add('ksel');
-    itemRows[cur].row.scrollIntoView({ block: 'nearest' });
+    // follow the cursor only when it moved — a push mustn't yank the scroll back
+    if (cur !== lastItemCur) itemRows[cur].row.scrollIntoView({ block: 'nearest' });
   }
-  const inBattle = App.view.battle && App.view.mode === 'battle';
-  $('inv').classList.toggle('armed', (armed && armed.kind === 'item-pick') || !inBattle);
+  lastItemCur = cur;
 }
 
 function itemClicked(name, n) {
@@ -157,15 +175,19 @@ function renderBattle(view) {
   // sprite isn't replaced under it. State catches up on the next push.
   if (performance.now() < fxLockUntil && $('enemies').children.length) { renderStack(view); return; }
   if (b.backdrop) {
+    // stored as an asset path ('backdrops/Battle/Black.jpg'); older saves hold a bare filename
+    const bg = `url("${assetUrl(b.backdrop.includes('/') ? b.backdrop : `backdrops/${b.backdrop}`)}")`;
     field.classList.add('backdrop');
-    field.style.backgroundImage = `url('/assets/backdrops/${encodeURIComponent(b.backdrop).replace(/%2F/g, '/')}')`;
+    if (field.style.backgroundImage !== bg) field.style.backgroundImage = bg;
   }
-  // enemies — sprite, name, visible effect icons; stats/HP only when revealed
-  const wrap = $('enemies');
-  wrap.innerHTML = '';
   const m = me();
   const myTurn = m && m.holding && !m.down;
   const cursor = armed ? kselTarget() : null;
+  const slotted = (b.partySlots || []).map(pid => view.party.find(x => x.id === pid)).filter(Boolean);
+  if (!changed('battle', [b.enemies, slotted.map(pm => [pm.id, pm.klass, pm.name, pm.down]), myTurn, armedMode(), cursor && cursor.id])) { renderStack(view); return; }
+  // enemies — sprite, name, visible effect icons; stats/HP only when revealed
+  const wrap = $('enemies');
+  wrap.innerHTML = '';
   for (const e of [...b.enemies].sort((a, x) => (a.slot || 0) - (x.slot || 0))) {
     const targetable = myTurn && !e.dead && armed && ['attack', 'comp-target-enemy', 'item-enemy'].includes(armedMode());
     const onCursor = targetable && cursor && cursor.id === e.id;
@@ -201,9 +223,7 @@ function renderBattle(view) {
     { right: '2vw', bottom: '345px', h: 140 },
     { right: '10vw', bottom: '415px', h: 135 },
   ];
-  (b.partySlots || []).forEach((pid, i) => {
-    const pm = view.party.find(x => x.id === pid);
-    if (!pm) return;
+  slotted.forEach((pm, i) => {
     const a = anchors[i] || anchors[0];
     const onCursorA = armed && allyTargetable(pm) && (() => { const c = kselTarget(); return c && c.id === pm.id; })();
     const div = el('div', {
@@ -406,12 +426,21 @@ function showFloat(targetId, text, style) {
 // ---------------------------------------------------------------- party strip
 function renderStrip(view) {
   const strip = $('strip');
-  strip.innerHTML = '';
   const present = view.party.filter(pm => isPresent(pm, view));
-  strip.style.gridTemplateColumns = `repeat(${Math.max(1, present.length)}, 1fr)`;
-  for (const pm of present) {
+  const cards = present.map(pm => {
     const targetable = !pm.benched && (allyTargetable(pm) && !pm.down || (armedMode() === 'ooc-ally'));
     const onCursorP = armed && targetable && (() => { const c = kselTarget(); return c && c.id === pm.id; })();
+    return { pm, targetable, onCursorP };
+  });
+  // gauges tick every push — paintGauges moves them in place; everything else rebuilds
+  const sig = cards.map(({ pm, targetable, onCursorP }) => {
+    const { gauge, gaugeSeconds, ...rest } = pm;
+    return [rest, targetable, onCursorP];
+  });
+  if (!changed('strip', sig)) { paintGauges(); return; }
+  strip.innerHTML = '';
+  strip.style.gridTemplateColumns = `repeat(${Math.max(1, present.length)}, 1fr)`;
+  for (const { pm, targetable, onCursorP } of cards) {
     const pc = el('div', { class: 'pc' + (pm.id === seat ? ' me' : '') + (pm.down ? ' deadpc' : '') + (targetable ? ' targetable' : '') + (onCursorP ? ' ksel' : ''), style: pm.benched ? 'opacity:.35' : '', 'data-id': pm.id });
     pc.appendChild(el('div', { class: 'r1' }, el('span', { class: 'pname' }, pm.name), el('span', { class: 'plvl' }, pm.benched ? 'OUT' : `LV${pm.level}`)));
     pc.appendChild(el('div', { class: 'nums' },
@@ -431,19 +460,20 @@ function renderStrip(view) {
   }
 }
 
-// local gauge animation between state pushes
-setInterval(() => {
+// local gauge animation between state pushes (and the in-place update on a push)
+function paintGauges() {
   const view = App.view;
-  if (!view || view.paused) return;
+  if (!view) return;
   const dt = (performance.now() - lastStateAt) / 1000;
+  const frozen = view.paused || !view.battle || view.battle.frozen || view.battle.over;
   for (const pm of view.party) {
     const g = document.querySelector(`[data-gid="${pm.id}"] i`);
     if (!g) continue;
-    const frozen = view.battle && (view.battle.frozen || view.battle.over);
-    const w = pm.holding || pm.down || frozen || !view.battle ? pm.gauge : Math.min(1, pm.gauge + dt / pm.gaugeSeconds);
+    const w = pm.holding || pm.down || frozen ? pm.gauge : Math.min(1, pm.gauge + dt / pm.gaugeSeconds);
     g.style.width = `${Math.round(w * 100)}%`;
   }
-}, 120);
+}
+setInterval(paintGauges, 120);
 
 function rerender() { if (App.view) render(App.view); }
 
@@ -451,7 +481,7 @@ function rerender() { if (App.view) render(App.view); }
 let sparkles = [], sceneAnim = null;
 function ensureSceneCanvas() {
   const c = $('sceneCanvas');
-  c.width = innerWidth; c.height = innerHeight;
+  if (c.width !== innerWidth || c.height !== innerHeight) { c.width = innerWidth; c.height = innerHeight; }
   if (!sparkles.length) for (let i = 0; i < 46; i++) sparkles.push({ x: Math.random(), y: Math.random(), p: Math.random() * 6.28, s: .4 + Math.random() * .9, pulse: 0 });
   if (!sceneAnim) sceneAnim = requestAnimationFrame(drawScene);
 }
@@ -463,6 +493,7 @@ function pulseSparkle() {
 
 let sceneBackdrop = null;
 function drawScene() {
+  if (App.dead) return;   // page retired — its elements are gone
   sceneAnim = requestAnimationFrame(drawScene);
   const c = $('sceneCanvas');
   if ($('sceneWrap').style.display === 'none') return;
@@ -499,8 +530,10 @@ function drawScene() {
   }
 }
 
+let sceneDraft = { key: null, value: '' }, sceneHover = '';   // survive a rebuild
 function renderScene(scene) {
   ensureSceneCanvas();
+  if (!changed('scene', scene)) return;
   const box = $('sceneText');
   box.innerHTML = '';
   if (!scene) { sceneBackdrop = null; return; }   // pure lobby: the dark, your sparkle among others
@@ -540,9 +573,12 @@ function renderGate(gate) {
   const box = $('sceneText');
   const b = gate.beat;
   box.appendChild(el('div', { class: 'sceneLine' }, b.title));
-  box.appendChild(el('div', { class: 'hoverline', id: 'hoverline' }, ''));
+  if (sceneDraft.key !== `${gate.index}|${b.key}`) { sceneDraft = { key: `${gate.index}|${b.key}`, value: '' }; sceneHover = ''; }
+  box.appendChild(el('div', { class: 'hoverline', id: 'hoverline' }, sceneHover));
   if (b.type === 'input') {
     const input = el('input', { class: 'sceneInput', maxlength: '40', placeholder: '…' });
+    input.value = sceneDraft.value;
+    input.oninput = () => { sceneDraft.value = input.value; };
     const ok = el('button', { class: 'sopt', style: 'margin-top:14px' }, 'SO BE IT');
     ok.onclick = () => { if (input.value.trim()) send({ t: 'scene-choose', key: b.key, value: input.value.trim() }); };
     box.appendChild(input); box.appendChild(ok);
@@ -565,13 +601,20 @@ function renderGate(gate) {
 
 // ---------------------------------------------------------------- overworld
 const OW = { keys: {}, moving: false, pos: null, seq: [0, 1, 2, 1], seqi: 1, animDist: 0, imgs: {}, lastSent: null, sentAt: 0 };
+// Held keys are tracked case-folded: Shift turns 's' into 'S' between down and up.
+const keyName = e => e.key.length === 1 ? e.key.toLowerCase() : e.key;
+const MOVE_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd']);
+const clearKeys = () => { OW.keys = {}; };
 addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT') return;
+  if (App.dead) return;
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
+  const k = keyName(e);
+  if (e.repeat && !MOVE_KEYS.has(k)) return;   // a held Enter must not chain menu → attack → confirm
   const view = App.view;
   // The combat loop, fully keyboard-driven: gauge fills → the menu pops with
   // ATTACK under the cursor → arrows + Enter pick the action → arrows + Enter
   // pick the target. Escape steps back one level. Clicking works throughout.
-  if (view && view.mode === 'battle') {
+  if (view && view.mode === 'battle' && view.battle) {
     const m = me();
     const myTurn = m && m.holding && !m.down && !view.battle.over;
     const subsOpen = $('subs').classList.contains('open');
@@ -622,21 +665,25 @@ addEventListener('keydown', e => {
       return;
     }
   }
-  if (e.key.startsWith('Arrow') || 'wasd'.includes(e.key)) { OW.keys[e.key] = true; e.preventDefault(); }
-  if ((e.key === 'e' || e.key === 'E' || e.key === ' ') && view && view.mode === 'overworld') tryExamine();
+  if (e.key === 'Escape' && armed && armed.kind === 'ooc-item') { armed = null; announce(''); rerender(); return; }
+  if (MOVE_KEYS.has(k)) { OW.keys[k] = true; e.preventDefault(); }
+  if ((k === 'e' || k === ' ') && view && view.mode === 'overworld') { e.preventDefault(); tryExamine(); }
 });
-addEventListener('keyup', e => { OW.keys[e.key] = false; });
+addEventListener('keyup', e => { OW.keys[keyName(e)] = false; });
+addEventListener('blur', clearKeys);   // a key released while unfocused never sends keyup
 
 function owImage(path) {
   if (!path) return null;
-  if (!OW.imgs[path]) { const i = new Image(); i.src = `/assets/${path}`; OW.imgs[path] = i; }
+  if (!OW.imgs[path]) { const i = new Image(); i.src = assetUrl(path); OW.imgs[path] = i; }
   return OW.imgs[path];
 }
+const imgOk = img => img && img.complete && img.naturalWidth > 0;   // broken images throw in drawImage
 
 const UNWALKABLE = { water: 1, void: 1, inkwall0: 1 };
 const SOLID = { crate: 1, barrel: 1, cabinet: 1, bottles: 1, counter: 1, plant: 1, stack: 1, lamp: 1, sign: 1, bed: 1, shelf: 1, vat: 1, rock: 1, greyblock: 1 };
 
-function walkableAt(room, x, y) {
+// Mirrors server walkableAt — including the pedalo, which inverts procedural terrain.
+function walkableAt(room, x, y, inVehicle) {
   if (!room) return true;
   const w = room.w || 384, h = room.h || 288;
   if (x < 0 || y < 0 || x >= w || y >= h) return false;
@@ -647,7 +694,7 @@ function walkableAt(room, x, y) {
     return true;
   }
   let ok = false;
-  for (const f of room.floors || []) if (x >= f.x && x < f.x + f.w && y >= f.y && y < f.y + f.h) ok = !UNWALKABLE[f.p];
+  for (const f of room.floors || []) if (x >= f.x && x < f.x + f.w && y >= f.y && y < f.y + f.h) ok = inVehicle ? f.p === 'water' : !UNWALKABLE[f.p];
   for (const s of room.structs || []) if (x >= s.x && x < s.x + s.w && y >= s.y && y < s.y + s.h) ok = false;
   for (const p of room.props || []) if (SOLID[p.t] && x >= p.x && x < p.x + (p.w || 24) && y >= p.y && y < p.y + 24) ok = false;
   return ok;
@@ -661,6 +708,7 @@ function tryExamine() {
   for (const p of room.pieces || []) {
     if (Math.abs(p.x - pos.x) < 26 && Math.abs(p.y - pos.y) < 26) {
       if (p.kind === 'keypad') {
+        clearKeys();   // the dialog swallows the keyup
         const code = prompt('The keypad waits.');
         if (code != null) send({ t: 'keypad', pieceId: p.id, code });
       } else send({ t: 'examine', pieceId: p.id });
@@ -675,6 +723,7 @@ function tryExamine() {
 // teleport or room change), so the ~180ms state broadcast can't rubber-band us.
 let owPrevT = 0;
 function owLoop(t) {
+  if (App.dead) return;   // page retired — its elements are gone
   requestAnimationFrame(owLoop);
   const view = App.view;
   const dt = Math.min(0.05, Math.max(0, (t - owPrevT) / 1000));
@@ -684,7 +733,10 @@ function owLoop(t) {
   const sp = view.positions[seat];
   if (!sp) return;
   const roomKey = (room && room.id) || view.location.name;
-  if (!OW.pos || OW.roomKey !== roomKey || Math.abs(sp.x - OW.pos.x) + Math.abs(sp.y - OW.pos.y) > 48) OW.pos = { ...sp };
+  // A hard disagreement (GM teleport, rejected steps) snaps us only once we've
+  // stopped sending moves — mid-walk the echo is just stale.
+  const far = OW.pos && Math.abs(sp.x - OW.pos.x) + Math.abs(sp.y - OW.pos.y) > 48;
+  if (!OW.pos || OW.roomKey !== roomKey || (far && t - OW.sentAt > 400)) OW.pos = { ...sp };
   OW.roomKey = roomKey;
   let { x, y, facing } = OW.pos;
   const spd = 88 * dt;
@@ -697,7 +749,8 @@ function owLoop(t) {
   OW.moving = moved;
   if (moved) {
     const nx = x + dx, ny = y + dy;
-    if (walkableAt(room, nx + 4, ny + 12) && walkableAt(room, nx + 12, ny + 12)) { x = nx; y = ny; }
+    const boat = !!(me() || {}).inVehicle;
+    if (walkableAt(room, nx + 4, ny + 12, boat) && walkableAt(room, nx + 12, ny + 12, boat)) { x = nx; y = ny; }
     OW.animDist += Math.abs(dx) + Math.abs(dy);
     OW.seqi = Math.floor(OW.animDist / 11) % 4;
   } else OW.seqi = 1;
@@ -751,7 +804,7 @@ function drawOverworld() {
     const bgPath = (room.backdrop === 'image' && room.image) || roomArt(view.location.name);
     if (bgPath) {
       const img = owImage(bgPath);
-      if (img && img.complete && img.width) x.drawImage(img, 0, 0, room.w || 384, room.h || 288);
+      if (imgOk(img)) x.drawImage(img, 0, 0, room.w || 384, room.h || 288);
     } else {
       drawRoomKit(x, room, pal, owPhase);
     }
@@ -760,7 +813,7 @@ function drawOverworld() {
   for (const p of room.pieces || []) {
     if (p.sprite) {
       const img = owImage(p.sprite);
-      if (img && img.complete) {
+      if (imgOk(img)) {
         const cw = Math.floor(img.width / 3), ch = Math.floor(img.height / 4);
         x.drawImage(img, cw, ch * 2, cw, ch, p.x, p.y - ch + 16, cw, ch);   // row 2 = down-facing
         continue;
@@ -779,7 +832,7 @@ function drawOverworld() {
       if (!view.gmAvatar) continue;
       const gimg = view.gmAvatar.sprite ? owImage(view.gmAvatar.sprite) : null;
       const gx2 = Math.round(sp.x), gy2 = Math.round(sp.y);
-      if (gimg && gimg.complete && gimg.width) {
+      if (imgOk(gimg)) {
         const cw = Math.floor(gimg.width / 3), ch = Math.floor(gimg.height / 4);
         const rowMapG = [2, 3, 1, 0];
         x.drawImage(gimg, cw, rowMapG[sp.facing || 0] * ch, cw, ch, gx2 - 4, gy2 - ch + 16, cw, ch);
@@ -798,7 +851,7 @@ function drawOverworld() {
     const px = Math.round(pp.x), py = Math.round(pp.y);
     const art = partyArt(pm.klass);
     const img = art.sprite ? owImage(art.sprite) : null;
-    if (img && img.complete) {
+    if (imgOk(img)) {
       const cw = Math.floor(img.width / 3), ch = Math.floor(img.height / 4);
       const rowMap = [2, 3, 1, 0];   // facing 0=down,1=left,2=right,3=up → sheet rows top-to-bottom: up, right, down, left
       const col = pid === seat ? OW.seq[OW.seqi] : 1;
@@ -831,7 +884,8 @@ function shadeHex(hex, f) {
 }
 
 // ---------------------------------------------------------------- shop
-let shopMode = null, shopSel = null;
+// Local shop state lives here so a push-triggered rebuild restores it exactly.
+let shopMode = null, shopSel = null, shopBubble = null, shopShown = false;
 const ZLINES = {
   buy: ['Take a look. Nothing here you don’t need.', 'Business is slow when the smoke is thick.'],
   sell: ['The characters are starting to pile up, aren’t they?', 'I pay half. Sentiment costs extra.'],
@@ -843,12 +897,16 @@ const ZLINES = {
 };
 const zline = k => ZLINES[k][Math.floor(Math.random() * ZLINES[k].length)];
 
-function renderShop(view) {
+function renderShop(view, force = false) {
   const wrap = $('shopWrap');
+  if (!shopShown) { shopShown = true; shopBubble = zline('hello'); }
+  if (!changed('shop', [view.shop, view.credits, view.inventory, view.gearOwned, view.wornBy, view.location.zone, shopMode, shopSel]) && !force) return;
   if (!view.shop.open) {
     wrap.innerHTML = '<div style="position:absolute;inset:0;background:#1c1c1c;display:flex;align-items:center;justify-content:center;font-family:var(--disp);text-transform:uppercase;font-size:30px;color:#777">ZACHARIE IS ARRANGING HIS WARES…</div>';
     return;
   }
+  const oldList = wrap.querySelector('#shopList');
+  const listScroll = oldList ? oldList.scrollTop : 0;
   wrap.innerHTML = `
   <div style="position:absolute;inset:0;background:#565656;display:flex;flex-direction:column;overflow:hidden;
        background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 34px,transparent 34px 68px)">
@@ -865,7 +923,7 @@ function renderShop(view) {
         <div style="text-align:center"><div style="font-size:76px;color:#cfcfcf;text-shadow:3px 0 #0a0a0a,-3px 0 #0a0a0a,0 3px #0a0a0a,0 -3px #0a0a0a">♚</div>
         <div style="width:150px;height:26px;background:#9c9c9c;border:3px solid #0a0a0a;margin-top:-8px"></div></div>
         <div style="position:relative;background:#cfcfcf;color:#1c1c1c;border:3px solid #0a0a0a;padding:16px 22px;max-width:420px;font-size:15px;line-height:1.5;margin-bottom:60px;border-radius:18px">
-          <span id="shopBubble">${zline('hello')}</span>
+          <span id="shopBubble"></span>
           <div id="shopPrice" style="position:absolute;left:30px;bottom:-46px;background:#f2f0ea;color:#1c1c1c;border:3px solid #0a0a0a;
             font-family:var(--disp);text-transform:uppercase;font-size:24px;padding:2px 20px;min-width:150px;display:none">$ <b id="shopPval" style="float:right;font-weight:400"></b></div>
         </div>
@@ -875,6 +933,7 @@ function renderShop(view) {
       </div>
     </div>
   </div>`;
+  wrap.querySelector('#shopBubble').textContent = shopBubble;
   const menu = wrap.querySelector('#shopMenu');
   const mkRibbon = (label, fn, sel) => {
     const r = el('button', {
@@ -883,19 +942,20 @@ function renderShop(view) {
     r.onclick = fn;
     return r;
   };
-  menu.appendChild(mkRibbon('Buy', () => { shopMode = 'buy'; shopSel = null; say(zline('buy')); renderShopList(view); }));
-  menu.appendChild(mkRibbon('Sell', () => { shopMode = 'sell'; shopSel = null; say(zline('sell')); renderShopList(view); }));
+  const again = () => renderShop(App.view, true);
+  menu.appendChild(mkRibbon('Buy', () => { shopMode = 'buy'; shopSel = null; say(zline('buy')); again(); }));
+  menu.appendChild(mkRibbon('Sell', () => { shopMode = 'sell'; shopSel = null; say(zline('sell')); again(); }));
   menu.appendChild(mkRibbon('Leave', () => say(zline('leave'))));
   if (shopMode) renderShopList(view);
 
-  function say(t) { const b = wrap.querySelector('#shopBubble'); if (b) b.textContent = t; }
+  function say(t) { shopBubble = t; const b = wrap.querySelector('#shopBubble'); if (b) b.textContent = t; }
 
   function renderShopList(v) {
     menu.style.display = 'none';
     const tag = wrap.querySelector('#shopTag');
     tag.style.display = 'block';
     tag.textContent = shopMode === 'buy' ? 'Buy' : 'Sell';
-    tag.onclick = () => { shopMode = null; shopSel = null; menu.style.display = 'flex'; tag.style.display = 'none'; wrap.querySelector('#shopList').style.display = 'none'; say('Anything else?'); };
+    tag.onclick = () => { shopMode = null; shopSel = null; say('Anything else?'); again(); };
     const list = wrap.querySelector('#shopList');
     list.style.display = 'flex';
     list.innerHTML = '';
@@ -908,6 +968,7 @@ function renderShop(view) {
     }
     for (const r of rows) {
       const selRow = shopSel === r.name;
+      if (selRow) { wrap.querySelector('#shopPrice').style.display = 'block'; wrap.querySelector('#shopPval').textContent = r.price; }
       const broke = shopMode === 'buy' && v.credits < r.price;
       const row = el('div', {
         style: `display:flex;align-items:center;gap:12px;padding:4px 16px;cursor:pointer;color:${selRow ? '#f5d31c' : '#9c9c9c'};background:${selRow ? '#0a0a0a' : 'transparent'};opacity:${broke ? .4 : 1}`,
@@ -924,13 +985,11 @@ function renderShop(view) {
         shopSel = r.name;
         const item = App.staticData.items.catalog.find(c => c.name === r.name);
         say(item ? item.desc : r.desc || r.name);
-        const pt = wrap.querySelector('#shopPrice');
-        pt.style.display = 'block';
-        wrap.querySelector('#shopPval').textContent = r.price;
-        renderShopList(v);
+        again();
       };
       list.appendChild(row);
     }
+    list.scrollTop = listScroll;
   }
 }
 
@@ -946,12 +1005,16 @@ function sellGuess(view, name) {
 }
 
 // ---------------------------------------------------------------- character sheet
-window.toggleSheet = () => { sheetOpen = !sheetOpen; $('sheet').classList.toggle('open', sheetOpen); if (sheetOpen) renderSheet(); };
+let pickerSlot = null;   // the open equipment picker, restored across rebuilds
+window.toggleSheet = () => { sheetOpen = !sheetOpen; pickerSlot = null; $('sheet').classList.toggle('open', sheetOpen); if (sheetOpen) renderSheet(true); };
 
-function renderSheet() {
+function renderSheet(force = false) {
   const view = App.view;
-  const m = view.party.find(p => p.id === seat);
+  const m = view && view.party.find(p => p.id === seat);
   if (!m || !m.stats) return;
+  const inBattle = view.battle && view.mode === 'battle';
+  const drawn = ['name', 'klass', 'level', 'element', 'stats', 'hp', 'cp', 'equipment', 'competences', 'passives', 'flavor', 'gender'].map(k => m[k]);
+  if (!changed('sheet', [drawn, view.gearOwned, view.wornBy, inBattle, pickerSlot]) && !force) return;
   const body = $('sheetBody');
   body.innerHTML = '';
   body.appendChild(el('h2', {}, `${m.name} — ${(m.klass || '').toUpperCase()} · LV ${m.level} · ${m.element.toUpperCase()}`));
@@ -964,7 +1027,6 @@ function renderSheet() {
   body.appendChild(grid);
 
   body.appendChild(el('h3', {}, 'EQUIPMENT — PICK A SLOT'));
-  const inBattle = view.battle && view.mode === 'battle';
   const slotLabels = { offensive: 'OFFENSIVE', defensive1: 'DEFENSIVE 1', defensive2: 'DEFENSIVE 2', defensive3: 'DEFENSIVE 3', special: 'SPECIAL' };
   for (const [slot, label] of Object.entries(slotLabels)) {
     const worn = m.equipment[slot];
@@ -973,6 +1035,7 @@ function renderSheet() {
     body.appendChild(row);
     const pickerHost = el('div', { id: `picker-${slot}` });
     body.appendChild(pickerHost);
+    if (slot === pickerSlot && !inBattle) fillSlotPicker(slot, pickerHost);
   }
   if (inBattle) body.appendChild(el('div', { style: 'font-size:11px;color:#886' }, 'Equipment swaps out of combat only.'));
 
@@ -998,16 +1061,18 @@ function renderSheet() {
 }
 
 function openSlotPicker(slot) {
+  pickerSlot = pickerSlot === slot ? null : slot;
+  renderSheet(true);
+}
+
+function fillSlotPicker(slot, host) {
   const view = App.view;
   const m = view.party.find(p => p.id === seat);
-  const host = $(`picker-${slot}`);
-  if (!host) return;
-  if (host.childNodes.length) { host.innerHTML = ''; return; }
   const list = el('div', { class: 'pickerlist' });
   // The slot is the menu: only this slot's legal items, filtered to owned copies;
   // shared-pool items worn by someone else show greyed with the wearer's name.
   const unequip = el('div', { class: 'pk' }, el('span', { class: 'n' }, '— unequip —'));
-  unequip.onclick = () => { send({ t: 'equip', slot, item: null }); host.innerHTML = ''; };
+  unequip.onclick = () => { send({ t: 'equip', slot, item: null }); openSlotPicker(slot); };
   list.appendChild(unequip);
   for (const [catName, cat] of Object.entries(App.staticData.gear.categories)) {
     if (cat.slot !== slot) continue;
@@ -1019,7 +1084,7 @@ function openSlotPicker(slot) {
       const row = el('div', { class: 'pk' + (wornElsewhere ? ' worn' : '') },
         el('span', { class: 'n' }, item.name),
         el('span', { class: 'd' }, `${catName} · ${item.tier}${item.stat ? ` · +${item.value} ${item.stat.toUpperCase()}` : ''}${wornElsewhere ? ` · worn by ${wearer}` : ''}`));
-      if (!wornElsewhere) row.onclick = () => { send({ t: 'equip', slot, item: item.name }); host.innerHTML = ''; };
+      if (!wornElsewhere) row.onclick = () => { send({ t: 'equip', slot, item: item.name }); openSlotPicker(slot); };
       list.appendChild(row);
     }
   }

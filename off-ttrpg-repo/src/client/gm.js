@@ -1,7 +1,7 @@
 // GM console. Organizes and suggests, never restricts: every list reachable,
 // every value editable, and nothing here ever says "you can't."
 
-import { App, connect, send, gm, loadStaticData, applyZone, applyPalette, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, owLabels, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx, previewTrack, stopPreview, previewingTrack } from '/common.js';
+import { App, connect, send, gm, loadStaticData, applyZone, assetUrl, el, statusChip, statChangeChip, floatOver, partyArt, enemyArt, roomArt, canonRoom, drawCanonCond, owLabels, artEl, syncJukebox, volumeSlider, rescanAssets, playCombatFx, previewTrack, stopPreview, previewingTrack } from '/common.js';
 
 // Canon map index (names, hierarchy, chipsets) — fetched once.
 let canonIndex = { maps: {}, chipsets: [] };
@@ -18,6 +18,7 @@ let pendingAction = null;      // {enemyId, kind, move|item} — an enemy acting
 let pendingPilot = null;       // {seat, kind, comp?, item?, element?, wants:'enemy'|'ally'} — the GM playing an absent character
 let stagedRoom = null;         // local editing copy of the current room
 let stagedDirty = false;
+let stagedFor = null;          // the location stagedRoom belongs to
 let tool = null, dragA = null, stamp = null;
 let editingTmpl = null;        // enemy editor working copy
 let enc = null;                // encounter builder working copy
@@ -38,24 +39,30 @@ App.onEvent = e => {
 };
 
 let wasBattle = false;
-let autoOpened = null;   // enemy id whose stack auto-popped this hold
+const autoOpened = new Set();   // enemy ids whose stack already popped this hold
 App.onState = view => {
   lastStateAt = performance.now();
   document.body.classList.toggle('paused', !!view.paused);
   const inBattle = view.mode === 'battle' && !!view.battle;
   if (inBattle && !wasBattle) setLeftMode('party');   // the fight starts: monitors up
-  if (!inBattle && wasBattle) setLeftMode('create');
+  if (!inBattle && wasBattle) {
+    setLeftMode('create');
+    // Nothing armed in one fight may leak into the next.
+    pendingAction = null; pendingPilot = null; autoOpened.clear();
+    $('estack').classList.remove('open');
+  }
   wasBattle = inBattle;
   render(view);
   // The GM's loop mirrors the players': a GM-controlled gauge fills → its
-  // action stack pops on its own. Escape dismisses; it won't re-pop that hold.
-  if (inBattle && !$('estack').classList.contains('open') && !pendingAction && !pendingPilot) {
-    // With several GM creatures holding at once, prefer one whose stack hasn't
-    // been shown this hold — dismissing A must not stop B from popping.
+  // action stack pops on its own, once per hold. Escape dismisses it for good;
+  // with several holding, each pops in turn and none comes back.
+  if (inBattle) {
     const holdingGm = view.battle.enemies.filter(x => x.control === 'gm' && x.holding && !x.dead);
-    const ready = holdingGm.find(x => x.id !== autoOpened) || holdingGm[0];
-    if (ready && autoOpened !== ready.id) { autoOpened = ready.id; enemyClicked(ready); }
-    if (!holdingGm.length) autoOpened = null;
+    for (const id of [...autoOpened]) if (!holdingGm.some(x => x.id === id)) autoOpened.delete(id);
+    if (!$('estack').classList.contains('open') && !pendingAction && !pendingPilot) {
+      const ready = holdingGm.find(x => !autoOpened.has(x.id));
+      if (ready) { autoOpened.add(ready.id); enemyClicked(ready); }
+    }
   }
 };
 
@@ -110,6 +117,13 @@ function render(view) {
   pb.classList.toggle('on', view.paused);
   pb.textContent = view.paused ? '▶ RESUME' : '❚❚ PAUSE';
 
+  // The staged copy belongs to one room: moving the party discards unsaved
+  // staging rather than letting SAVE ROOM write it over the new location.
+  if (stagedFor !== view.location.name) {
+    if (stagedDirty) announce(`Unsaved staging for ${stagedFor} discarded — the party moved.`);
+    stagedDirty = false;
+    stagedFor = view.location.name;
+  }
   if (!stagedDirty) stagedRoom = view.room ? JSON.parse(JSON.stringify(view.room)) : null;
 
   renderCreateCol(view);
@@ -130,6 +144,7 @@ function renderCreateCol(view) {
   const col = $('createcol');
   if (col.dataset.built && !col.dataset.stale) return;
   col.dataset.built = '1';
+  delete col.dataset.stale;
   col.innerHTML = '';
   col.appendChild(el('div', { class: 'dsec' }, 'BUILD — DRAG RECTANGLES ON THE FIELD'));
   const tools = el('div', { class: 'btool' });
@@ -200,7 +215,9 @@ function stampBtn(label, s) {
 
 function saveRoom() {
   if (!stagedRoom) stagedRoom = { w: 768, h: 576, floors: [], structs: [], props: [], pieces: [] };
-  gm('room-save', { location: App.view.location.name, room: stagedRoom });
+  // View-only overlays (GM pins, door hoists, collision grid) never go back.
+  const { pins, doorsNear, grid, nativeChipset, ...room } = stagedRoom;
+  gm('room-save', { location: stagedFor || App.view.location.name, room });
   stagedDirty = false;
   announce(`Room saved: ${App.view.location.name} (${(stagedRoom.floors || []).length + (stagedRoom.structs || []).length} shapes, ${(stagedRoom.pieces || []).length} pieces).`);
 }
@@ -208,13 +225,17 @@ function saveRoom() {
 // ---------------------------------------------------------------- PARTY column
 function renderPartyCol(view) {
   const col = $('partycol');
-  const scroll = col.scrollTop;   // rebuilt every push — the scroll must survive
-  col.innerHTML = '';
-  col.classList.toggle('targeting', !!pendingAction);
   // Only present members: in battle that's the roster; otherwise connected, un-benched
   // seats. Absent characters live in the PLAYERS tab, not on the table.
   const present = view.party.filter(m => !m.benched &&
     ((view.battle && (view.battle.partySlots || []).includes(m.id)) || (view.connected || []).includes(m.id)));
+  // Gauges animate in place; a rebuild mid-click would swallow the click.
+  const sig = sigOf([present, view.connected, !!pendingAction, !!view.battle]);
+  if (col.dataset.sig === sig) return;
+  col.dataset.sig = sig;
+  const scroll = col.scrollTop;
+  col.innerHTML = '';
+  col.classList.toggle('targeting', !!pendingAction);
   if (!present.length) col.appendChild(el('div', { style: 'padding:10px;font-size:13px;color:#666' }, 'NOBODY PRESENT — SEE PLAYERS TAB'));
   for (const m of present) {
     const pm = el('div', { class: 'pm' + (m.down ? ' dead' : ''), 'data-id': m.id });
@@ -321,6 +342,7 @@ function pilotTarget(t) {
 
 function targetPlayer(m) {
   if (!pendingAction || m.down) return;
+  if (pendingAction.kind === 'pool-item-friendly') { announce(`${pendingAction.item} — click one of your creatures in the strip.`); return; }
   const a = pendingAction;
   pendingAction = null;
   if (a.kind === 'move') gm('enemy-action', { enemyId: a.enemyId, action: { kind: 'move', move: a.move, targetId: m.id } });
@@ -330,6 +352,7 @@ function targetPlayer(m) {
 
 let eCursor = 0;
 addEventListener('keydown', e => {
+  if (!$('estack')) return;   // seat taken over: the console is gone
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
   if (e.key === 'Escape') {
     if (pendingAction) { pendingAction = null; announce('Action lowered.'); render(App.view); }
@@ -340,7 +363,9 @@ addEventListener('keydown', e => {
   // The GM's action stack follows the same loop as the players': arrows walk
   // the options, Enter fires. (Avatar walking pauses while a stack is open.)
   const st = $('estack');
-  if (st.classList.contains('open')) {
+  // A panel sits over the stack, and a focused button owns Enter/Space.
+  const panelKeys = activeTab || e.target.tagName === 'BUTTON' || $('panels').contains(e.target);
+  if (st.classList.contains('open') && !panelKeys) {
     const opts = [...st.querySelectorAll('button.eact')];
     if (!opts.length) return;
     if (['ArrowUp', 'ArrowLeft'].includes(e.key)) { eCursor = (eCursor - 1 + opts.length) % opts.length; e.preventDefault(); markECursor(opts); return; }
@@ -366,14 +391,23 @@ function renderField(view) {
   const inBattle = view.mode === 'battle' && view.battle;
   // Hold rebuilds while a combat animation is mid-flight.
   if (inBattle && performance.now() < fxLockUntil && overlay.children.length) return;
-  overlay.innerHTML = '';
   if (inBattle) {
+    // Gauges animate in place; rebuild only when something shown changes, so
+    // a click on a sprite is never swallowed by a push landing mid-press.
+    const sig = sigOf([view.battle, view.party, pendingAction, pendingPilot && pendingPilot.wants]);
+    if (overlay.dataset.sig === sig) return;
+    overlay.dataset.sig = sig;
+    overlay.innerHTML = '';
     canvas.style.display = 'none';
     field.classList.remove('building');
     if (view.battle.backdrop) {
       field.classList.add('backdrop');
-      field.style.backgroundImage = `url('/assets/backdrops/${encodeURIComponent(view.battle.backdrop).replace(/%2F/g, '/')}')`;
-      if (view.battle.palette) applyPalette(view.battle.palette);
+      // Stored as an asset path (backdrops/…); older encounters kept a bare filename.
+      const bd = view.battle.backdrop.includes('/') ? view.battle.backdrop : `backdrops/${view.battle.backdrop}`;
+      field.style.backgroundImage = `url("${assetUrl(bd)}")`;
+    } else {
+      field.classList.remove('backdrop');
+      field.style.backgroundImage = '';
     }
     // slot markers render on the GM's field only
     for (let i = 0; i < 8; i++) {
@@ -432,6 +466,7 @@ function renderField(view) {
       overlay.appendChild(div);
     }
   } else {
+    if (overlay.dataset.sig) { overlay.innerHTML = ''; delete overlay.dataset.sig; }
     field.classList.remove('backdrop');
     field.style.backgroundImage = '';
     canvas.style.display = 'block';
@@ -454,7 +489,7 @@ function stagingImage(p) {
   if (!stagingImgs[p]) {
     const i = new Image();
     i.onload = () => { if (App.view) drawStaging(App.view); };
-    i.src = `/assets/${p}`;
+    i.src = assetUrl(p);
     stagingImgs[p] = i;
   }
   return stagingImgs[p];
@@ -484,17 +519,6 @@ function drawStaging(view) {
       x.drawImage(cr.ground, 0, 0); x.drawImage(cr.overlay, 0, 0);
       drawCanonCond(x, cr, room.condOn, 'all', true);   // GM x-ray: off groups ghosted
     }
-    const overlayEl = $('fieldOverlay');
-    for (const p of room.pins || []) {
-      // Just the glyph — destinations live in the hover tooltip and the
-      // hoisted door row, so clustered doors can't pile text on the map.
-      const d = el('div', {
-        style: `position:absolute;left:${(p.x * 16 + 8) * sc}px;top:${(p.y * 16 + 8) * sc}px;transform:translate(-50%,-50%);z-index:2;`
-          + `font-size:${11 * sc}px;color:${p.door ? 'var(--amber)' : '#9ad'};cursor:${p.door ? 'help' : 'default'};text-shadow:1px 1px 0 #000`,
-        title: p.door ? `${p.name} → ${p.destName}` : p.name,
-      }, p.door ? '◈' : '·');
-      overlayEl.appendChild(d);
-    }
   } else if (bgPath) {
     // Image rooms: the art is the look; the shapes are invisible collision,
     // shown here (and only here) as a translucent overlay so the GM can edit it.
@@ -507,19 +531,7 @@ function drawStaging(view) {
   } else {
     drawRoomKit(x, room, pal, phase);
   }
-  // pieces as DOM over the canvas
-  const overlay = $('fieldOverlay');
-  for (const piece of room.pieces || []) {
-    const d = el('div', {
-      style: `position:absolute;left:${piece.x * sc}px;top:${piece.y * sc}px;font-size:${26 * sc}px;color:var(--wht);cursor:pointer;z-index:3;`
-        + `text-shadow:2px 0 var(--blk),-2px 0 var(--blk),0 2px var(--blk),0 -2px var(--blk);${piece.hidden ? 'opacity:.35' : ''}`,
-      title: `${piece.name || piece.kind}${piece.hidden ? ' (hidden)' : ''}`,
-    }, piece.g || '◇');
-    if (piece.hidden) d.append(el('span', { style: 'font-size:10px;color:var(--wht)' }, '◌'));
-    d.onclick = ev => { ev.stopPropagation(); piece.hidden = !piece.hidden; stagedDirty = true; drawStaging(view); };
-    d.ondblclick = ev => { ev.stopPropagation(); room.pieces = room.pieces.filter(z => z !== piece); stagedDirty = true; drawStaging(view); };
-    overlay.appendChild(d);
-  }
+  syncStagingDom(room, sc);
   // live sprites on the GM camera — the party and the avatar; nametags drawn
   // together at the end so clustered plates stagger instead of piling up.
   const ROWS = [2, 3, 1, 0];
@@ -545,6 +557,40 @@ function drawStaging(view) {
     tags.push({ text: label, cx: Math.round(pp.x) + 8, y: Math.round(pp.y) + 24, accent: pid !== 'GM' });
   }
   owLabels(x, tags);
+}
+
+// Pins and pieces as DOM over the staging canvas. drawStaging repaints every
+// 380ms; this layer is rebuilt only when what it shows changes — appending on
+// every repaint grew the overlay without bound and replaced pieces mid-click.
+function syncStagingDom(room, sc) {
+  const overlay = $('fieldOverlay');
+  if (!overlay) return;
+  const sig = sigOf([stagedFor, room.pins, room.pieces, sc]);
+  if (overlay.dataset.stagingSig === sig && overlay.querySelector('.stg')) return;
+  overlay.dataset.stagingSig = sig;
+  overlay.querySelectorAll('.stg').forEach(n => n.remove());
+  for (const p of room.pins || []) {
+    // Just the glyph — destinations live in the hover tooltip and the
+    // hoisted door row, so clustered doors can't pile text on the map.
+    overlay.appendChild(el('div', {
+      class: 'stg',
+      style: `position:absolute;left:${(p.x * 16 + 8) * sc}px;top:${(p.y * 16 + 8) * sc}px;transform:translate(-50%,-50%);z-index:2;`
+        + `font-size:${11 * sc}px;color:${p.door ? 'var(--amber)' : '#9ad'};cursor:${p.door ? 'help' : 'default'};text-shadow:1px 1px 0 #000`,
+      title: p.door ? `${p.name} → ${p.destName}` : p.name,
+    }, p.door ? '◈' : '·'));
+  }
+  for (const piece of room.pieces || []) {
+    const d = el('div', {
+      class: 'stg',
+      style: `position:absolute;left:${piece.x * sc}px;top:${piece.y * sc}px;font-size:${26 * sc}px;color:var(--wht);cursor:pointer;z-index:3;`
+        + `text-shadow:2px 0 var(--blk),-2px 0 var(--blk),0 2px var(--blk),0 -2px var(--blk);${piece.hidden ? 'opacity:.35' : ''}`,
+      title: `${piece.name || piece.kind}${piece.hidden ? ' (hidden)' : ''}`,
+    }, piece.g || '◇');
+    if (piece.hidden) d.append(el('span', { style: 'font-size:10px;color:var(--wht)' }, '◌'));
+    d.onclick = ev => { ev.stopPropagation(); piece.hidden = !piece.hidden; stagedDirty = true; drawStaging(App.view); };
+    d.ondblclick = ev => { ev.stopPropagation(); room.pieces = room.pieces.filter(z => z !== piece); stagedDirty = true; drawStaging(App.view); };
+    overlay.appendChild(d);
+  }
 }
 
 // ---------------------------------------------------------------- GM walk mode
@@ -573,11 +619,20 @@ function gmWalkable(room, x, y) {
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
   if (!gmWalkActive()) return;
-  if (e.key.startsWith('Arrow') || 'wasd'.includes(e.key)) { GOW.keys[e.key] = true; e.preventDefault(); }
+  const k = walkKey(e);
+  if (k) { GOW.keys[k] = true; e.preventDefault(); }
 });
-addEventListener('keyup', e => { GOW.keys[e.key] = false; });
+addEventListener('keyup', e => { const k = walkKey(e); if (k) GOW.keys[k] = false; });
+addEventListener('blur', () => { GOW.keys = {}; });   // a key released elsewhere never sends keyup here
+// Shift or Caps Lock turn 'w' into 'W' between press and release.
+function walkKey(e) {
+  if (e.key.startsWith('Arrow')) return e.key;
+  const k = e.key.toLowerCase();
+  return k.length === 1 && 'wasd'.includes(k) ? k : null;
+}
 
 function gmOwLoop(t) {
+  if (App.dead) return;   // seat taken over / bad key: the console is gone
   requestAnimationFrame(gmOwLoop);
   const dt = Math.min(0.05, Math.max(0, (t - GOW.prevT) / 1000));
   GOW.prevT = t;
@@ -823,6 +878,10 @@ function enemyClicked(e) {
 // ---------------------------------------------------------------- STRIP (enemy seats)
 function renderStrip(view) {
   const strip = $('strip');
+  // Gauges animate in place; rebuild only when something shown changes.
+  const sig = sigOf([view.battle, pendingAction && pendingAction.kind, pendingPilot && pendingPilot.wants]);
+  if (strip.dataset.sig === sig) return;
+  strip.dataset.sig = sig;
   const scroll = strip.scrollLeft;
   strip.innerHTML = '';
   if (!view.battle) {
@@ -897,7 +956,8 @@ function instanceEditor(e) {
   const hpI = el('input', { type: 'number', min: '0', value: String(e.hp), style: 'width:110px;background:#111;border:1px solid #333;color:var(--wht);padding:4px 8px' });
   box.appendChild(mkRow(`HP /${e.maxHp}`, hpI));
   const szSel = el('select', { style: 'background:#111;border:1px solid #333;color:var(--wht);padding:4px 8px' });
-  for (const s of ENC_SIZES) szSel.appendChild(el('option', { value: String(s), selected: (e.size || 1) === s ? '' : undefined }, `×${s}`));
+  const curSize = e.size || 1;
+  for (const s of [...new Set([...ENC_SIZES, curSize])].sort((a, b) => a - b)) szSel.appendChild(el('option', { value: String(s), selected: curSize === s ? '' : undefined }, `×${s}`));
   box.appendChild(mkRow('SIZE', szSel));
   const bar = el('div', { style: 'display:flex;gap:8px;transform:skewX(4deg)' });
   // Control lives here too — a second, unmissable place to flip AI ⇄ GM.
@@ -911,7 +971,12 @@ function instanceEditor(e) {
   bar.appendChild(ctl);
   const apply = el('button', { class: 'qbtn gmctl' }, 'APPLY');
   apply.onclick = () => {
-    gm('edit-instance', { enemyId: e.id, patch: { hp: Math.max(0, +hpI.value || 0), size: +szSel.value } });
+    // Only what the GM touched: re-sending the HP from when the editor opened
+    // would undo any damage taken since.
+    const patch = {};
+    if (hpI.value !== String(e.hp)) patch.hp = Math.max(0, +hpI.value || 0);
+    if (+szSel.value !== curSize) patch.size = +szSel.value;
+    if (Object.keys(patch).length) gm('edit-instance', { enemyId: e.id, patch });
     st.classList.remove('open');
   };
   const cancel = el('button', { class: 'qbtn' }, 'CANCEL');
@@ -943,47 +1008,56 @@ setInterval(() => {
 }, 120);
 
 // ---------------------------------------------------------------- PANELS
-// State pushes arrive every ~180ms in battle: a naive rebuild resets scroll,
-// closes dropdown popups, and clobbers half-made choices. Three defenses:
-// a focused field always blocks the rebuild, any interaction inside the panel
-// buys a grace period (covers the pick-option-then-click-button race), and
-// scroll position survives the rebuilds that do happen. Local UI actions call
-// renderPanels() directly and always rebuild.
+// State pushes arrive every ~180ms in battle, but all that changes tick to tick
+// is gauge fill and hold state — which no panel shows. So a push rebuilds the
+// open panel only when the data it renders actually changed; everything else
+// leaves the GM's half-made choices, scroll and open dropdowns alone.
+//   · A rebuild that does happen waits while a text field is being typed in,
+//     or while a press is mid-flight (pointerdown → click).
+//   · Controls tagged data-keep, and scrollers tagged data-scroll, carry their
+//     value / scroll position across the rebuild.
+//   · Local UI actions call renderPanels() directly and always rebuild.
+const VOLATILE = new Set(['gauge', 'holding', 'critCharged', 'positions']);
+function sigOf(v, drop = null) {
+  return JSON.stringify(v, (k, x) => (k === 'gauge' || (drop && drop.has(k)) ? undefined : x));
+}
 let lastPanelInteract = 0;
-for (const evt of ['pointerdown', 'keydown', 'wheel', 'change']) {
+for (const evt of ['pointerdown', 'keydown', 'wheel']) {
   document.addEventListener(evt, e => {
     const host = document.getElementById('panels');
     if (host && e.target instanceof Node && host.contains(e.target)) lastPanelInteract = performance.now();
   }, true);
 }
-let panelRetry = 0;
+let panelRetry = 0, panelSig = null;
 function renderPanelsFromState() {
-  // A suppressed rebuild is deferred, never dropped: player choices and other
-  // pushes that land mid-grace still paint the moment the GM's hands are still.
   const host = $('panels');
+  if (!host) return;   // seat taken over: the console is gone
+  if (!activeTab || !App.view) return;
+  if (activeTab + sigOf(App.view, VOLATILE) === panelSig) return;   // nothing this panel shows changed
+  // Deferred, never dropped: the change paints as soon as the GM's hands are still.
   const ae = document.activeElement;
-  if (ae && host.contains(ae) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName)) {
+  const typing = ae && host.contains(ae) && (ae.tagName === 'TEXTAREA' || (ae.tagName === 'INPUT' && !['range', 'checkbox', 'radio', 'button'].includes(ae.type)));
+  const left = 400 - (performance.now() - lastPanelInteract);
+  if (typing || left > 0) {
     clearTimeout(panelRetry);
-    panelRetry = setTimeout(renderPanelsFromState, 800);
-    return;
-  }
-  const left = 1500 - (performance.now() - lastPanelInteract);
-  if (left > 0) {
-    clearTimeout(panelRetry);
-    panelRetry = setTimeout(renderPanelsFromState, left + 60);
+    panelRetry = setTimeout(renderPanelsFromState, typing ? 600 : left + 40);
     return;
   }
   renderPanels();
 }
 function renderPanels() {
   clearTimeout(panelRetry);
-  let host = $('panels');
+  const host = $('panels');
+  if (!host) return;
   const prevPanel = host.querySelector('.gmpanel');   // .gmpanel is the scroller
   const scroll = prevPanel ? prevPanel.scrollTop : 0;
   const prevTab = host.dataset.tab;
+  const kept = {}, scrolls = {};
+  for (const n of host.querySelectorAll('[data-keep]')) kept[n.dataset.keep] = n.value;
+  for (const n of host.querySelectorAll('[data-scroll]')) scrolls[n.dataset.scroll] = n.scrollTop;
   host.innerHTML = '';
   for (const t of TABS) $(`tab-${t}`).classList.toggle('on', activeTab === t);
-  if (!activeTab || !App.view) { delete host.dataset.tab; return; }
+  if (!activeTab || !App.view) { delete host.dataset.tab; panelSig = null; return; }
   const panel = el('div', { class: 'gmpanel open' });
   host.appendChild(panel);
   ({
@@ -991,8 +1065,18 @@ function renderPanels() {
     Items: renderItems, Players: renderPlayers, Shop: renderShopGate,
     Jukebox: renderJukebox, Stingers: renderStingers, Cutscene: renderCutscene, System: renderSystem,
   })[activeTab](panel, App.view);
+  panelSig = activeTab + sigOf(App.view, VOLATILE);
   host.dataset.tab = activeTab;
-  if (prevTab === activeTab) panel.scrollTop = scroll;   // same tab: stay put
+  if (prevTab === activeTab) {
+    panel.scrollTop = scroll;   // same tab: stay put
+    for (const n of panel.querySelectorAll('[data-keep]')) {
+      const v = kept[n.dataset.keep];
+      if (v == null) continue;
+      if (n.tagName === 'SELECT' && ![...n.options].some(o => o.value === v)) continue;
+      n.value = v;
+    }
+    for (const n of panel.querySelectorAll('[data-scroll]')) if (scrolls[n.dataset.scroll] != null) n.scrollTop = scrolls[n.dataset.scroll];
+  }
 }
 
 // ---- Location
@@ -1046,9 +1130,11 @@ function renderLocation(p, view) {
   if (Object.keys(canonIndex.maps).length) {
     p.appendChild(el('div', { class: 'dsec' }, 'CANON MAPS'));
     const row = el('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px' });
-    const filter = el('input', { type: 'text', placeholder: 'filter…', style: 'width:130px' });
+    const filter = el('input', { type: 'text', placeholder: 'filter…', style: 'width:130px', value: canonPick.filter });
     const sel = el('select', { style: 'max-width:420px' });
+    sel.onchange = () => { canonPick.map = sel.value; };
     const rebuild = () => {
+      canonPick.filter = filter.value;
       const q = filter.value.trim().toLowerCase();
       sel.innerHTML = '';
       // A map matches if the filter hits its own name (English or French), its
@@ -1077,7 +1163,7 @@ function renderLocation(p, view) {
       for (const zone of Object.keys(byZone).sort((a, b) => byZone[a].minId - byZone[b].minId)) {
         const og = el('optgroup', { label: zone });
         for (const [k, m, sub] of byZone[zone].rows.sort((a, b) => a[1].id - b[1].id)) {
-          og.appendChild(el('option', { value: k },
+          og.appendChild(el('option', { value: k, selected: k === canonPick.map ? '' : undefined },
             `${sub ? sub + ' · ' : ''}${m.name} — ${m.w}×${m.h}${m.doorCount ? ' · ' + m.doorCount + ' doors' : ''}`));
         }
         sel.appendChild(og);
@@ -1172,6 +1258,7 @@ function renderLocation(p, view) {
   p.appendChild(rest);
 }
 
+const canonPick = { filter: '', map: '' };   // survives panel rebuilds
 function ensureRoom() { if (!stagedRoom) stagedRoom = { w: 768, h: 576, floors: [], structs: [], props: [], pieces: [] }; }
 function labeled(lbl, node) { return el('div', { class: 'statrow' }, el('span', { class: 'sl' }, lbl), node); }
 
@@ -1225,7 +1312,7 @@ function musicSelect(cur, onchange) {
   s.onchange = () => onchange(s.value);
   // 🎧 auditions the selected track on the GM's client only — pick with
   // confidence, the players hear nothing until it's assigned or played.
-  const prev = el('button', { class: 'qbtn', title: 'preview — only you hear this' }, '🎧');
+  const prev = el('button', { class: 'qbtn', title: 'preview — only you hear this' }, cur && previewingTrack() === cur ? '■' : '🎧');
   prev.onclick = ev => {
     ev.stopPropagation();
     if (!s.value) return;
@@ -1252,8 +1339,9 @@ function renderEnemies(p, view) {
   p.appendChild(el('div', { class: 'ps' }, 'TEMPLATES FROM THE CAMPAIGN BESTIARY — CLICK TO EDIT · EDITS SAVE AS CAMPAIGN OVERLAY, THE DATA FILE IS UNTOUCHED'));
   const cards = el('div', { class: 'cards' });
   const all = [...App.staticData.bestiary];
+  const defs = view.templateDefs || {};
   for (const name of view.templates || []) {
-    if (!all.find(e => e.name === name)) all.push({ name, custom: true, ...( {} ) });
+    if (!all.find(e => e.name === name)) all.push({ ...(defs[name] || {}), name, custom: true });
   }
   for (const e of all) {
     const overlay = (view.templates || []).includes(e.name);
@@ -1262,7 +1350,9 @@ function renderEnemies(p, view) {
       el('div', {}, artEl(enemyArt(e.name), e.name, 40)),
       el('div', { class: 'cn' }, e.name + (overlay ? ' ·' : '')),
       el('div', { class: 'cs' }, `HP ${e.hp ?? '?'} · dmg ${e.dmg_per_action ?? '?'} · ${e.gauge_s ?? '?'}s · ${e.zone || 'custom'}${e.archetype ? ' · ' + e.archetype : ''}`));
-    card.onclick = () => { editingTmpl = JSON.parse(JSON.stringify({ ...e })); renderPanels(); };
+    // An edited template reopens as edited — starting from the bestiary row
+    // would silently throw the overlay away on the next save.
+    card.onclick = () => { editingTmpl = JSON.parse(JSON.stringify(defs[e.name] || { ...e })); renderPanels(); };
     cards.appendChild(card);
   }
   const fresh = el('div', { class: 'card new' }, '+ CREATE NEW');
@@ -1373,6 +1463,7 @@ function blankEnc() {
   return { name: 'encounter', waves: [{ trigger: 'launch', queue: [] }], pool: {}, cutpurseTable: [], backdrop: null, palette: null, music: null };
 }
 
+let encLibZone = 'Zone 1';   // survives panel rebuilds
 function renderEncounter(p, view) {
   enc = enc || blankEnc();
   p.appendChild(el('div', { class: 'ph' }, 'ENCOUNTER'));
@@ -1383,7 +1474,7 @@ function renderEncounter(p, view) {
   const lib = el('div', {});
   lib.appendChild(el('div', { class: 'ps' }, 'ADD FROM LIBRARY'));
   const zoneSel = el('select', { style: 'margin-bottom:8px;width:100%' });
-  for (const z of ['Zone 1', 'Zone 2', 'Zone 3', 'The Room', 'Purified Zones & Superbosses', 'custom']) zoneSel.appendChild(el('option', { value: z }, z));
+  for (const z of ['Zone 1', 'Zone 2', 'Zone 3', 'The Room', 'Purified Zones & Superbosses', 'custom']) zoneSel.appendChild(el('option', { value: z, selected: z === encLibZone ? '' : undefined }, z));
   lib.appendChild(zoneSel);
   const libList = el('div', {});
   const fillLib = () => {
@@ -1395,7 +1486,7 @@ function renderEncounter(p, view) {
       libList.appendChild(c);
     }
   };
-  zoneSel.onchange = fillLib;
+  zoneSel.onchange = () => { encLibZone = zoneSel.value; fillLib(); };
   fillLib();
   lib.appendChild(libList);
   grid.appendChild(lib);
@@ -1465,12 +1556,13 @@ function renderEncounter(p, view) {
   const loadSel = el('select', {});
   loadSel.appendChild(el('option', { value: '' }, 'load saved…'));
   for (const n of view.encounters || []) loadSel.appendChild(el('option', { value: n }, n));
-  loadSel.onchange = async () => {
-    if (!loadSel.value) return;
-    // encounters are in gm view only by name; ask server to launch by name or clone locally via notes — simplest: keep local copy keyed in localStorage
-    const saved = JSON.parse(localStorage.getItem('off-encs') || '{}')[loadSel.value];
-    if (saved) { enc = JSON.parse(JSON.stringify(saved)); renderPanels(); }
-    else { gm('launch-encounter', { name: loadSel.value }); activeTab = null; renderPanels(); }
+  // Loading opens the saved copy in the builder — it never launches anything.
+  loadSel.onchange = () => {
+    const saved = (view.encounterDefs || {})[loadSel.value];
+    if (!saved) return;
+    enc = JSON.parse(JSON.stringify(saved));
+    enc.name = enc.name || loadSel.value;
+    renderPanels();
   };
   const dup = el('button', { class: 'bigbtn ghost' }, 'CLONE');
   dup.onclick = () => { enc = JSON.parse(JSON.stringify(enc)); enc.name += ' (copy)'; renderPanels(); };
@@ -1479,10 +1571,6 @@ function renderEncounter(p, view) {
   right.appendChild(noteBox(`enc:${enc.name}`, view));
   grid.appendChild(right);
   p.appendChild(grid);
-  // remember saved encounters locally too (for re-editing)
-  const encs = JSON.parse(localStorage.getItem('off-encs') || '{}');
-  encs[enc.name] = enc;
-  localStorage.setItem('off-encs', JSON.stringify(encs));
 }
 
 function dropLabel(d) {
@@ -1676,15 +1764,16 @@ function openSpawnPicker(mapKey) {
 }
 
 // ---- Items
+let credAmount = 20;   // survives panel rebuilds
 function renderItems(p, view) {
   p.appendChild(el('div', { class: 'ph' }, 'ITEMS'));
   p.appendChild(el('div', { class: 'ps' }, 'GRANTS GO STRAIGHT TO THE SHARED PARTY INVENTORY · DEDUCT AND SET LIVE HERE TOO'));
   const undoRow = el('div', { style: 'display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap' });
-  const credStep = stepper(20, 20, () => {});
+  const credStep = stepper(credAmount, 20, v => { credAmount = v; });
   const grantC = el('button', { class: 'bigbtn', style: 'font-size:17px;padding:4px 16px' }, 'GRANT CREDITS');
-  grantC.onclick = () => gm('grant-credits', { n: parseFloat(credStep.querySelector('.v').textContent) });
+  grantC.onclick = () => gm('grant-credits', { n: credAmount });
   const dedC = el('button', { class: 'bigbtn ghost', style: 'font-size:17px' }, 'DEDUCT');
-  dedC.onclick = () => gm('grant-credits', { n: -parseFloat(credStep.querySelector('.v').textContent) });
+  dedC.onclick = () => gm('grant-credits', { n: -credAmount });
   const setC = el('button', { class: 'bigbtn ghost', style: 'font-size:17px' }, 'SET…');
   setC.onclick = () => { const n = prompt('Set credits to:', view.credits); if (n != null) gm('set-credits', { n: +n }); };
   undoRow.append(el('span', { class: 'dfont', style: 'font-size:22px;color:var(--amber)' }, `CREDITS ${view.credits}`), credStep, grantC, dedC, setC);
@@ -1764,16 +1853,16 @@ function renderPlayers(p, view) {
       icons.appendChild(chip);
     }
     card.appendChild(icons);
-    card.appendChild(labeledPair('HP', m.hp, 10, v => gm('player-edit', { seat: m.id, patch: { hp: v } })));
-    card.appendChild(labeledPair('CP', m.cp, 5, v => gm('player-edit', { seat: m.id, patch: { cp: v } })));
-    card.appendChild(labeledPair('LEVEL', m.level, 1, v => gm('player-edit', { seat: m.id, patch: { level: v } })));
+    card.appendChild(liveStepper('HP', m.id, 'hp', 10));
+    card.appendChild(liveStepper('CP', m.id, 'cp', 5));
+    card.appendChild(liveStepper('LEVEL', m.id, 'level', 1));
     const addRow = el('div', { class: 'statrow' });
-    const stSel = el('select', {});
+    const stSel = el('select', { 'data-keep': `status:${m.id}` });
     for (const s of STATUSES) stSel.appendChild(el('option', { value: s }, s));
     const addB = el('button', { class: 'qbtn' }, '+STATUS');
     addB.onclick = () => gm('player-add-status', { seat: m.id, status: stSel.value });
     addRow.append(stSel, addB);
-    const scSel = el('select', {});
+    const scSel = el('select', { 'data-keep': `statchange:${m.id}` });
     for (const s of ['ATK up', 'ATK down', 'DEF up', 'DEF down', 'AGI up', 'AGI down']) scSel.appendChild(el('option', { value: s }, s));
     const addSc = el('button', { class: 'qbtn' }, '+CHANGE');
     addSc.onclick = () => {
@@ -1821,11 +1910,21 @@ function renderPlayers(p, view) {
   p.appendChild(rest);
 }
 
-function labeledPair(lbl, val, step, onSet) {
-  const row = el('div', { class: 'statrow' }, el('span', { class: 'sl' }, lbl));
-  const st = stepper(val, step, v => onSet(v));
-  row.appendChild(st);
-  return row;
+// Steps from the member's live value, not the number on screen — the panel
+// may be a push or two behind, and a stale absolute would overwrite damage.
+function liveStepper(lbl, seat, key, step) {
+  const live = () => (App.view.party.find(x => x.id === seat) || {})[key] ?? 0;
+  const v = el('span', { class: 'v' }, `${live()}`);
+  const mk = d => {
+    const b = el('button', {}, d > 0 ? '+' : '−');
+    b.onclick = () => {
+      const n = Math.max(0, live() + d);
+      v.textContent = n;
+      gm('player-edit', { seat, patch: { [key]: n } });
+    };
+    return b;
+  };
+  return el('div', { class: 'statrow' }, el('span', { class: 'sl' }, lbl), el('span', { class: 'step' }, mk(-step), v, mk(step)));
 }
 
 // ---- Shop gate
@@ -1877,7 +1976,13 @@ function renderJukebox(p, view) {
   skip.onclick = () => gm('jukebox-skip');
   bar.append(stop, skip, volumeSlider());
   const rescan = el('button', { class: 'qbtn' }, 'RESCAN ASSET FOLDERS');
-  rescan.onclick = async () => { await rescanAssets(); announce('Hot folders re-scanned — new tracks and art are in.'); renderPanels(); };
+  rescan.onclick = async () => {
+    await rescanAssets();
+    $('createcol').dataset.stale = '1';   // new sprites belong in the stamp palette too
+    renderCreateCol(App.view);
+    announce('Hot folders re-scanned — new tracks and art are in.');
+    renderPanels();
+  };
   bar.appendChild(rescan);
   now.appendChild(bar);
   if (previewingTrack()) {
@@ -1972,8 +2077,8 @@ function renderConductor(p, view) {
   const sc = view.scene;
   p.appendChild(el('div', { class: 'ph' }, `CONDUCTOR — ${sc.name || sc.sceneId}`));
   const bar = el('div', { style: 'display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap' });
-  // These clear the interaction grace: the whole point of the click is the
-  // state change it causes, so the very next push must repaint the script.
+  // These clear the press grace: the whole point of the click is the state
+  // change it causes, so the very next push must repaint the script.
   const cont = el('button', { class: 'bigbtn' }, 'CONTINUE ▸');
   cont.onclick = () => { lastPanelInteract = 0; gm('scene-continue'); };
   const end = el('button', { class: 'bigbtn ghost' }, 'END SCENE');
@@ -2019,7 +2124,7 @@ function renderConductor(p, view) {
     p.appendChild(box);
   }
   const grid = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:18px' });
-  const beats = el('div', { class: 'edsec', style: 'max-height:46vh;overflow-y:auto' }, el('h4', {}, 'BEATS'));
+  const beats = el('div', { class: 'edsec', 'data-scroll': 'beats', style: 'max-height:46vh;overflow-y:auto' }, el('h4', {}, 'BEATS'));
   (sc.beats || []).forEach(b => {
     const row = el('div', { class: 'beatrow' + (b.index === sc.beatIndex ? ' cur' : '') },
       el('span', { class: 'bt2' }, `${b.index} · ${b.type}`), el('span', {}, (b.label || '').slice(0, 70)));
@@ -2077,7 +2182,7 @@ function renderSystem(p, view) {
     el('h4', {}, 'SESSION SNAPSHOTS'),
     (() => {
       const bar = el('div', { style: 'display:flex;gap:8px;margin-bottom:10px' });
-      const name = el('input', { type: 'text', placeholder: 'snapshot name…' });
+      const name = el('input', { type: 'text', placeholder: 'snapshot name…', 'data-keep': 'snapname' });
       const save = el('button', { class: 'bigbtn', style: 'font-size:16px;padding:3px 14px' }, 'SNAPSHOT NOW');
       save.onclick = () => gm('snapshot', { name: name.value || 'manual' });
       bar.append(name, save);
@@ -2104,7 +2209,7 @@ function renderSystem(p, view) {
       b.onclick = () => gm('reload-diff');
       return b;
     })(),
-    el('div', { id: 'diffbox', style: 'font-size:10px;color:#aaa;margin-top:8px;white-space:pre-wrap;max-height:30vh;overflow-y:auto' })));
+    diffBox()));
   p.appendChild(el('div', { class: 'edsec' },
     el('h4', {}, 'DANGER'),
     (() => {
@@ -2114,18 +2219,25 @@ function renderSystem(p, view) {
     })()));
 }
 
+// The pending reload lives here, not in the page, so rebuilds can't eat it.
+let reloadDiff = null;
 function showReloadDiff(diff, total) {
+  reloadDiff = { diff, total };
   activeTab = 'System';
   renderPanels();
-  const box = $('diffbox');
-  if (!box) return;
-  if (!diff.length) { box.textContent = 'No changes on disk.'; return; }
+}
+function diffBox() {
+  const box = el('div', { 'data-scroll': 'diff', style: 'font-size:10px;color:#aaa;margin-top:8px;white-space:pre-wrap;max-height:30vh;overflow-y:auto' });
+  if (!reloadDiff) return box;
+  const { diff, total } = reloadDiff;
+  if (!diff.length) { box.textContent = 'No changes on disk.'; return box; }
   box.textContent = diff.join('\n') + (total > diff.length ? `\n… and ${total - diff.length} more` : '');
   const bar = el('div', { style: 'margin-top:8px;display:flex;gap:8px' });
   const apply = el('button', { class: 'bigbtn', style: 'font-size:15px' }, 'APPLY');
-  apply.onclick = () => { gm('reload-apply'); box.textContent = ''; };
+  apply.onclick = () => { gm('reload-apply'); reloadDiff = null; renderPanels(); };
   const cancel = el('button', { class: 'bigbtn ghost', style: 'font-size:15px' }, 'DISCARD');
-  cancel.onclick = () => { gm('reload-cancel'); box.textContent = ''; };
+  cancel.onclick = () => { gm('reload-cancel'); reloadDiff = null; renderPanels(); };
   bar.append(apply, cancel);
   box.appendChild(bar);
+  return box;
 }

@@ -3,6 +3,7 @@
 
 export const App = {
   seat: null, ws: null, view: null, art: null, staticData: null,
+  dead: false,   // the page was retired (seat taken over / bad key): loops must stop
   onState: () => {}, onEvent: () => {}, onJoined: () => {},
 };
 
@@ -13,10 +14,14 @@ export function connect(seat) {
   const urlKey = new URLSearchParams(location.search).get('key');
   if (urlKey) localStorage.setItem('off-key', urlKey);
   const key = localStorage.getItem('off-key') || undefined;
+  // The GM seat may need its own key (server GM_KEY): ?gmkey=... likewise.
+  const urlGmKey = new URLSearchParams(location.search).get('gmkey');
+  if (urlGmKey) localStorage.setItem('off-gmkey', urlGmKey);
+  const gmKey = seat === 'GM' ? localStorage.getItem('off-gmkey') || undefined : undefined;
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}`);
   App.ws = ws;
-  ws.onopen = () => ws.send(JSON.stringify({ t: 'hello', seat, key }));
+  ws.onopen = () => ws.send(JSON.stringify({ t: 'hello', seat, key, gmKey }));
   ws.onmessage = m => {
     const msg = JSON.parse(m.data);
     if (msg.t === 'joined') { App.art = msg.art; App.onJoined(msg); }
@@ -24,9 +29,19 @@ export function connect(seat) {
     if (msg.t === 'ev') for (const e of msg.events) handleCommonEvent(e);
   };
   ws.onclose = ev => {
-    if (ev.code === 4000) { document.body.innerHTML = '<div style="padding:40px;font-family:var(--disp);font-size:30px">SEAT TAKEN OVER ELSEWHERE.</div>'; return; }
+    if (App.dead) return;
+    if (ev.code === 4000) { retire('SEAT TAKEN OVER ELSEWHERE.'); return; }
+    // A wrong key never becomes right by retrying — say so and stop.
+    if (ev.code === 4001) { retire(`ACCESS KEY REJECTED. OPEN THIS PAGE WITH ?${seat === 'GM' ? 'key=…&gmkey=…' : 'key=…'} IN THE ADDRESS.`); return; }
     setTimeout(() => connect(seat), 1200);   // refresh-proof: rejoin the seat exactly
   };
+}
+
+function retire(text) {
+  App.dead = true;
+  if (musicEl) musicEl.pause();
+  document.body.innerHTML = '';
+  document.body.appendChild(el('div', { style: 'padding:40px;font-family:var(--disp);font-size:30px' }, text));
 }
 
 export function send(msg) { if (App.ws && App.ws.readyState === 1) App.ws.send(JSON.stringify(msg)); }
@@ -96,12 +111,17 @@ export function roomArt(name) {
   return null;
 }
 
+// Asset-relative path ('sprites/npcs/Guard #2.png') → URL, each segment encoded.
+export function assetUrl(relPath) {
+  return '/assets/' + String(relPath).split('/').map(encodeURIComponent).join('/');
+}
+
 // Render an element that shows the portrait if present, else the sprite frame,
 // else a named grey silhouette. Returns an HTMLElement.
 export function artEl(art, name, h = 84) {
   if (art && art.portrait) {
     const img = document.createElement('img');
-    img.src = `/assets/${art.portrait}`;
+    img.src = assetUrl(art.portrait);
     img.style.cssText = `height:${h}px;image-rendering:pixelated;filter:drop-shadow(0 8px 0 rgba(0,0,0,.25))`;
     img.alt = name;
     return img;
@@ -129,7 +149,7 @@ export function spriteFrameEl(spritePath, h = 84) {
     x.imageSmoothingEnabled = false;
     x.drawImage(img, cw, ch * 2, cw, ch, 0, 0, cw, ch);
   };
-  img.src = `/assets/${spritePath}`;
+  img.src = assetUrl(spritePath);
   canvas.style.height = `${h}px`;
   return canvas;
 }
@@ -137,7 +157,7 @@ export function spriteFrameEl(spritePath, h = 84) {
 // ---------- audio
 // Volume is per client, never shared: each seat sets its own and it persists
 // in this browser only.
-let musicEl = null, currentTrack = null, queueLen = 0;
+let musicEl = null, currentTrack = null, queueLen = 0, unlockPending = false;
 export function getVolume() {
   const v = parseFloat(localStorage.getItem('off-vol'));
   return Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.7;
@@ -175,9 +195,24 @@ export function syncJukebox(jb) {
   musicEl.loop = false;
   if (jb.track === currentTrack) return;
   currentTrack = jb.track;
-  musicEl.src = `/assets/${encodeURIComponent(jb.track).replace(/%2F/g, '/')}`;
+  musicEl.src = assetUrl(jb.track);
   musicEl.volume = getVolume();
-  if (!previewFile) musicEl.play().catch(() => {});   // a live preview keeps its duck
+  if (!previewFile) playMusic();   // a live preview keeps its duck
+}
+
+// Autoplay policy rejects play() after a refresh until the page is touched:
+// retry once on the next pointer/key press rather than staying silent.
+function playMusic() {
+  musicEl.play().catch(() => {
+    if (unlockPending) return;
+    unlockPending = true;
+    const retry = () => {
+      unlockPending = false;
+      removeEventListener('pointerdown', retry, true); removeEventListener('keydown', retry, true);
+      if (currentTrack && !previewFile && musicEl.paused) musicEl.play().catch(() => {});
+    };
+    addEventListener('pointerdown', retry, true); addEventListener('keydown', retry, true);
+  });
 }
 
 // ---------- GM-side track preview
@@ -195,7 +230,7 @@ export function previewTrack(file) {
     window.addEventListener('off-volume', () => { if (previewEl) previewEl.volume = getVolume(); });
   }
   previewFile = file;
-  previewEl.src = `/assets/${encodeURIComponent(file).replace(/%2F/g, '/')}`;
+  previewEl.src = assetUrl(file);
   previewEl.volume = getVolume();
   previewEl.play().catch(() => {});
 }
@@ -203,12 +238,12 @@ export function stopPreview() {
   if (!previewFile) return;
   previewFile = null;
   if (previewEl) previewEl.pause();
-  if (musicEl && currentTrack) musicEl.play().catch(() => {});   // un-duck the table's track
+  if (musicEl && currentTrack) playMusic();   // un-duck the table's track
 }
 export function previewingTrack() { return previewFile; }
 
 export function playStinger(file) {
-  const a = new Audio(`/assets/${encodeURIComponent(file).replace(/%2F/g, '/')}`);
+  const a = new Audio(assetUrl(file));
   a.volume = getVolume();
   a.play().catch(() => {});
 }
@@ -223,7 +258,12 @@ export function volumeSlider() {
     title: 'your music volume (only yours)',
   });
   input.oninput = () => setVolume(input.value / 100);
-  window.addEventListener('off-volume', () => { input.value = String(Math.round(getVolume() * 100)); });
+  // Panels rebuild and drop sliders; a detached one unhooks itself.
+  const sync = () => {
+    if (!input.isConnected) { window.removeEventListener('off-volume', sync); return; }
+    input.value = String(Math.round(getVolume() * 100));
+  };
+  window.addEventListener('off-volume', sync);
   wrap.appendChild(input);
   return wrap;
 }
@@ -241,17 +281,25 @@ export async function rescanAssets() {
 // resolved at import, so any chipset PNG paints any map. Composed once per
 // (map, chipset) into two canvases: ground, and the above-hero overlay that
 // draws over sprites. Rendering is async; callers redraw when ready.
+// Every caller's onReady fires once the entry is composed; a failed load is
+// retried by a later call after a short backoff (callers ask every frame).
 const canonCanvases = new Map();
-export function canonRoom(mapKey, chipset, onReady = () => {}) {
+export function canonRoom(mapKey, chipset, onReady) {
   const key = `${mapKey}|${chipset}`;
-  if (canonCanvases.has(key)) return canonCanvases.get(key);
-  const entry = { ready: false, ground: null, overlay: null, w: 0, h: 0, evc: [], chip: null };
+  const old = canonCanvases.get(key);
+  if (old && !(old.failedAt && performance.now() - old.failedAt > 5000)) {
+    if (!old.ready && !old.failedAt && onReady) old.waiters.push(onReady);
+    return old;
+  }
+  const entry = { ready: false, ground: null, overlay: null, w: 0, h: 0, evc: [], chip: null, waiters: [...(old ? old.waiters : []), ...(onReady ? [onReady] : [])], failedAt: 0 };
   canonCanvases.set(key, entry);
   (async () => {
     try {
-      const tm = await (await fetch(`/api/canon/${mapKey}/tilemap.json`)).json();
+      const res = await fetch(`/api/canon/${mapKey}/tilemap.json`);
+      if (!res.ok) throw new Error(`tilemap ${res.status}`);
+      const tm = await res.json();
       const raw = new Image();
-      raw.src = `/assets/level creation/chipset/${encodeURIComponent(chipset)}`;
+      raw.src = assetUrl(`level creation/chipset/${chipset}`);
       await raw.decode();
       // RM2k chipsets key transparency to a palette color, stored literally in
       // the PNG. The blank upper tile (F0) is pure key — sample it and knock
@@ -283,7 +331,7 @@ export function canonRoom(mapKey, chipset, onReady = () => {}) {
       if (tm.pano) {
         try {
           const pano = new Image();
-          pano.src = `/assets/level creation/Panorama/${encodeURIComponent(tm.pano)}.png`;
+          pano.src = assetUrl(`level creation/Panorama/${tm.pano}.png`);
           await pano.decode();
           for (let py = 0; py < entry.h; py += pano.height) {
             for (let px2 = 0; px2 < entry.w; px2 += pano.width) gx.drawImage(pano, px2, py);
@@ -307,8 +355,8 @@ export function canonRoom(mapKey, chipset, onReady = () => {}) {
       entry.ground = g; entry.overlay = o; entry.ready = true;
       entry.evc = tm.evc || [];   // conditioned scenery — drawn live, not baked
       entry.chip = img;
-      onReady();
-    } catch { /* missing map/chipset renders black — never blocks */ }
+      for (const fn of entry.waiters.splice(0)) fn();
+    } catch { entry.failedAt = performance.now(); /* missing map/chipset renders black — never blocks */ }
   })();
   return entry;
 }
@@ -478,8 +526,13 @@ export function statChangeChip(sc) {
     el('b', {}, arrow), `${sc.stat}·${sc.turnsLeft}t`);
 }
 
+// Floats mount in a fixed layer over the host's box (like crosshairOver), so a
+// host rebuilt mid-rise can't take its number with it.
 export function floatOver(container, text, style) {
-  const f = el('div', { class: `float ${style} show` }, text);
-  container.appendChild(f);
-  setTimeout(() => f.remove(), 1100);
+  const r = container.getBoundingClientRect();
+  if (!r.width && !r.height) return;   // host hidden — nothing to rise over
+  const layer = el('div', { style: `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:0;pointer-events:none;z-index:8` });
+  layer.appendChild(el('div', { class: `float ${style} show` }, text));
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), 1100);
 }
