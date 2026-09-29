@@ -11,7 +11,7 @@ stock checklists, per-leg quantities, and rest placement are nowhere in this cod
 cd off-ttrpg-repo/src
 npm install
 npm start          # http://localhost:8420
-npm test           # 55 engine rule tests
+npm test           # 82 engine rule tests
 ```
 
 Open the URL: the lobby offers six player seats and the Judge's seat (GM console).
@@ -91,7 +91,7 @@ server/engine/    formulas.js · members.js · battle.js — the rules, tested
 server/data/      transcription tables (see below) + the intro scene
 server/           dataload · state/persistence · scenes · server (HTTP+WS)
 client/           index (seats) · player.* · gm.* · common.* · roomkit.js
-tests/            55 rule tests, each named for the doc sentence it locks
+tests/            82 rule tests, each named for the doc sentence or bug it locks
 ```
 
 The three transcription tables are the only place doc prose was converted to data, each

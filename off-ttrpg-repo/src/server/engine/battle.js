@@ -17,19 +17,23 @@
 // - Party wipe: detect, freeze, announce — and then nothing.
 
 import {
-  elementMult, TIER_BASE, REVIVE_GAUGE, POISON_COMBAT_FRAC,
+  elementMult, REVIVE_GAUGE, POISON_COMBAT_FRAC,
   CURE_AUTO_TURN, ENEMY_SLOTS, RING,
   FIXED_TURN_STATUSES, THORNS_FRAC, FAMINE_FRAC, ringNext, ringPrev,
 } from '../../shared/constants.js';
 import {
-  statChangeAmount, pctMult, effectiveDef, currentElement, hasStatus,
+  pctMult, currentElement, hasStatus,
   playerRaw, enemyRaw, finalDamage, accuracyRoll, statusLandingChance, cureChance,
-  rollVariance, playerAtk, playerEsp,
+  rollVariance,
 } from './formulas.js';
 import { memberBase, gearEffects } from './members.js';
 
 let seq = 0;
 const uid = p => `${p}${++seq}`;
+// Lookups keyed by client/GM strings must not reach Object.prototype
+// ('constructor', 'toString', '__proto__').
+const own = (obj, key) => (obj && Object.hasOwn(obj, key) ? obj[key] : undefined);
+const SCRIPT_TABLES = ['moveEffects', 'triggers', 'rotations', 'passives'];
 
 export class Battle {
   constructor(data, campaign, encounter, { rng = Math.random, emit = () => {}, log = () => {}, present = null } = {}) {
@@ -54,7 +58,10 @@ export class Battle {
       m.gauge = 0; m.holding = false; m.defending = false; m.hastySecond = false;
       this.rollCrit(m);
     }
+    this.actingId = null;             // whose action is resolving right now (stat/element freshness)
+    // waves[0] always opens the fight; any other wave the GM marked 'launch' joins it.
     this.spawnWave(0, 'launch');
+    this.encounter.waves.forEach((w, i) => { if (i > 0 && w.trigger === 'launch') this.spawnWave(i, 'launch'); });
   }
 
   // ---------- helpers ----------
@@ -65,7 +72,6 @@ export class Battle {
   livingParty() { return this.party().filter(p => this.inRoster(p) && !p.down); }
   activeParty() { return this.party().filter(p => this.inRoster(p)); }
   livingEnemies() { return this.enemies.filter(e => !e.dead); }
-  memberByClass(k) { return this.party().find(p => p.klass === k); }
   find(id) { return this.party().find(p => p.id === id) || this.enemies.find(e => e.id === id); }
 
   log(entry) { this.logFn({ t: Date.now() - this.startedAt, ...entry }); }
@@ -98,7 +104,7 @@ export class Battle {
     let res = c.kind === 'player' ? memberBase(this.data, c).res : c.res;
     if (c.kind === 'player' && statusName) {
       const fx = gearEffects(this.data, c);
-      res += fx.res_vs[statusName] || 0;
+      res += own(fx.res_vs, statusName) || 0;
     }
     return res;
   }
@@ -123,7 +129,19 @@ export class Battle {
   // Template-level scripted passives (Source's per-action self-heal, boss
   // Purification / Sacred Mission mirrors, Chain Mastery on Add-On Alpha).
   templatePassives(e) {
-    return (this.data.scripts.passives || {})[e.template] || {};
+    return this.script('passives', e) || {};
+  }
+
+  // Scripts are keyed by the instance's scriptKey, not its (GM-renamable) template name.
+  script(table, e) {
+    return own(this.data.scripts[table], e.scriptKey || e.template);
+  }
+
+  // A GM copy carries its source's scriptKey; a compound-fight unit with no
+  // entry of its own (Pastel-burnt Body) runs the scripts of the entry it was cut from.
+  resolveScriptKey(tmpl, tmplName) {
+    const has = k => k && SCRIPT_TABLES.some(t => Object.hasOwn(this.data.scripts[t] || {}, k));
+    return [tmpl.scriptKey, tmplName, tmpl.name, tmpl.derivedFrom].find(has) || tmpl.scriptKey || tmplName;
   }
 
   // Defamed bookkeeping: everything the afflicted produces is recorded, and
@@ -136,8 +154,10 @@ export class Battle {
     else s.ledger[field] += value;
   }
 
+  // Negative Space is Omega's level-10 passive: only a Blinded from an Omega who has it counts.
   blindedByOmega(c) {
-    return c.statuses.some(s => s.name === 'Blinded' && s.applierClass === 'Omega');
+    return c.statuses.some(s => s.name === 'Blinded' && s.applierClass === 'Omega' &&
+      this.hasPassive(this.find(s.applierId), 'Negative Space'));
   }
 
   // ---------- waves & spawning ----------
@@ -147,19 +167,21 @@ export class Battle {
     wave.spawned = true;
     this.waveIndex = index;
     for (const q of wave.queue) this.spawnInstance(q, index);
-    this.announce(why === 'launch' ? 'BATTLE TIME.' : `Wave ${index + 1} arrives!`);
+    // Several 'launch' waves open the fight together under one announcement.
+    if (why !== 'launch' || index === 0) this.announce(why === 'launch' ? 'BATTLE TIME.' : `Wave ${index + 1} arrives!`);
     this.log({ ev: 'wave', index, why });
     return true;
   }
 
   spawnInstance(q, waveIdx) {
     const tmplName = q.template;
-    const tmpl = this.campaign.templates[tmplName] || this.data.enemiesByName[tmplName];
+    const tmpl = own(this.campaign.templates, tmplName) || own(this.data.enemiesByName, tmplName);
     if (!tmpl) { this.announce(`Unknown enemy template: ${tmplName}`); return null; }
     const o = q.overrides || {};
     const inst = {
       kind: 'enemy', id: uid('e'),
       template: tmplName,
+      scriptKey: this.resolveScriptKey(tmpl, tmplName),
       name: q.name || tmplName,
       element: o.element ?? tmpl.element,
       elementSet: null,
@@ -182,13 +204,14 @@ export class Battle {
       turnCount: 0, hastySecond: false, dead: false,
       firedTriggers: [], sprite: tmpl.sprite || null, portrait: tmpl.portrait || null,
     };
-    if (inst.slot == null) inst.slot = this.freeEnemySlot();
+    // Summons are capped by the slots (fireSummon checks first); a GM-built wave is never refused.
+    if (inst.slot == null) inst.slot = this.freeEnemySlot() ?? ((this.enemies.length % ENEMY_SLOTS) + 1);
     // Duplicates get letter suffixes so the table can call its targets:
     // the second "Common Spectre" renames the first to "Common Spectre A"
     // and becomes "Common Spectre B"; later spawns continue the lettering.
     if (!q.name) {
       this.nameCounts = this.nameCounts || {};
-      const n = (this.nameCounts[tmplName] = (this.nameCounts[tmplName] || 0) + 1);
+      const n = (this.nameCounts[tmplName] = (own(this.nameCounts, tmplName) || 0) + 1);
       if (n === 2) {
         const first = this.enemies.find(x => x.template === tmplName && x.name === tmplName);
         if (first) first.name = `${tmplName} A`;
@@ -199,24 +222,50 @@ export class Battle {
     if (inst.gaugeS == null && tmpl.gauge_phases) inst.gaugeS = Object.values(tmpl.gauge_phases)[0];
     if (inst.gaugeS == null) inst.gaugeS = 5.0;
     // Forms & rotations (Japhet): start in the first scripted form.
-    const forms = (this.data.scripts.rotations || {})[tmplName];
+    const forms = this.script('rotations', inst);
     if (forms) { inst.form = Object.keys(forms)[0]; inst.rotIdx = 0; }
     if (q.fake) inst.fake = true;
+    if (q.summoned) inst.summoned = true;
     inst.usedMoves = [];
     inst.timers = {};
     // GM ruling: enemies can carry items — they enter the encounter's shared pool.
     for (const [n, cnt] of Object.entries(q.items || {})) {
-      this.pool[n] = (this.pool[n] || 0) + cnt;
+      this.pool[n] = (own(this.pool, n) || 0) + cnt;
     }
     this.rollCrit(inst);
     this.enemies.push(inst);
     return inst;
   }
 
-  freeEnemySlot() {
+  freeSlots() {
     const used = new Set(this.livingEnemies().map(e => e.slot));
-    for (let i = 1; i <= ENEMY_SLOTS; i++) if (!used.has(i)) return i;
-    return ((this.enemies.length) % ENEMY_SLOTS) + 1;
+    const free = [];
+    for (let i = 1; i <= ENEMY_SLOTS; i++) if (!used.has(i)) free.push(i);
+    return free;
+  }
+
+  freeEnemySlot() {
+    return this.freeSlots()[0] ?? null;
+  }
+
+  // Scripted summons (triggers and moves). Only as many as there are free
+  // slots arrive — real ones before Facade's lies — and the GM hears of the rest.
+  fireSummon(e, { name, count, realCount }) {
+    const room = this.freeSlots().length;
+    const n = Math.min(count, room);
+    const real = Math.min(realCount ?? count, n);
+    const picks = [];
+    for (let i = 0; i < n; i++) picks.push(i >= real);
+    // shuffle which spawns are fakes so slot order tells nothing
+    for (let i = picks.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [picks[i], picks[j]] = [picks[j], picks[i]]; }
+    for (let i = 0; i < n; i++) {
+      this.spawnInstance({ template: name, control: 'ai', drop: { type: 'none' }, fake: picks[i], summoned: true }, e.wave);
+    }
+    if (n < count) {
+      this.emit({ kind: 'gm-note', text: `${e.name} summons ${count} × ${name}, but only ${n} fit — the enemy slots are full.` });
+      this.log({ ev: 'summon-capped', who: e.id, name, wanted: count, got: n });
+    }
+    return { n, real };
   }
 
   // ---------- the tick ----------
@@ -224,7 +273,18 @@ export class Battle {
     if (this.over || this.frozen || this.campaign.paused) return;
     this.elapsed += dt;
     for (const c of [...this.livingParty(), ...this.livingEnemies()]) {
-      if (c.holding) continue;
+      // A snapshot: an earlier combatant this tick may have ended the fight or felled c.
+      if (this.over || this.frozen) break;
+      if (this.dead(c)) continue;
+      if (c.holding) {
+        // Madness is the one exception to holding: a Mad holder (Madness landed
+        // while it waited) resolves now. Its fill already ran, so no second cure check.
+        if (hasStatus(c, 'Madness')) this.madnessAct(c);
+        // An AI enemy found holding was just handed back by the GM: it takes the
+        // turn it is holding, without re-running the fill.
+        else if (c.kind === 'enemy' && c.control === 'ai') this.aiAct(c);
+        continue;
+      }
       const secs = this.gaugeSeconds(c);
       c.gauge += dt / secs;
       if (c.gauge >= 1) { c.gauge = 1; this.onGaugeFill(c); }
@@ -256,16 +316,7 @@ export class Battle {
       return;
     }
 
-    if (hasStatus(c, 'Madness')) {
-      // The one place the engine acts without input: a normal Attack on a random
-      // member of its own party, including itself.
-      const pool = c.kind === 'player' ? this.livingParty() : this.livingEnemies();
-      const target = pool[Math.floor(this.rng() * pool.length)];
-      this.announce(`${this.dispName(c)} flails in Madness!`);
-      this.resolveBasicAttack(c, target, { madness: true });
-      this.spendTurn(c);
-      return;
-    }
+    if (hasStatus(c, 'Madness')) { this.madnessAct(c); return; }
 
     // Otherwise the gauge holds at full and waits.
     c.holding = true;
@@ -277,6 +328,20 @@ export class Battle {
     }
   }
 
+  // The one place the engine acts without input: a normal Attack on a random
+  // member of its own party, including itself. Reached from a fill, from a
+  // holder Madness landed on, and from Hasty's second action.
+  madnessAct(c) {
+    const pool = c.kind === 'player' ? this.livingParty() : this.livingEnemies();
+    const target = pool[Math.floor(this.rng() * pool.length)];
+    this.actingId = c.id;
+    try {
+      this.announce(`${this.dispName(c)} flails in Madness!`);
+      if (target) this.resolveBasicAttack(c, target, { madness: true });
+      this.spendTurn(c);
+    } finally { this.actingId = null; }
+  }
+
   dead(c) { return c.kind === 'player' ? c.down : c.dead; }
   dispName(c) { return c.kind === 'player' ? c.name : c.name; }
 
@@ -286,7 +351,7 @@ export class Battle {
       if (s.fixedTurns != null) continue;   // fixed-duration endgame statuses don't roll
       s.turnsAfflicted = s.turnsAfflicted ?? 0;
       if (s.turnsAfflicted >= CURE_AUTO_TURN - 1) { this.cureStatus(c, s.name, 'wore off'); continue; }
-      const chain = (s.applierClass === 'Alpha' && this.passiveActive('Alpha', 'Chain Mastery')) || s.chain;
+      const chain = (s.applierClass === 'Alpha' && this.hasPassive(this.find(s.applierId), 'Chain Mastery')) || s.chain;
       const chance = cureChance(this.effRes(c, s.name), s.turnsAfflicted, chain);
       if (this.rng() * 100 < chance) this.cureStatus(c, s.name, 'shaken off');
       else s.turnsAfflicted++;
@@ -307,10 +372,12 @@ export class Battle {
   // ---------- turn spending ----------
   spendTurn(c, { consumed = false } = {}) {
     // Hasty: acts twice per gauge fill; a charged crit applies to the first action only.
-    if (hasStatus(c, 'Hasty') && !c.hastySecond && !consumed && !this.dead(c)) {
+    if (hasStatus(c, 'Hasty') && !c.hastySecond && !consumed && !this.dead(c) && !this.over) {
       c.hastySecond = true;
       c.critCharged = false;
       c.holding = true;
+      // A Mad second action takes no input either (and the AI's is a Madness attack, not a move).
+      if (hasStatus(c, 'Madness')) { this.madnessAct(c); return; }
       if (c.kind === 'enemy' && c.control === 'ai') { this.aiAct(c); return; }
       this.emit(c.kind === 'enemy'
         ? { kind: 'gm-turn', enemyId: c.id, prompts: this.pendingTriggers(c).map(t => t.label), second: true }
@@ -324,7 +391,9 @@ export class Battle {
       const maxHp = c.kind === 'player' ? memberBase(this.data, c).hp : c.maxHp;
       this.applyDamage(c, Math.round(maxHp * THORNS_FRAC), { style: 'dmg', source: 'Thorns' });
     }
-    // Durations count the afflicted's own turns.
+    // Durations count the afflicted's own turns. Anything landing after this
+    // countdown (Defamed's reflection) lands outside the turn, so it is not fresh.
+    if (this.actingId === c.id) this.actingId = null;
     for (const sc of [...c.statChanges]) {
       if (sc.fresh) { sc.fresh = false; continue; }
       sc.turnsLeft--;
@@ -389,10 +458,7 @@ export class Battle {
     } else {
       // A Facade fake vanishes at the first touch — the wasted action is the point.
       if (target.fake) {
-        target.dead = true; target.drop = { type: 'none' };
-        this.announce(`${target.name} scatters — it was a lie.`);
-        this.log({ ev: 'fake-vanish', who: target.id });
-        this.checkEnd();
+        this.leaveField(target, `${target.name} scatters — it was a lie.`, 'fake-vanish');
         return 0;
       }
       // Scripted Sacred Mission mirror (the Batter): first lethal blow leaves 1 HP.
@@ -428,6 +494,16 @@ export class Battle {
     this.checkEnd();
   }
 
+  // Leaving the field without a kill (a flee, a fake scattering): the same
+  // cleanup as a death — gauge cleared, its Taunts released — but no drop, no killer.
+  leaveField(e, text, ev) {
+    e.dead = true; e.holding = false; e.gauge = 0; e.critCharged = false; e.drop = { type: 'none' };
+    this.announce(text);
+    this.log({ ev, who: e.id });
+    this.onApplierDeath(e.id);
+    this.checkEnd();
+  }
+
   // Taunted ends immediately when the character who applied it dies.
   onApplierDeath(id) {
     for (const c of [...this.party(), ...this.enemies]) {
@@ -447,9 +523,23 @@ export class Battle {
       return;
     }
     if (this.livingEnemies().length === 0) {
-      const next = this.encounter.waves.findIndex(w => !w.spawned && (w.trigger || 'prev-death') === 'prev-death');
-      if (next >= 0) { this.spawnWave(next, 'prev-death'); return; }
-      if (this.encounter.waves.some(w => !w.spawned)) return; // manual waves remain — GM's call
+      // Waves come in order: only the first unspawned one is considered. A
+      // manual wave there is the GM's call, and everything behind it waits.
+      let next;
+      while ((next = this.encounter.waves.findIndex(w => !w.spawned)) >= 0) {
+        if ((this.encounter.waves[next].trigger || 'prev-death') !== 'prev-death') return;
+        this.spawnWave(next, 'prev-death');
+        if (this.livingEnemies().length) return;
+      }
+      // Nothing ever took the field (an empty or unknown-template launch) is
+      // not a victory — tell the GM once and leave the fight to them.
+      if (!this.enemies.length) {
+        if (!this.emptyNoted) {
+          this.emptyNoted = true;
+          this.emit({ kind: 'gm-note', text: 'No enemy has spawned in this encounter — add or spawn one, or end the encounter.' });
+        }
+        return;
+      }
       this.win();
     }
   }
@@ -484,15 +574,20 @@ export class Battle {
   }
 
   grantItem(name, n) {
-    this.campaign.inventory[name] = (this.campaign.inventory[name] || 0) + n;
+    this.campaign.inventory[name] = (own(this.campaign.inventory, name) || 0) + n;
   }
 
   // ---------- statuses / stat changes / element changes ----------
-  passiveActive(klass, passiveName) {
-    const m = this.memberByClass(klass);
-    if (!m || m.down) return false;
-    const p = this.data.classKits.classes[klass].passives.find(x => x.name === passiveName);
+  // A passive belongs to one member: in the fight (roster), standing, at its level.
+  hasPassive(m, passiveName) {
+    if (!m || m.kind !== 'player' || m.down || !this.inRoster(m)) return false;
+    const p = this.data.classKits.classes[m.klass].passives.find(x => x.name === passiveName);
     return !!p && m.level >= p.level;
+  }
+
+  // Party-wide passives (Light Fingers): any fielded member of the class who has it.
+  passiveActive(klass, passiveName) {
+    return this.livingParty().some(m => m.klass === klass && this.hasPassive(m, passiveName));
   }
 
   // Returns true if applied. tier: explicit tier or looked up on enemy targets.
@@ -510,10 +605,10 @@ export class Battle {
     }
     if (!force) {
       let tier = tierOverride;
-      if (tier == null) tier = target.kind === 'enemy' ? (target.statusTiers[statusName] || 'neutral') : 'neutral';
+      if (tier == null) tier = target.kind === 'enemy' ? (own(target.statusTiers, statusName) || 'neutral') : 'neutral';
       const alphaMods = applier && applier.kind === 'player' && applier.klass === 'Alpha' ? {
-        expertise: this.passiveActive('Alpha', 'Status Expertise'),
-        corrosion: this.passiveActive('Alpha', 'Corrosion'),
+        expertise: this.hasPassive(applier, 'Status Expertise'),
+        corrosion: this.hasPassive(applier, 'Corrosion'),
       } : {};
       const chance = statusLandingChance(tier, this.effRes(target, statusName), alphaMods);
       if (chance == null) { this.float(target.id, 'IMMUNE', 'miss'); return false; }
@@ -536,12 +631,12 @@ export class Battle {
       turnsAfflicted: 0, permanent,
       chain: applier && applier.kind === 'enemy' && this.templatePassives(applier).chainMastery ? true : undefined,
     };
-    if (FIXED_TURN_STATUSES[statusName] != null) rec.fixedTurns = FIXED_TURN_STATUSES[statusName];
+    if (own(FIXED_TURN_STATUSES, statusName) != null) rec.fixedTurns = FIXED_TURN_STATUSES[statusName];
     target.statuses.push(rec);
     if (statusName === 'Defamed') { rec.ledger = { dmg: 0, heal: 0, buffs: [] }; target.critCharged = true; }
     // Negative Space: a charged crit held by an enemy is lost the moment Blinded lands.
     if (statusName === 'Blinded' && target.kind === 'enemy' &&
-        rec.applierClass === 'Omega' && this.passiveActive('Omega', 'Negative Space')) {
+        rec.applierClass === 'Omega' && this.hasPassive(applier, 'Negative Space')) {
       target.critCharged = false;
     }
     this.announce(`${this.dispName(target)} is ${statusName}!`);
@@ -562,7 +657,7 @@ export class Battle {
     const had = target.statuses.length > 0;
     for (const s of [...target.statuses]) this.cureStatus(target, s.name);
     // Fixer: whenever Omega cures statuses, it also strips one stat Down from the same target.
-    if (curedBy && curedBy.kind === 'player' && curedBy.klass === 'Omega' && this.passiveActive('Omega', 'Fixer')) {
+    if (curedBy && curedBy.kind === 'player' && curedBy.klass === 'Omega' && this.hasPassive(curedBy, 'Fixer')) {
       const down = target.statChanges.find(sc => sc.dir === 'down');
       if (down) {
         target.statChanges.splice(target.statChanges.indexOf(down), 1);
@@ -586,8 +681,10 @@ export class Battle {
     if (existing) return 'blocked';   // the first application holds until it expires
     let t = turns;
     // Artistic Mastery: Epsilon's Dramas last 1 additional turn.
-    if (source && source.tag === 'drama' && this.passiveActive('Epsilon', 'Artistic Mastery')) t += 1;
-    target.statChanges.push({ stat, dir, amount, turnsLeft: t, fresh: true, tag: source?.tag || null });
+    if (source && source.tag === 'drama' && this.hasPassive(source.user, 'Artistic Mastery')) t += 1;
+    // Fresh (skips one countdown) only when it lands during the holder's own
+    // action, before that turn's countdown; from anyone else it counts from the next turn.
+    target.statChanges.push({ stat, dir, amount, turnsLeft: t, fresh: this.actingId === target.id, tag: source?.tag || null });
     this.announce(`${this.dispName(target)}: ${stat} ${dir === 'up' ? 'Up' : 'Down'} ${stat === 'DEF' ? (dir === 'up' ? '+' : '−') + amount : amount + '%'} (${t}t).`);
     this.log({ ev: 'statchange', target: target.id, stat, dir, amount, turns: t });
     return 'applied';
@@ -596,7 +693,7 @@ export class Battle {
   // One element change per target; a change to the native element cancels instead.
   applyElementSet(target, element, applier, { announceAs = null } = {}) {
     // Sweet Madness: the Burnt's own element can never be changed, including by itself.
-    if (target.kind === 'player' && target.klass === 'Burnt' && this.passiveActive('Burnt', 'Sweet Madness')) {
+    if (target.kind === 'player' && target.klass === 'Burnt' && this.hasPassive(target, 'Sweet Madness')) {
       this.float(target.id, 'IMMUNE', 'miss');
       return false;
     }
@@ -611,8 +708,9 @@ export class Battle {
     }
     if (element === target.element) return false;  // setting native with no change running: nothing to cancel
     let turns = 2;
-    if (applier && applier.kind === 'player' && applier.klass === 'Burnt' && this.passiveActive('Burnt', 'Scorched')) turns = 3;
-    target.elementSet = { element, turnsLeft: turns, fresh: true };
+    if (applier && applier.kind === 'player' && applier.klass === 'Burnt' && this.hasPassive(applier, 'Scorched')) turns = 3;
+    // "Until the end of the changed character's second turn": fresh only if changed during its own action.
+    target.elementSet = { element, turnsLeft: turns, fresh: this.actingId === target.id };
     this.announce(`${this.dispName(target)}'s element becomes ${element}!`);
     this.log({ ev: 'element-set', target: target.id, element, turns });
     return true;
@@ -653,7 +751,11 @@ export class Battle {
   playerAction(p, action) {
     if (!this.canAct(p)) return { ok: false, refuse: true };
     if (hasStatus(p, 'Madness')) return { ok: false, refuse: true };  // no input accepted
+    this.actingId = p.id;
+    try { return this.resolvePlayerAction(p, action); } finally { this.actingId = null; }
+  }
 
+  resolvePlayerAction(p, action) {
     // Taunted: single-target actions may only target the applier.
     const taunt = p.statuses.find(s => s.name === 'Taunted');
 
@@ -755,7 +857,7 @@ export class Battle {
   offensiveModifiers(user, target, raw) {
     // Purification: +25% against enemies at or below 30% HP.
     if (user.kind === 'player' && user.klass === 'Purifier' && target.kind === 'enemy' &&
-        this.passiveActive('Purifier', 'Purification') && target.hp / target.maxHp <= 0.3) {
+        this.hasPassive(user, 'Purification') && target.hp / target.maxHp <= 0.3) {
       raw *= 1.25;
     }
     return raw;
@@ -850,7 +952,7 @@ export class Battle {
       }
       if (sp.doubleIfTargetBlinded && hasStatus(target, 'Blinded')) raw *= 2;
       // Standing Ovation: while any Drama is active, Epsilon's Tragedies deal +20%.
-      if ((rider.tags || []).includes('tragedy') && this.passiveActive('Epsilon', 'Standing Ovation') &&
+      if ((rider.tags || []).includes('tragedy') && this.hasPassive(p, 'Standing Ovation') &&
           this.livingParty().some(m => m.statChanges.some(sc => sc.tag === 'drama'))) {
         raw *= 1.2;
       }
@@ -877,7 +979,7 @@ export class Battle {
       if (this.dead(target) && e.type !== 'cureAllStatuses') continue;
       if (e.type === 'status') this.tryApplyStatus(target, e.status, p);
       else if (e.type === 'statChange') {
-        const res = this.applyStatChange(target, e, { tag: (rider.tags || [])[0] || null });
+        const res = this.applyStatChange(target, e, { tag: (rider.tags || [])[0] || null, user: p });
         if (res === 'applied' && e.dir === 'up' && target.kind === p.kind) this.trackDefamed(p, 'buffs', { stat: e.stat, dir: e.dir, amount: e.amount, turns: e.turns });
       }
       else if (e.type === 'elementSet') this.applyElementSet(target, e.element === 'choose' ? chosenElement : e.element, p);
@@ -900,7 +1002,8 @@ export class Battle {
   heal(target, amt) {
     if (this.dead(target)) return 0;
     const maxHp = target.kind === 'player' ? memberBase(this.data, target).hp : target.maxHp;
-    const healed = Math.min(amt, maxHp - target.hp);
+    // Never negative: HP above max (a GM patch, a level drop) is left alone, not trimmed.
+    const healed = Math.max(0, Math.min(amt, maxHp - target.hp));
     target.hp += healed;
     this.float(target.id, `+${healed}`, 'heal');
     this.log({ ev: 'heal', target: target.id, amt: healed });
@@ -934,16 +1037,15 @@ export class Battle {
   doItem(p, itemName, targetId, { taunt = null } = {}) {
     if (hasStatus(p, 'Corrupted')) return { ok: false, refuse: true };   // Cob's variant also locks items
     const inv = this.campaign.inventory;
-    if (!inv[itemName] || inv[itemName] <= 0) return { ok: false, refuse: true };
-    const item = this.data.itemsByName[itemName];
+    if (!(own(inv, itemName) > 0)) return { ok: false, refuse: true };
+    const item = own(this.data.itemsByName, itemName);
     if (!item) return { ok: false, refuse: true };
     if (item.effect.outOfCombatOnly) return { ok: false, refuse: true };
     const res = this.applyItemEffect(p, item, targetId, { taunt });
     if (!res.ok) return res;
     this.combatFx('item', 'item', p, targetId && this.find(targetId) ? [this.find(targetId)] : [p]);
     // Light Fingers: whenever any party member uses an Object, 5% chance it is not consumed.
-    const bandit = this.memberByClass('Bandit');
-    const saved = bandit && !bandit.down && bandit.level >= 2 && this.rng() < 0.05;
+    const saved = this.passiveActive('Bandit', 'Light Fingers') && this.rng() < 0.05;
     if (saved) this.announce('Light Fingers — the item is not consumed!');
     else inv[itemName]--;
     this.log({ ev: 'item', who: p.id, item: itemName, target: targetId, saved });
@@ -1022,7 +1124,7 @@ export class Battle {
 
   // ---------- enemy turns ----------
   allTriggers(e) {
-    return this.data.scripts.triggers[e.template] || [];
+    return this.script('triggers', e) || [];
   }
 
   pendingTriggers(e) {
@@ -1041,10 +1143,12 @@ export class Battle {
       const next = e.timers[t.id] ?? w.everySeconds;
       return this.elapsed >= next;
     }
-    if (w.allyDied && this.enemies.some(x => x !== e && x.dead && !x.fled)) return true;
+    // A fallen ally is a real one: fled, Facade fakes, and summons don't count.
+    if (w.allyDied && this.enemies.some(x => x !== e && x.dead && !x.fled && !x.fake && !x.summoned)) return true;
     if (w.watchAgeGte != null) return !!e.watch && e.turnCount - e.watch.setAtTurn >= w.watchAgeGte - 1;
     if (w.hpPctLte != null && pct <= w.hpPctLte) return true;
-    if (w.turn != null && e.turnCount + 1 === w.turn) return true;
+    // '>=': a turn consumed by Palsied/Asleep delays the trigger, never loses it (firedTriggers keeps it once).
+    if (w.turn != null && e.turnCount + 1 >= w.turn) return true;
     if (w.orTurn != null && e.turnCount + 1 >= w.orTurn) return true;
     return false;
   }
@@ -1059,7 +1163,11 @@ export class Battle {
     return true;
   }
 
-  fireTrigger(e, trigger) {
+  // spend: the AI's scripted trigger is its turn (standing ruling); the GM's
+  // hand costs the creature nothing (gmEnemyAction passes false).
+  fireTrigger(e, trigger, { spend = true } = {}) {
+    // A repeating telegraphed trigger telegraphs again before its next firing.
+    if (e.telegraphed) e.telegraphed = e.telegraphed.filter(id => id !== trigger.id);
     if (trigger.when && trigger.when.everySeconds != null) {
       e.timers[trigger.id] = (e.timers[trigger.id] ?? trigger.when.everySeconds) + trigger.when.everySeconds;
     } else {
@@ -1076,16 +1184,8 @@ export class Battle {
       for (const t of this.livingParty()) this.tryApplyStatus(t, a.partyStatus.status, e);
     }
     if (a.summon) {
-      const total = a.summon.count;
-      const real = a.summon.realCount ?? total;
-      const picks = [];
-      for (let i = 0; i < total; i++) picks.push(i >= real);
-      // shuffle which spawns are fakes so slot order tells nothing
-      for (let i = picks.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [picks[i], picks[j]] = [picks[j], picks[i]]; }
-      for (let i = 0; i < total; i++) {
-        this.spawnInstance({ template: a.summon.name, control: 'ai', drop: { type: 'none' }, fake: picks[i] }, e.wave);
-      }
-      this.announce(`${e.name} summons ${total} × ${a.summon.name}!`);
+      const { n } = this.fireSummon(e, a.summon);
+      if (n) this.announce(`${e.name} summons ${n} × ${a.summon.name}!`);
     }
     if (a.selfStatus) {
       this.tryApplyStatus(e, a.selfStatus.status, null, { permanent: !!a.selfStatus.permanent, force: true });
@@ -1151,18 +1251,16 @@ export class Battle {
     }
     if (a.forfeitDrop) e.drop = { type: 'none' };
     if (a.flee && !e.dead) {
-      e.dead = true; e.fled = true; e.drop = { type: 'none' };
-      this.announce(`${e.name} slips away!`);
-      this.log({ ev: 'flee', who: e.id });
-      this.checkEnd();
+      e.fled = true;
+      this.leaveField(e, `${e.name} slips away!`, 'flee');
     }
     if (a.die && !e.dead) this.killEnemy(e, null);
-    if (!e.dead) this.spendTurn(e);
+    if (spend && !e.dead) this.spendTurn(e);
   }
 
   moveFx(e, move) {
-    const base = (this.data.scripts.moveEffects[e.template] || {})[move.n] || {};
-    const overlay = (e.moveFxOverlay || {})[move.n] || {};
+    const base = own(this.script('moveEffects', e), move.n) || {};
+    const overlay = own(e.moveFxOverlay, move.n) || {};
     return { ...base, ...overlay };
   }
 
@@ -1179,6 +1277,11 @@ export class Battle {
   }
 
   aiAct(e) {
+    this.actingId = e.id;
+    try { this.resolveAiAct(e); } finally { this.actingId = null; }
+  }
+
+  resolveAiAct(e) {
     // Scripted behaviors auto-fire for AI-controlled instances only.
     const pending = this.pendingTriggers(e);
     if (pending.length) {
@@ -1190,7 +1293,7 @@ export class Battle {
     const moves = this.legalMoves(e);
     if (!moves.length) { this.spendTurn(e); return; }
     // Canonical rotations (Japhet) are stage directions: the AI follows the cycle.
-    const rotations = (this.data.scripts.rotations || {})[e.template];
+    const rotations = this.script('rotations', e);
     let move;
     if (rotations && e.form && rotations[e.form] && rotations[e.form].length) {
       const cycle = rotations[e.form];
@@ -1213,10 +1316,17 @@ export class Battle {
       // and it costs the creature nothing.
       const t = this.allTriggers(e).find(x => x.id === action.triggerId);
       if (!t || this.triggerSpent(e, t)) return { ok: false, refuse: true };
-      this.fireTrigger(e, t);
+      // Fired while it holds, the effects land inside its turn (fresh); mid-fill, from outside.
+      this.actingId = e.holding ? e.id : null;
+      try { this.fireTrigger(e, t, { spend: false }); } finally { this.actingId = null; }
       return { ok: true };
     }
     if (!e.holding) return { ok: false, refuse: true };   // acting spends the turn — that needs the gauge
+    this.actingId = e.id;
+    try { return this.resolveGmAction(e, action); } finally { this.actingId = null; }
+  }
+
+  resolveGmAction(e, action) {
     if (action.kind === 'defend') {
       e.defending = true;
       this.announce(`${e.name} defends.`);
@@ -1224,8 +1334,8 @@ export class Battle {
       return { ok: true };
     }
     if (action.kind === 'pool-item') {
-      if (!this.pool[action.item] || this.pool[action.item] <= 0) return { ok: false, refuse: true };
-      const item = this.data.itemsByName[action.item];
+      if (!(own(this.pool, action.item) > 0)) return { ok: false, refuse: true };
+      const item = own(this.data.itemsByName, action.item);
       if (!item) return { ok: false, refuse: true };
       const res = this.applyItemEffect(e, item, action.targetId, { byEnemy: e });
       if (!res.ok) return res;
@@ -1291,15 +1401,22 @@ export class Battle {
     let attackEl = currentElement(e);
     if (fx.forceElement) attackEl = fx.forceElement;
     if (fx.randomElement) attackEl = RING[Math.floor(this.rng() * 4)];
-    if (fx.attackElementOwnWeakness) attackEl = ringPrev(currentElement(e));   // the element that beats him
+    if (fx.attackElementOwnWeakness) {
+      // The element that beats him. Before any reroll his element is off the ring
+      // ('rotating (Impure)'), so there is no weakness yet: a random ring element.
+      const cur = currentElement(e);
+      attackEl = RING.includes(cur) ? ringPrev(cur) : RING[Math.floor(this.rng() * 4)];
+    }
 
     // Self-directed verbs.
     if (fx.selfDamage) this.applyDamage(e, Math.round(fx.selfDamage * rollVariance(10, this.rng)), { style: 'dmg', source: e.id });
     if (fx.selfHeal) this.heal(e, fx.selfHeal);
     if (fx.selfHealPctMax) this.heal(e, Math.round(e.maxHp * fx.selfHealPctMax / 100));
     if (fx.selfRandomElement) {
+      // Uniform over the ring minus whatever he is right now (a native off the ring filters nothing).
+      const choices = RING.filter(x => x !== currentElement(e));
       e.elementSet = null;
-      this.applyElementSet(e, RING.filter(x => x !== e.element)[Math.floor(this.rng() * 3)], null);
+      this.applyElementSet(e, choices[Math.floor(this.rng() * choices.length)], null);
       if (e.elementSet) e.elementSet.turnsLeft = 999;   // his own instability, rerolled by the move, not the clock
     }
 
@@ -1350,7 +1467,8 @@ export class Battle {
         for (const st of statuses) this.tryApplyStatus(target, st, e);
         if (fx.statChange) this.applyStatChange(target, { ...fx.statChange });
         if (fx.setElementRandom) {
-          const el = RING.filter(x => x !== target.element)[Math.floor(this.rng() * 3)];
+          const choices = RING.filter(x => x !== target.element);
+          const el = choices[Math.floor(this.rng() * choices.length)];
           this.applyElementSet(target, el, e);
         }
         if (fx.drainCp) {
@@ -1368,13 +1486,8 @@ export class Battle {
       }
     }
     if (fx.summon) {
-      const total = fx.summon.count;
-      const real = fx.summon.realCount ?? total;
-      const picks = [];
-      for (let i = 0; i < total; i++) picks.push(i >= real);
-      for (let i = picks.length - 1; i > 0; i--) { const j = Math.floor(this.rng() * (i + 1)); [picks[i], picks[j]] = [picks[j], picks[i]]; }
-      for (let i = 0; i < total; i++) this.spawnInstance({ template: fx.summon.name, control: 'ai', drop: { type: 'none' }, fake: picks[i] }, e.wave);
-      this.announce(`${e.name} conjures ${total} × ${fx.summon.name}${real < total ? ' — but which is real?' : ''}!`);
+      const { n, real } = this.fireSummon(e, fx.summon);
+      if (n) this.announce(`${e.name} conjures ${n} × ${fx.summon.name}${real < n ? ' — but which is real?' : ''}!`);
     }
     // Source's cadence: a self-heal rides every action the template takes.
     const passives = this.templatePassives(e);
