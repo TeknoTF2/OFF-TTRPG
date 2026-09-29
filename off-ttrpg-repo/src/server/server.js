@@ -3,12 +3,12 @@
 // GM-side operations are never restricted.
 
 import http from 'node:http';
-import { readFileSync, existsSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync, mkdirSync, createReadStream } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 
-import { loadAll, REPO_ROOT, ASSETS_DIR } from './dataload.js';
+import { loadAll, ASSETS_DIR } from './dataload.js';
 import { Store, newCampaign } from './state.js';
 import { Battle } from './engine/battle.js';
 import { SceneRun } from './scenes.js';
@@ -26,6 +26,11 @@ mkdirSync(VAR_DIR, { recursive: true });
 // Optional shared key for public hosting: set ACCESS_KEY and clients must
 // present it to claim a seat. Left unset, seats are open (private table).
 const ACCESS_KEY = process.env.ACCESS_KEY || null;
+// Optional GM key: with it set, the Judge's seat also needs ?gmkey=... — on a
+// public URL the shared ACCESS_KEY alone would let any player take the GM seat.
+const GM_KEY = process.env.GM_KEY || null;
+// Own-property lookup for keys that come off the wire ('constructor', 'toString'…).
+const has = (o, k) => o != null && typeof k === 'string' && Object.hasOwn(o, k);
 
 let data = loadAll();
 const store = new Store(data, VAR_DIR);
@@ -76,6 +81,11 @@ function campaign() {
   c.rooms = c.rooms || {};
   c.notes = c.notes || {};
   c.gmAvatar = c.gmAvatar || { on: false, sprite: null, name: 'The Judge' };
+  return c;
+}
+// Run whenever a campaign object is (re)loaded: from disk, a snapshot, or undo.
+function migrateCampaign() {
+  const c = campaign();
   // Retire the old PNG-based Zone 0 built-ins — canon maps replace them.
   for (const name of Object.keys(c.rooms)) {
     if ((c.notes[`builtinver:${name}`] || 0) && !c.rooms[name].imported) {
@@ -84,7 +94,14 @@ function campaign() {
       delete c.notes[`roomzone:${name}`];
     }
   }
-  return c;
+  // Battles don't survive a restart or a restore: a saved 'battle' mode with no
+  // live Battle would strand every client between screens.
+  if (c.mode === 'battle' && !battle) {
+    c.mode = 'overworld';
+    for (const m of c.party) { m.holding = false; m.gauge = 0; m.defending = false; }
+  }
+  if (c.mode === 'scene' && (!c.scene || c.scene.done)) { c.scene = null; c.mode = 'overworld'; }
+  for (const r of Object.values(c.rooms)) for (const p of r.pieces || []) delete p._pinged;
 }
 function emit(ev) { eventQueue.push(ev); }
 
@@ -97,9 +114,12 @@ const FX_SOUNDS = {
   heal: ['revive3'],
   item: ['item1'],
 };
+let stingerCache = { at: 0, files: [] };
 function fxStinger(sound) {
   const cands = FX_SOUNDS[sound] || [];
-  const files = assetTree().stingers;
+  // Walking the asset tree is ~800 stats; combat sounds fire constantly.
+  if (Date.now() - stingerCache.at > 30000) stingerCache = { at: Date.now(), files: assetTree().stingers };
+  const files = stingerCache.files;
   const hits = [];
   for (const cand of cands) {
     const f = files.find(f2 => path.basename(f2).toLowerCase().replace(/\.[a-z0-9]+$/, '').replace(/[^a-z0-9]/g, '').endsWith(cand));
@@ -133,6 +153,7 @@ function currentRoom() {
 // Restore the active scene / battle links after load
 function rebuildSceneRun() {
   const c = campaign();
+  sceneRun = null;
   if (c.scene && !c.scene.done) {
     const def = c.scenes[c.scene.sceneId] || (c.scene.sceneId === 'intro' ? introScene : null);
     if (def) {
@@ -141,6 +162,7 @@ function rebuildSceneRun() {
     }
   }
 }
+migrateCampaign();
 rebuildSceneRun();
 
 // ---------------------------------------------------------------- asset tree
@@ -248,7 +270,7 @@ function memberView(m, { self = false } = {}) {
     gaugeSeconds: battle ? battle.gaugeSeconds(m) : Math.max(1, 40 / base.agi),
     statuses: m.statuses.map(s => ({ name: s.name, turns: s.turnsAfflicted ?? 0 })),
     statChanges: m.statChanges.map(sc => ({ stat: sc.stat, dir: sc.dir, amount: sc.amount, turnsLeft: sc.turnsLeft })),
-    gender: m.gender, flavor: m.flavor,
+    gender: m.gender, flavor: m.flavor, inVehicle: !!m.inVehicle,
   };
   if (self) {
     v.stats = base;
@@ -320,7 +342,6 @@ function battleViewFor(seat) {
 function viewFor(seat) {
   const c = campaign();
   const gm = seat === 'GM';
-  const me = c.party.find(m => m.id === seat);
   const view = {
     seat, mode: c.mode, paused: c.paused, location: c.location,
     credits: c.credits, inventory: c.inventory,
@@ -342,10 +363,12 @@ function viewFor(seat) {
   };
   if (gm) {
     view.templates = Object.keys(c.templates);
+    view.templateDefs = c.templates;      // the editor reopens overlays as edited
     view.encounters = Object.keys(c.encounters);
+    view.encounterDefs = c.encounters;    // "load saved…" opens the server's copy
     view.notes = c.notes;
     view.snapshots = store.listSnapshots().slice(0, 30);
-    view.undo = store.lastUndo ? store.lastUndo.desc : null;
+    view.undo = store.undoDesc();
     view.logs = c.log.map(l => ({ id: l.id, name: l.name, startedAt: l.startedAt, entries: l.entries.length }));
     view.zoneDropTables = c.zoneDropTables;
     view.rooms = Object.keys(c.rooms);
@@ -386,7 +409,7 @@ function flushEvents() {
   for (const [seat, ws] of seats) {
     if (ws.readyState !== 1) continue;
     const filtered = evs.filter(e => {
-      if (e.kind === 'gm-turn' || e.kind === 'gm-note') return seat === 'GM';
+      if (e.kind === 'gm-turn' || e.kind === 'gm-note' || e.kind === 'reload-diff') return seat === 'GM';
       if (e.kind === 'your-turn') return e.playerId === seat || seat === 'GM';
       if (e.kind === 'private') return e.seat === seat;
       if (e.kind === 'keypad-attempt') return seat === 'GM';
@@ -483,6 +506,7 @@ function setLocation(zone, name) {
   c.positions = {};
   const spawn = room && room.spawn ? room.spawn : { x: 48, y: 48 };
   c.party.forEach((m, i) => { c.positions[m.id] = { x: spawn.x + (i % 3) * 20, y: spawn.y + Math.floor(i / 3) * 20, facing: 0 }; });
+  if (c.gmAvatar && c.gmAvatar.on) c.positions.GM = { x: spawn.x + 60, y: spawn.y, facing: 0 };   // the avatar travels too
   if (room && room.music) { c.jukebox.track = room.music; c.jukebox.playing = true; }
   if (c.mode !== 'battle' && c.mode !== 'shop') c.mode = 'overworld';
   emit({ kind: 'announce', text: `The party arrives: ${name}.` });
@@ -492,9 +516,9 @@ function setLocation(zone, name) {
 // ---------------------------------------------------------------- item use (out of combat)
 function outOfCombatItem(userSeat, itemName, targetSeat) {
   const c = campaign();
-  if (!c.inventory[itemName] || c.inventory[itemName] <= 0) return;
-  const item = data.itemsByName[itemName];
-  if (!item) return;
+  if (!has(c.inventory, itemName) || !(c.inventory[itemName] > 0)) return;
+  const item = has(data.itemsByName, itemName) ? data.itemsByName[itemName] : null;
+  if (!item || !item.effect) return;
   const target = c.party.find(m => m.id === targetSeat) || c.party.find(m => m.id === userSeat);
   const fx = item.effect;
   let used = false;
@@ -552,8 +576,8 @@ function defaultStock() {
 function sellPrice(name) {
   const c = campaign();
   const mult = ZONE_PRICE_MULT[c.location.zone] || 1;
-  if (c.shop && c.shop.stock[name]) return Math.floor(c.shop.stock[name].price / 2);
-  const it = data.itemsByName[name];
+  if (c.shop && has(c.shop.stock, name) && Number.isFinite(c.shop.stock[name].price)) return Math.floor(c.shop.stock[name].price / 2);
+  const it = has(data.itemsByName, name) ? data.itemsByName[name] : null;
   if (it && it.priceZ1 != null) return Math.floor(it.priceZ1 * mult / 2);
   const g = findGearItem(data, name);
   if (g && g.item.price != null) return Math.floor(g.item.price / 2);
@@ -612,9 +636,9 @@ function handlePlayer(seat, msg) {
     case 'equip': {
       if (battle) return;   // equipment swaps out of combat only
       const { slot, item } = msg;
-      if (!(slot in me.equipment)) return;
+      if (!has(me.equipment, slot)) return;
       if (item == null) { me.equipment[slot] = null; touch(); break; }
-      if (!c.gearOwned || !c.gearOwned[item]) return;
+      if (!has(c.gearOwned, item)) return;
       const v = validateEquip(data, me, slot, item);
       if (!v.ok) return;   // silent backstop — the UI never offered this
       // Single-copy pools: an item worn by someone else is not equippable.
@@ -674,14 +698,15 @@ function handlePlayer(seat, msg) {
       const piece = (room?.pieces || []).find(p => p.id === msg.pieceId);
       if (!piece || piece.kind !== 'keypad') return;
       // Attempts ping the GM privately; examines announce publicly.
-      emit({ kind: 'keypad-attempt', text: `${me.name} tries "${msg.code}" on the keypad${piece.code ? ` (staged: ${piece.code})` : ''} — ${piece.code && msg.code === piece.code ? 'MATCH' : 'no match'}.` });
+      const code = String(msg.code ?? '').slice(0, 32);
+      emit({ kind: 'keypad-attempt', text: `${me.name} tries "${code}" on the keypad${piece.code ? ` (staged: ${piece.code})` : ''} — ${piece.code && code === piece.code ? 'MATCH' : 'no match'}.` });
       break;
     }
     case 'shop-buy': {
       if (!c.shop || !c.shop.open) return;
-      const s = c.shop.stock[msg.name];
-      if (!s || !s.on) return;
-      if (c.credits < s.price) return;
+      const s = has(c.shop.stock, msg.name) ? c.shop.stock[msg.name] : null;
+      if (!s || !s.on || !Number.isFinite(s.price)) return;
+      if (!(c.credits >= s.price)) return;
       c.credits -= s.price;
       if (s.category === 'gear') (c.gearOwned = c.gearOwned || {})[msg.name] = true;
       else c.inventory[msg.name] = (c.inventory[msg.name] || 0) + 1;
@@ -692,10 +717,10 @@ function handlePlayer(seat, msg) {
     case 'shop-sell': {
       if (!c.shop || !c.shop.open) return;
       const name = msg.name;
-      if (c.inventory[name] > 0) {
+      if (has(c.inventory, name) && c.inventory[name] > 0) {
         c.inventory[name]--;
         c.credits += sellPrice(name);
-      } else if (c.gearOwned && c.gearOwned[name]) {
+      } else if (has(c.gearOwned, name)) {
         for (const m of c.party) for (const sl of Object.keys(m.equipment)) if (m.equipment[sl] === name) m.equipment[sl] = null;
         delete c.gearOwned[name];
         c.credits += sellPrice(name);
@@ -707,8 +732,13 @@ function handlePlayer(seat, msg) {
     case 'scene-choose':
       if (sceneRun && !sceneRun.state.done) {
         const gates = sceneRun.openGatesFor(seat);
-        if (!gates.some(g => g.beat.key === msg.key)) return;
-        sceneRun.recordChoice(seat, msg.key, msg.value);
+        const gate = gates.find(g => g.beat.key === msg.key);
+        if (!gate) return;
+        const value = typeof msg.value === 'string' ? msg.value.slice(0, 80) : '';
+        // Choice gates accept only their own options; input gates take free text.
+        if (gate.beat.type === 'choice' && !(gate.beat.options || []).includes(value)) return;
+        if (!value.trim()) return;
+        sceneRun.recordChoice(seat, msg.key, value);
         c.scene = sceneRun.state;
         touch();
       }
@@ -725,6 +755,7 @@ function handlePlayer(seat, msg) {
   }
 }
 
+const pingedDoors = new WeakSet();   // server-side only: never saved, so a restart can't strand a door
 function checkPieceContact(seat, x, y) {
   const c = campaign();
   const room = currentRoom();
@@ -732,12 +763,15 @@ function checkPieceContact(seat, x, y) {
   for (const p of room.pieces || []) {
     const px = p.x, py = p.y;
     if (Math.abs(px - x) < 16 && Math.abs(py - y) < 16) {
-      if (p.kind === 'door' && !p._pinged) {
-        p._pinged = true;   // door pieces ping the GM on contact; only the Location panel moves the party
-        setTimeout(() => { p._pinged = false; }, 5000);
+      if (p.kind === 'door' && !pingedDoors.has(p)) {
+        pingedDoors.add(p);   // door pieces ping the GM on contact; only the Location panel moves the party
+        setTimeout(() => pingedDoors.delete(p), 5000);
         emit({ kind: 'gm-note', text: `${c.party.find(m => m.id === seat)?.name} is at the door "${p.name || 'door'}" in ${c.location.name}.` });
       }
-      if (p.kind === 'trigger' && p.encounter && c.encounters[p.encounter] && !battle) {
+      if (p.kind === 'trigger' && !p.hidden && p.encounter && has(c.encounters, p.encounter) && !battle) {
+        // An ambush springs once: the trigger hides itself, and the GM can
+        // un-hide it from the Location panel to re-arm it.
+        p.hidden = true;
         emit({ kind: 'announce', text: 'Ambush!' });
         launchEncounter({ name: p.encounter, ...JSON.parse(JSON.stringify(c.encounters[p.encounter])) });
       }
@@ -757,17 +791,24 @@ function handleGm(msg) {
 
     case 'new-campaign':
       store.campaign = newCampaign(data);
+      store.lastUndo = null;
       battle = null; sceneRun = null;
       touch(); break;
 
     case 'snapshot': emit({ kind: 'gm-note', text: `Snapshot saved: ${store.snapshot(msg.name)}` }); break;
     case 'restore':
       store.restore(msg.file);
-      battle = null; sceneRun = null; rebuildSceneRun();
+      battle = null; migrateCampaign(); rebuildSceneRun();
       emit({ kind: 'announce', text: 'The world settles into a remembered shape.' });
       touch(); break;
     case 'undo': {
       const d = store.undo();
+      if (d) {
+        // The undo swapped in a fresh campaign object: re-point the live
+        // battle and scene at it, or they'd keep mutating the discarded one.
+        if (battle) battle.campaign = store.campaign;
+        migrateCampaign(); rebuildSceneRun();
+      }
       emit({ kind: 'gm-note', text: d ? `Undid: ${d}` : 'Nothing to undo.' });
       touch(); break;
     }
@@ -863,9 +904,27 @@ function handleGm(msg) {
       if (c.sceneMusic[msg.id]) { c.jukebox.track = c.sceneMusic[msg.id]; c.jukebox.playing = true; }
       touch(); break;
     }
-    case 'scene-continue': if (sceneRun) { sceneRun.advance(); c.scene = sceneRun.state; touch(); } break;
+    case 'scene-continue':
+      if (sceneRun) {
+        sceneRun.advance();
+        c.scene = sceneRun.state;
+        // The last Continue ends the scene exactly as END SCENE does — a done
+        // scene left in place would hide the conductor and strand the players.
+        if (sceneRun.state.done) { c.scene = null; sceneRun = null; c.mode = 'overworld'; }
+        touch();
+      }
+      break;
     case 'scene-jump': if (sceneRun) { sceneRun.jumpTo(msg.index); c.scene = sceneRun.state; touch(); } break;
-    case 'scene-set-choice': if (sceneRun) { sceneRun.recordChoice(msg.seat, msg.key, msg.value); c.scene = sceneRun.state; touch(); } break;
+    case 'scene-set-choice': {
+      if (!sceneRun) break;
+      let value = msg.value;
+      if (msg.key === 'class') {
+        // Typed by hand at the conductor: match the class whatever the case.
+        value = Object.keys(data.classKits.classes).find(k => k.toLowerCase() === String(value).trim().toLowerCase());
+        if (!value) { emit({ kind: 'gm-note', text: `"${msg.value}" isn't a class — choice not recorded.` }); break; }
+      }
+      sceneRun.recordChoice(msg.seat, msg.key, value); c.scene = sceneRun.state; touch(); break;
+    }
     case 'scene-end':
       if (sceneRun) { sceneRun.state.done = true; c.scene = null; sceneRun = null; c.mode = 'overworld'; touch(); }
       break;
@@ -892,8 +951,8 @@ function handleGm(msg) {
       const e = battle.enemies.find(x => x.id === msg.enemyId);
       if (e) {
         e.control = e.control === 'ai' ? 'gm' : 'ai';
-        // An AI instance holding at full acts immediately on flip.
-        if (e.control === 'ai' && e.holding) { e.holding = false; e.gauge = 1; battle.onGaugeFill(e); }
+        // An AI instance holding at full acts on the next tick — its fill (cure
+        // checks, poison) already ran; re-filling would run them twice.
         touch();
       }
       break;
@@ -901,7 +960,11 @@ function handleGm(msg) {
     case 'edit-instance': {
       if (!battle) break;
       const e = battle.enemies.find(x => x.id === msg.enemyId);
-      if (e) { Object.assign(e, msg.patch || {}); touch(); }
+      if (e) {
+        Object.assign(e, msg.patch || {});
+        if (!e.dead && e.hp <= 0) { e.hp = 0; battle.killEnemy(e, null); }   // a hand-set 0 is a kill
+        touch();
+      }
       break;
     }
     case 'enemy-add-status': {
@@ -932,7 +995,8 @@ function handleGm(msg) {
     case 'template-delete': delete c.templates[msg.name]; touch(); break;
     case 'template-clone': {
       const src = c.templates[msg.from] || data.enemiesByName[msg.from];
-      if (src) { c.templates[msg.to] = JSON.parse(JSON.stringify({ ...src, name: msg.to })); touch(); }
+      // scriptKey keeps the clone on its source's scripted behaviors.
+      if (src) { c.templates[msg.to] = JSON.parse(JSON.stringify({ ...src, name: msg.to, scriptKey: src.scriptKey || src.name })); touch(); }
       break;
     }
     case 'encounter-save': c.encounters[msg.name] = msg.def; touch(); break;
@@ -1064,7 +1128,14 @@ function handleGm(msg) {
     }
 
     // ---- rooms & staging
-    case 'room-save': c.rooms[msg.location] = msg.room; touch(); break;
+    case 'room-save': {
+      if (!msg.room || typeof msg.room !== 'object') break;
+      // The GM edits a copy of its own room view: strip the view-only overlays
+      // (GM pins, door hoists, collision grid) so they never reach players.
+      const { pins, doorsNear, grid, nativeChipset, ...room } = msg.room;
+      c.rooms[msg.location] = room;
+      touch(); break;
+    }
     case 'room-clone':
       if (c.rooms[msg.from]) { c.rooms[msg.to] = JSON.parse(JSON.stringify(c.rooms[msg.from])); touch(); }
       break;
@@ -1135,13 +1206,13 @@ function handleGm(msg) {
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.gif': 'image/gif', '.otf': 'font/otf', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.wav': 'audio/wav', '.svg': 'image/svg+xml' };
 
 const server = http.createServer((req, res) => {
-  const url = decodeURIComponent(req.url.split('?')[0]);
   try {
-    if (url === '/' || url === '/index.html') return sendFile(res, path.join(CLIENT_DIR, 'index.html'));
+    const url = decodeURIComponent(req.url.split('?')[0]);
+    if (url === '/' || url === '/index.html') return sendFile(req, res, path.join(CLIENT_DIR, 'index.html'));
     if (url.startsWith('/assets/')) {
       const p = path.normalize(path.join(ASSETS_DIR, url.slice(8)));
-      if (!p.startsWith(ASSETS_DIR)) { res.writeHead(403); return res.end(); }
-      return sendFile(res, p);
+      if (!p.startsWith(ASSETS_DIR + path.sep)) { res.writeHead(403); return res.end(); }
+      return sendFile(req, res, p, true);
     }
     if (url === '/api/assets') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1171,6 +1242,7 @@ const server = http.createServer((req, res) => {
           gauge_s: e.gauge_s, dmg_per_action: e.dmg_per_action, group: e.group,
           def: e.def, res: e.res, lck: e.lck, moves: e.moves, status_tiers: e.status_tiers,
           special: e.special || null, anchor_level: e.anchor_level,
+          scriptKey: e.scriptKey || e.name,   // editor copies saved under a new name keep their scripts
         })),
         riders: data.riders,
         scripts: data.scripts,
@@ -1189,33 +1261,73 @@ const server = http.createServer((req, res) => {
     }
     // client files
     const p = path.normalize(path.join(CLIENT_DIR, url));
-    if (p.startsWith(CLIENT_DIR) && existsSync(p) && statSync(p).isFile()) return sendFile(res, p);
+    if (p.startsWith(CLIENT_DIR + path.sep) && existsSync(p) && statSync(p).isFile()) return sendFile(req, res, p);
     res.writeHead(404); res.end('not found');
   } catch (e) {
-    res.writeHead(500); res.end(String(e));
+    if (!res.headersSent) { res.writeHead(e instanceof URIError ? 400 : 500); res.end(String(e)); }
   }
 });
 
-function sendFile(res, p) {
-  if (!existsSync(p) || !statSync(p).isFile()) { res.writeHead(404); return res.end(); }
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(p).toLowerCase()] || 'application/octet-stream' });
-  res.end(readFileSync(p));
+// Streamed (the asset tree is hundreds of MB — a sync read would stall the
+// battle tick) with Range support, which Safari needs to play audio.
+function sendFile(req, res, p, cacheable = false) {
+  let st;
+  try { st = statSync(p); } catch { st = null; }
+  if (!st || !st.isFile()) { res.writeHead(404); return res.end(); }
+  const headers = {
+    'Content-Type': MIME[path.extname(p).toLowerCase()] || 'application/octet-stream',
+    'Accept-Ranges': 'bytes',
+    // Hot folders: assets may be swapped at any time, so revalidate rather than pin.
+    'Cache-Control': cacheable ? 'no-cache' : 'no-store',
+    'Last-Modified': st.mtime.toUTCString(),
+  };
+  const ims = req.headers['if-modified-since'];
+  if (cacheable && ims && Math.floor(st.mtimeMs / 1000) <= Math.floor(Date.parse(ims) / 1000)) {
+    res.writeHead(304, headers); return res.end();
+  }
+  let start = 0, end = st.size - 1, status = 200;
+  const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+  if (range && (range[1] !== '' || range[2] !== '') && st.size > 0) {
+    if (range[1] === '') start = Math.max(0, st.size - Number(range[2]));
+    else { start = Number(range[1]); if (range[2] !== '') end = Math.min(end, Number(range[2])); }
+    if (start > end || start >= st.size) {
+      res.writeHead(416, { 'Content-Range': `bytes */${st.size}` }); return res.end();
+    }
+    status = 206;
+    headers['Content-Range'] = `bytes ${start}-${end}/${st.size}`;
+  }
+  headers['Content-Length'] = st.size === 0 ? 0 : end - start + 1;
+  res.writeHead(status, headers);
+  if (req.method === 'HEAD' || st.size === 0) return res.end();
+  createReadStream(p, { start, end }).on('error', () => res.destroy()).pipe(res);
 }
 
 // ---------------------------------------------------------------- WS
-const wss = new WebSocketServer({ server });
+// Room and encounter saves are the largest legitimate messages, well under this.
+const wss = new WebSocketServer({ server, maxPayload: 4 * 1024 * 1024 });
 wss.on('connection', ws => {
   let seat = null;
   ws.on('message', raw => {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
+    if (!msg || typeof msg !== 'object') return;
+    // One bad message must never take the whole table down.
+    try { onMessage(msg); } catch (e) {
+      console.error(`message from ${seat || '(no seat)'} failed:`, msg.t, msg.op || '', e);
+      if (seat === 'GM') emit({ kind: 'gm-note', text: `That didn't work: ${e.message}` });
+    }
+  });
+  function onMessage(msg) {
     if (msg.t === 'hello') {
       const want = String(msg.seat || '');
       if (!['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'GM'].includes(want)) return;
       if (ACCESS_KEY && msg.key !== ACCESS_KEY) { ws.close(4001, 'bad key'); return; }
+      if (want === 'GM' && GM_KEY && msg.gmKey !== GM_KEY) { ws.close(4001, 'bad key'); return; }
       // Reconnection restores the seat exactly; a new connection replaces the old one.
       const old = seats.get(want);
       if (old && old !== ws && old.readyState === 1) old.close(4000, 'seat taken over');
+      // Re-hello on the same socket for a different seat releases the first one.
+      if (seat && seat !== want && seats.get(seat) === ws) seats.delete(seat);
       seat = want;
       seats.set(seat, ws);
       ws.send(JSON.stringify({ t: 'joined', seat, art: artIndex() }));
@@ -1229,7 +1341,7 @@ wss.on('connection', ws => {
     // all other player verbs stay player-only.
     if (seat === 'GM') { if (msg.t === 'move') handlePlayer(seat, msg); return; }
     handlePlayer(seat, msg);
-  });
+  }
   ws.on('close', () => {
     if (seat && seats.get(seat) === ws) { seats.delete(seat); stateDirtyView = true; }
   });
@@ -1275,8 +1387,11 @@ setInterval(() => {
   const dt = (now - last) / 1000;
   last = now;
   if (battle) {
+    // Gauges only move while the fight is live; a won, wiped or paused battle
+    // pushes state on its events alone instead of ~5×/s forever.
+    const live = !battle.over && !battle.frozen && !campaign().paused;
     battle.tick(dt);
-    stateDirtyView = true;
+    if (live) stateDirtyView = true;
   }
   flushEvents();
 }, 100);
@@ -1285,7 +1400,17 @@ setInterval(() => {
   if (stateDirtyView) { broadcastState(); stateDirtyView = false; }
 }, 180);
 
-setInterval(() => store.persist(), 4000);
+setInterval(() => {
+  try { store.persist(); } catch (e) { console.error('persist failed:', e.message); }
+}, 4000);
+
+// Redeploys send SIGTERM: save the last few seconds of play on the way out.
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, () => {
+    try { store.persist(); } catch (e) { console.error('persist on exit failed:', e.message); }
+    process.exit(0);
+  });
+}
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`OFF TTRPG server listening on http://localhost:${PORT}`);

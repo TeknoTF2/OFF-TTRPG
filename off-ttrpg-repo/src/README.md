@@ -24,7 +24,11 @@ The repo root carries `package.json` + `railway.json` for one-click deploy. The 
 binds `0.0.0.0:$PORT`, sends WebSocket heartbeats every 30 s, and persists campaign
 state to `RAILWAY_VOLUME_MOUNT_PATH` (mount a volume or state resets on redeploy;
 `DATA_DIR` also works). Set `ACCESS_KEY` to require `?key=...` on the public URL —
-left unset, seats are open, as at a private table.
+left unset, seats are open, as at a private table. Every player holds that shared key,
+so on a public URL also set `GM_KEY`: the Judge's seat then needs `?gmkey=...` too,
+and nobody else can take over the console. Saves are written atomically and flushed
+on shutdown, so a redeploy mid-session loses nothing; an unreadable save is moved
+aside as `campaign-state.json.corrupt-<time>` rather than overwritten.
 
 ## What is in build 1
 

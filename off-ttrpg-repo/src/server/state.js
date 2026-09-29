@@ -2,7 +2,7 @@
 // party, inventory, credits, rooms and staged pieces, encounter library,
 // enemy template overlay, reveal flags, jukebox, notes, snapshots.
 
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import { CLASSES } from '../shared/constants.js';
 import { makeMember, statsAt } from './engine/members.js';
@@ -19,7 +19,7 @@ export function newCampaign(data) {
     credits: 0,
     paused: false,
     location: { zone: 'Zone 1', name: 'lobby' },
-    mode: 'lobby',            // lobby | intro | overworld | battle | shop | rest
+    mode: 'lobby',            // lobby | scene | overworld | battle
     rooms: {},                // location name -> room JSON (floors/structs/props/pieces/palette/music)
     templates: {},            // GM enemy-template overlay (bestiary stays untouched on disk)
     encounters: {},           // saved encounter definitions by name
@@ -32,7 +32,6 @@ export function newCampaign(data) {
     sceneMusic: {},           // scene id -> track that starts looping when the scene starts
     notes: {},                // GM notes by key ("room:alma", "enc:dedan", "tmpl:Tiburce")
     log: [],                  // combat logs per encounter: {id, name, startedAt, entries[]}
-    poisonNote: 'Poisoned ticks 1/10 max HP per location transition',
   };
 }
 
@@ -49,17 +48,33 @@ export class Store {
   }
 
   loadFromDisk() {
+    if (!existsSync(this.file)) return null;
     try {
-      if (existsSync(this.file)) return JSON.parse(readFileSync(this.file, 'utf8'));
-    } catch (e) { console.error('state load failed:', e.message); }
-    return null;
+      return JSON.parse(readFileSync(this.file, 'utf8'));
+    } catch (e) {
+      // Never silently overwrite an unreadable save: set it aside so it can be
+      // recovered by hand, and say so loudly.
+      const aside = `${this.file}.corrupt-${Date.now()}`;
+      try { renameSync(this.file, aside); } catch { /* best effort */ }
+      console.error(`state load failed (${e.message}) — bad file moved to ${aside}; starting a new campaign`);
+      return null;
+    }
   }
 
-  markDirty() { this.dirty = true; }
+  // Any change other than the undo itself retires the undo point: undo is for
+  // the hand-edit just made, never a rollback of everything since.
+  markDirty() { this.dirty = true; if (this.lastUndo) this.lastUndo.stale++; }
+
+  // Write-then-rename so a crash or redeploy mid-write can't truncate the save.
+  writeAtomic(file, text) {
+    const tmp = `${file}.tmp`;
+    writeFileSync(tmp, text);
+    renameSync(tmp, file);
+  }
 
   persist() {
     if (!this.dirty) return;
-    writeFileSync(this.file, JSON.stringify(this.campaign, null, 1));
+    this.writeAtomic(this.file, JSON.stringify(this.campaign, null, 1));
     this.dirty = false;
   }
 
@@ -67,29 +82,38 @@ export class Store {
   snapshot(name) {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fname = `${stamp}__${(name || 'snapshot').replace(/[^\w\- ]+/g, '')}.json`;
-    writeFileSync(path.join(this.snapDir, fname), JSON.stringify(this.campaign, null, 1));
+    this.writeAtomic(path.join(this.snapDir, fname), JSON.stringify(this.campaign, null, 1));
+    this.snapCache = null;
     return fname;
   }
 
+  // Cached: the GM view lists these on every state push.
   listSnapshots() {
-    return readdirSync(this.snapDir).filter(f => f.endsWith('.json')).sort().reverse()
-      .map(f => ({ file: f, name: f.replace(/^[^_]*__/, '').replace(/\.json$/, ''), at: f.split('__')[0] }));
+    if (!this.snapCache) {
+      this.snapCache = readdirSync(this.snapDir).filter(f => f.endsWith('.json')).sort().reverse()
+        .map(f => ({ file: f, name: f.replace(/^[^_]*__/, '').replace(/\.json$/, ''), at: f.split('__')[0] }));
+    }
+    return this.snapCache;
   }
 
   restore(file) {
     const p = path.join(this.snapDir, path.basename(file));
     this.campaign = JSON.parse(readFileSync(p, 'utf8'));
+    this.lastUndo = null;
     this.dirty = true;
     return this.campaign;
   }
 
-  // Record state before a GM hand-edit so the last one can be undone.
+  // Record state before a GM hand-edit so the last one can be undone. The
+  // edit's own touch() is expected (stale 1); anything beyond retires it.
   recordUndo(desc) {
-    this.lastUndo = { desc, state: JSON.stringify(this.campaign) };
+    this.lastUndo = { desc, state: JSON.stringify(this.campaign), stale: 0 };
   }
 
+  undoDesc() { return this.lastUndo && this.lastUndo.stale <= 1 ? this.lastUndo.desc : null; }
+
   undo() {
-    if (!this.lastUndo) return null;
+    if (!this.undoDesc()) return null;
     const desc = this.lastUndo.desc;
     this.campaign = JSON.parse(this.lastUndo.state);
     this.lastUndo = null;

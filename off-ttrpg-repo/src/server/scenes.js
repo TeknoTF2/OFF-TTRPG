@@ -48,8 +48,13 @@ export class SceneRun {
     // remembered first — the override may rewrite the very key the branch reads,
     // and the matching seats must still see the branch's own text.
     if (nb && nb.type === 'branch-text' && nb.override) {
-      const matched = Object.entries(this.state.choices).filter(([, ch]) => ch[nb.on] === nb.equals).map(([s]) => s);
-      (this.state.branchMatched = this.state.branchMatched || {})[this.state.beatIndex] = matched;
+      // Computed once: on a replay the override has already rewritten the key,
+      // and recomputing would show the matched seats the else-text.
+      const bm = (this.state.branchMatched = this.state.branchMatched || {});
+      if (!(this.state.beatIndex in bm)) {
+        bm[this.state.beatIndex] = Object.entries(this.state.choices).filter(([, ch]) => ch[nb.on] === nb.equals).map(([s]) => s);
+      }
+      const matched = bm[this.state.beatIndex];
       for (const seat of matched) this.recordChoice(seat, nb.override.key, nb.override.value, { silent: true });
     }
   }
@@ -78,6 +83,7 @@ export class SceneRun {
 
   applyToMember(member, key, value) {
     if (key === 'class') {
+      if (!Object.hasOwn(this.data.classKits.classes, value)) return;   // not a class: ignore, never crash
       const wasDefaultName = Object.keys(this.data.classKits.classes).includes(member.name);
       member.klass = value;
       member.element = this.data.classKits.classes[value].element;
